@@ -1,36 +1,127 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Finish Five
 
-## Getting Started
+> Five tracks. One focus. Finish them.
 
-First, run the development server:
+A focused songwriting/production tracker built around a single constraint:
+**only five tracks can be active at a time.** Everything else lives in the
+backlog. The dashboard tells you what's stuck, what's next, and which one to
+open first.
+
+## Features (V1)
+
+- **Dashboard** — active-five card grid with per-track progress, current
+  bottleneck, next action, and last-worked timestamp.
+- **Recommendation engine** — deterministic scoring (progress + momentum −
+  bottleneck − staleness) picks one track and one action to start with.
+- **Track Detail** — five-stage production checklist (Idea, Sound Design,
+  Arrangement, Mixing, Mastering), bottleneck editor, primary-action editor,
+  markdown notes, and audio versions with wavesurfer.js playback.
+- **Focus Mode** — minimal-chrome timer with start/pause/resume/stop. Stop
+  flows directly into a session log dialog with reflection prompts.
+- **Sessions** — duration, "what improved / still broken / new bottleneck"
+  prompts, plus a one-click "mark action complete." Saving updates the
+  active bottleneck, completes the action, and bumps `last_worked_at`.
+- **All Tracks** — library view with status + tag filters, 5-active-cap
+  enforced server-side on activation.
+- **Calendar** — month grid of session logs with per-day minutes.
+- **Analytics** — avg time/track, completion rate, sessions/week, top
+  bottleneck category, plus a category bar chart.
+
+## Stack
+
+- **Next.js 16** (App Router, Turbopack, TS, Server Actions)
+- **Tailwind v4** + handwritten Radix-backed shadcn-style components
+- **Supabase Postgres** for data, **Supabase Storage** for audio versions
+- **wavesurfer.js**, **react-markdown**, **date-fns**, **zod**
+
+## Setup
 
 ```bash
+npm install
+cp .env.local.example .env.local
+# Fill in the Supabase URL + anon key from your project's API settings
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Required environment variables (see `.env.local.example`):
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+| Var | Notes |
+|---|---|
+| `NEXT_PUBLIC_SUPABASE_URL` | Project URL |
+| `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Project anon/publishable key |
+| `NEXT_PUBLIC_OWNER_ID` | Any UUID — single-user V1 marker |
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+## Database
 
-## Learn More
+Schema lives in `supabase/migrations/`. Apply in order:
 
-To learn more about Next.js, take a look at the following resources:
+```
+0001_init.sql               # tables + triggers + indexes
+0002_storage.sql            # private 'track-audio' bucket
+0003_storage_policies.sql   # permissive V1 anon r/w on the bucket
+```
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+If you have the [Supabase CLI](https://supabase.com/docs/guides/cli) linked
+to your project: `supabase db push`. Otherwise paste each file into the SQL
+editor in the Supabase dashboard.
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+Tables: `tracks`, `track_stages`, `bottlenecks`, `actions`, `sessions`,
+`track_versions`. Triggers seed the 5 stages on track insert and bump
+`tracks.last_worked_at` on session insert. Partial unique indexes enforce
+"one active bottleneck per track" and "one open primary action per track."
 
-## Deploy on Vercel
+RLS is intentionally **off** in V1 (single-user, no auth). When you add real
+auth, enable RLS on every table with `using (owner_id = auth.uid())` and
+replace the permissive storage policies in `0003_storage_policies.sql`.
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+## Scripts
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+```
+npm run dev         # next dev (Turbopack)
+npm run build       # production build
+npm run start       # production server
+npm run lint        # eslint
+npm run typecheck   # tsc --noEmit
+```
+
+## Deploy (Vercel)
+
+1. Push this repo to GitHub.
+2. Import into Vercel.
+3. Add the three env vars above in Project Settings → Environment Variables.
+4. Deploy.
+
+## Project structure
+
+```
+src/
+  app/
+    page.tsx                 Dashboard
+    layout.tsx               SiteNav + main shell
+    tracks/
+      page.tsx               Library
+      new/page.tsx           Add Track
+      [id]/page.tsx          Detail (Overview / Notes / Versions)
+      [id]/edit/page.tsx     Edit metadata
+    focus/[trackId]/page.tsx Focus Mode
+    calendar/page.tsx        Month history grid
+    analytics/page.tsx       V1 metrics
+    actions/                 Server Actions (one file per resource)
+  components/
+    ui/                      Radix-backed primitives
+    ...                      Feature components
+  lib/
+    supabase/{server,browser}.ts
+    data/{tracks,versions}.ts
+    recommend.ts             Scoring engine
+    types.ts                 Domain types + helpers
+    database.types.ts        Generated from Supabase schema
+supabase/
+  migrations/                SQL migrations
+```
+
+## Out of scope (intentional)
+
+The PRD's §9 "Future Features" list is deferred: AI suggestions, Ableton
+project integration, collaboration, smart pattern detection. Add real auth
+before exposing this beyond a single user.
