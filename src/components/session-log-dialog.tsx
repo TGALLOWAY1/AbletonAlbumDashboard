@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useTransition } from "react";
+import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import {
   Dialog,
@@ -54,16 +54,19 @@ export function SessionLogDialog({
   const [manualMinutes, setManualMinutes] = useState<string>("");
   const [pending, start] = useTransition();
 
-  useEffect(() => {
-    if (!open) {
-      setImproved("");
-      setStillBroken("");
-      setNewBottleneckDescription("");
-      setNewBottleneckCategory("arrangement");
-      setCompleteActionFlag(false);
-      setManualMinutes("");
-    }
-  }, [open]);
+  const reset = () => {
+    setImproved("");
+    setStillBroken("");
+    setNewBottleneckDescription("");
+    setNewBottleneckCategory("arrangement");
+    setCompleteActionFlag(false);
+    setManualMinutes("");
+  };
+
+  const handleOpenChange = (next: boolean) => {
+    if (!next) reset();
+    onOpenChange(next);
+  };
 
   const computedDurationSec = (() => {
     if (manualMinutes && /^\d+$/.test(manualMinutes)) {
@@ -100,6 +103,7 @@ export function SessionLogDialog({
             : undefined,
           completeAction: completeActionFlag && !!primaryAction,
         });
+        reset();
         onOpenChange(false);
         router.push(redirectTo);
         router.refresh();
@@ -110,7 +114,7 @@ export function SessionLogDialog({
   };
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
+    <Dialog open={open} onOpenChange={handleOpenChange}>
       <DialogContent className="max-w-xl">
         <DialogHeader>
           <DialogTitle>Log session</DialogTitle>
@@ -215,7 +219,7 @@ export function SessionLogDialog({
         <DialogFooter>
           <Button
             variant="ghost"
-            onClick={() => onOpenChange(false)}
+            onClick={() => handleOpenChange(false)}
             disabled={pending}
           >
             Discard
