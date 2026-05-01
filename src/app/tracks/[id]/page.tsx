@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { format } from "date-fns";
-import { ArrowLeft, Play } from "lucide-react";
+import { ArrowLeft, CalendarDays, Clock3, Play } from "lucide-react";
 import {
   Tabs,
   TabsContent,
@@ -32,32 +32,58 @@ export default async function TrackDetailPage({
   ]);
   if (!track) notFound();
 
+  const [genre, ...descriptors] = track.tags;
+
   return (
     <div className="flex flex-col gap-6">
-      <div className="flex items-start justify-between gap-4">
-        <div className="flex flex-col gap-2">
-          <Button asChild variant="ghost" size="sm" className="self-start">
-            <Link href="/">
-              <ArrowLeft className="h-4 w-4" />
-              Dashboard
-            </Link>
-          </Button>
-          <h1 className="text-3xl font-semibold tracking-tight">
-            {track.name}
-          </h1>
-          <div className="flex flex-wrap gap-1.5">
-            {track.tags.map((tag) => (
-              <Badge key={tag} variant="default">
-                {tag}
-              </Badge>
-            ))}
-            <Badge variant="primary">{track.status}</Badge>
+      <Button asChild variant="ghost" size="sm" className="self-start">
+        <Link href="/">
+          <ArrowLeft className="h-4 w-4" />
+          Back to Dashboard
+        </Link>
+      </Button>
+
+      <div className="flex flex-wrap items-start justify-between gap-6">
+        <div className="flex items-start gap-5">
+          <div className="h-36 w-36 shrink-0 overflow-hidden rounded-lg bg-gradient-to-br from-primary/20 via-surface-2 to-accent/15">
+            {track.cover_image_url ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img
+                src={track.cover_image_url}
+                alt=""
+                className="h-full w-full object-cover"
+              />
+            ) : (
+              <div className="flex h-full items-center justify-center text-3xl font-bold text-foreground/30">
+                {track.name.slice(0, 2).toUpperCase()}
+              </div>
+            )}
           </div>
-          <div className="text-xs text-muted-foreground">
-            Created {format(new Date(track.created_at), "MMM d, yyyy")} ·{" "}
-            {track.last_worked_at
-              ? `Last worked ${format(new Date(track.last_worked_at), "MMM d, yyyy")}`
-              : "Never worked on yet"}
+          <div className="flex flex-col gap-2">
+            <h1 className="text-3xl font-semibold tracking-tight">
+              {track.name}
+            </h1>
+            <div className="flex flex-wrap items-center gap-2">
+              {genre && <Badge variant="primary">{genre}</Badge>}
+              <Badge variant="default">{track.status}</Badge>
+            </div>
+            {descriptors.length > 0 && (
+              <p className="text-sm text-muted-foreground">
+                {descriptors.join(", ")}
+              </p>
+            )}
+            <div className="mt-1 flex flex-col gap-1 text-xs text-muted-foreground">
+              <span className="inline-flex items-center gap-1.5">
+                <CalendarDays className="h-3.5 w-3.5" />
+                Created {format(new Date(track.created_at), "MMM d, yyyy")}
+              </span>
+              <span className="inline-flex items-center gap-1.5">
+                <Clock3 className="h-3.5 w-3.5" />
+                {track.last_worked_at
+                  ? `Last worked ${format(new Date(track.last_worked_at), "MMM d, yyyy")}`
+                  : "Never worked on yet"}
+              </span>
+            </div>
           </div>
         </div>
         <Button asChild>

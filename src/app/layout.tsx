@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
-import { SiteNav } from "@/components/site-nav";
+import { Sidebar } from "@/components/sidebar";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -18,6 +18,11 @@ export const metadata: Metadata = {
   description: "Five tracks. One focus. Finish them.",
 };
 
+// Sidebar reads from Supabase on every render; opt the whole app out of
+// static prerendering so build doesn't try to render `/_not-found` at compile
+// time without DB credentials.
+export const dynamic = "force-dynamic";
+
 export default function RootLayout({
   children,
 }: Readonly<{
@@ -29,8 +34,10 @@ export default function RootLayout({
       className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
     >
       <body className="min-h-full">
-        <SiteNav />
-        <main className="mx-auto max-w-7xl px-6 py-8">{children}</main>
+        <div className="flex min-h-screen">
+          <Sidebar />
+          <main className="flex-1 px-8 py-7">{children}</main>
+        </div>
       </body>
     </html>
   );
