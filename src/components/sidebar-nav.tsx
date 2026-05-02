@@ -9,6 +9,7 @@ import {
   Headphones,
   Home,
   LayoutTemplate,
+  Library,
   ListMusic,
   Settings,
   type LucideIcon,
@@ -24,6 +25,7 @@ type NavItem = {
 const NAV_ITEMS: NavItem[] = [
   { href: "/", label: "Dashboard", icon: Home },
   { href: "/tracks", label: "All Tracks", icon: ListMusic },
+  { href: "/library", label: "Library", icon: Library },
   { href: "/calendar", label: "Calendar", icon: Calendar },
   { href: "/sessions", label: "Focus Sessions", icon: Headphones },
   { href: "/analytics", label: "Analytics", icon: BarChart3 },
