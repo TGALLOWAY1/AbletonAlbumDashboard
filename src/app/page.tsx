@@ -3,11 +3,8 @@ import { format } from "date-fns";
 import { Plus, Sun } from "lucide-react";
 import { TrackCard } from "@/components/track-card";
 import { RecommendationCard } from "@/components/recommendation-card";
-import {
-  TrackSortControl,
-  SORT_OPTIONS,
-  type SortValue,
-} from "@/components/track-sort-control";
+import { TrackSortControl } from "@/components/track-sort-control";
+import { SORT_OPTIONS, type SortValue } from "@/lib/sort-options";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { getTracksByStatus } from "@/lib/data/tracks";

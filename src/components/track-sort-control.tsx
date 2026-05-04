@@ -8,15 +8,9 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { SORT_OPTIONS, type SortValue } from "@/lib/sort-options";
 
-export const SORT_OPTIONS = [
-  { value: "recommended", label: "Recommended" },
-  { value: "recent", label: "Last worked" },
-  { value: "progress", label: "Progress" },
-  { value: "name", label: "Name" },
-] as const;
-
-export type SortValue = (typeof SORT_OPTIONS)[number]["value"];
+export { SORT_OPTIONS, type SortValue };
 
 export function TrackSortControl({ current }: { current: SortValue }) {
   const router = useRouter();
