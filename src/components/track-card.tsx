@@ -13,6 +13,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { TrackCardActions } from "@/components/track-card-actions";
+import { DeleteTrackMenuItem } from "@/components/delete-track-menu-item";
 import {
   BOTTLENECK_LABELS,
   progressFromStages,
@@ -155,6 +156,8 @@ export function TrackCard({
             </DropdownMenuItem>
             <DropdownMenuSeparator />
             <TrackCardActions trackId={track.id} status={track.status} />
+            <DropdownMenuSeparator />
+            <DeleteTrackMenuItem trackId={track.id} trackName={track.name} />
           </DropdownMenuContent>
         </DropdownMenu>
       </div>

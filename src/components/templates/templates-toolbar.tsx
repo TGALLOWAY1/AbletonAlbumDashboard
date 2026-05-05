@@ -15,7 +15,6 @@ import {
 } from "@/lib/data/templates";
 
 export type TemplateSort =
-  | "name-asc"
   | "recently-modified"
   | "recently-created"
   | "category"
@@ -34,7 +33,6 @@ const TABS: ("all" | TemplateCategory)[] = [
 ];
 
 const SORT_OPTIONS: { value: TemplateSort; label: string }[] = [
-  { value: "name-asc", label: "Sort: A–Z" },
   { value: "recently-modified", label: "Sort: Recently Modified" },
   { value: "recently-created", label: "Sort: Recently Created" },
   { value: "category", label: "Sort: Category" },

@@ -67,6 +67,7 @@ const updateSchema = z.object({
   name: z.string().min(1).max(120),
   tags: z.string().optional().default(""),
   cover_image_url: z.string().url().optional().or(z.literal("")),
+  als_file_path: z.string().max(1000).optional().default(""),
 });
 
 export async function updateTrack(formData: FormData) {
@@ -75,6 +76,7 @@ export async function updateTrack(formData: FormData) {
     name: formData.get("name"),
     tags: formData.get("tags") ?? "",
     cover_image_url: formData.get("cover_image_url") ?? "",
+    als_file_path: formData.get("als_file_path") ?? "",
   });
   const supabase = getServerSupabase();
   const { error } = await supabase
@@ -83,6 +85,7 @@ export async function updateTrack(formData: FormData) {
       name: parsed.name,
       tags: parseTags(parsed.tags),
       cover_image_url: parsed.cover_image_url || null,
+      als_file_path: parsed.als_file_path.trim() || null,
     })
     .eq("owner_id", OWNER_ID)
     .eq("id", parsed.id);

@@ -28,8 +28,6 @@ function compareTemplates(
   sort: TemplateSort,
 ): number {
   switch (sort) {
-    case "name-asc":
-      return a.name.localeCompare(b.name);
     case "recently-modified":
       return new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime();
     case "recently-created":
@@ -50,7 +48,7 @@ function TemplatesPageInner({ items: initialItems }: { items: TemplateItem[] }) 
   const { toast } = useToast();
   const [items, setItems] = React.useState<TemplateItem[]>(initialItems);
   const [tab, setTab] = React.useState<"all" | TemplateCategory>("all");
-  const [sort, setSort] = React.useState<TemplateSort>("name-asc");
+  const [sort, setSort] = React.useState<TemplateSort>("recently-modified");
   const [view, setView] = React.useState<TemplateView>("grid");
   const [selectedId, setSelectedId] = React.useState<string | null>(null);
   const notesRef = React.useRef<HTMLTextAreaElement | null>(null);

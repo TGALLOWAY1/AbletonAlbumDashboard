@@ -3,7 +3,6 @@ import { AudioLines } from "lucide-react";
 import { SidebarNav } from "@/components/sidebar-nav";
 import { SidebarFocusPanel } from "@/components/sidebar-focus-panel";
 import { SidebarStats } from "@/components/sidebar-stats";
-import { SidebarQuote } from "@/components/sidebar-quote";
 import { SidebarChrome } from "@/components/sidebar-chrome";
 
 export function Sidebar() {
@@ -23,10 +22,7 @@ export function Sidebar() {
 
       <SidebarNav />
 
-      <SidebarChrome
-        focusPanel={<SidebarFocusPanel />}
-        quote={<SidebarQuote />}
-      />
+      <SidebarChrome focusPanel={<SidebarFocusPanel />} />
       <SidebarStats />
     </aside>
   );

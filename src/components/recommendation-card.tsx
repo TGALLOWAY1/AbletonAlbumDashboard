@@ -3,6 +3,7 @@ import { Sparkles, Play } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { CopyPathButton } from "@/components/copy-path-button";
 import type { Recommendation } from "@/lib/recommend";
 
 export function RecommendationCard({ rec }: { rec: Recommendation | null }) {
@@ -58,7 +59,7 @@ export function RecommendationCard({ rec }: { rec: Recommendation | null }) {
           </p>
         )}
 
-        <div className="flex gap-2">
+        <div className="flex flex-wrap gap-2">
           <Button asChild>
             <Link href={`/focus/${rec.track.id}`}>
               <Play className="h-4 w-4" />
@@ -68,6 +69,9 @@ export function RecommendationCard({ rec }: { rec: Recommendation | null }) {
           <Button asChild variant="outline">
             <Link href={`/tracks/${rec.track.id}`}>Open detail</Link>
           </Button>
+          {rec.track.als_file_path && (
+            <CopyPathButton path={rec.track.als_file_path} size="md" />
+          )}
         </div>
       </CardContent>
     </Card>

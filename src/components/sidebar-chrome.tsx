@@ -6,10 +6,8 @@ import { Headphones } from "lucide-react";
 
 export function SidebarChrome({
   focusPanel,
-  quote,
 }: {
   focusPanel: React.ReactNode;
-  quote: React.ReactNode;
 }) {
   const pathname = usePathname();
   const isLibrary = pathname?.startsWith("/library") ?? false;
@@ -31,10 +29,5 @@ export function SidebarChrome({
     );
   }
 
-  return (
-    <>
-      {focusPanel}
-      {quote}
-    </>
-  );
+  return <>{focusPanel}</>;
 }

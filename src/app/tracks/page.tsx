@@ -140,7 +140,7 @@ export default async function AllTracksPage({
                   {STATUS_LABELS[s] ?? s}
                   <Badge variant="default">{grouped.get(s)?.length ?? 0}</Badge>
                 </h2>
-                <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+                <div className="flex flex-col gap-3">
                   {grouped.get(s)?.map((t) => (
                     <TrackCard key={t.id} track={t} />
                   ))}

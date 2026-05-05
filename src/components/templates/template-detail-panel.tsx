@@ -1,8 +1,10 @@
 "use client";
 
 import * as React from "react";
+import Link from "next/link";
 import {
   ChevronLeft,
+  ExternalLink,
   Folder,
   FolderOpen,
   Play,
@@ -63,14 +65,23 @@ export const TemplateDetailPanel = React.forwardRef<
 
   return (
     <div className="flex flex-col gap-5 rounded-lg border border-border bg-surface p-5 shadow-sm">
-      <button
-        type="button"
-        onClick={onBack}
-        className="-ml-1 flex items-center gap-1 text-sm font-medium text-muted-foreground transition-colors hover:text-foreground"
-      >
-        <ChevronLeft className="h-4 w-4" />
-        Back to Templates
-      </button>
+      <div className="flex items-center justify-between gap-2">
+        <button
+          type="button"
+          onClick={onBack}
+          className="-ml-1 flex items-center gap-1 text-sm font-medium text-muted-foreground transition-colors hover:text-foreground"
+        >
+          <ChevronLeft className="h-4 w-4" />
+          Back to Templates
+        </button>
+        <Link
+          href={`/templates/${item.id}`}
+          className="inline-flex items-center gap-1 text-xs font-medium text-primary transition-colors hover:underline"
+        >
+          <ExternalLink className="h-3.5 w-3.5" />
+          Open as new page
+        </Link>
+      </div>
 
       <TemplateThumbnail seed={item.id} showPlay={false} />
 

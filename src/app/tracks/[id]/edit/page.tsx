@@ -68,6 +68,22 @@ export default async function EditTrackPage({
               />
             </div>
 
+            <div className="grid gap-2">
+              <Label htmlFor="als_file_path">Ableton project file (.als)</Label>
+              <Input
+                id="als_file_path"
+                name="als_file_path"
+                type="text"
+                defaultValue={track.als_file_path ?? ""}
+                placeholder="/Users/you/Music/Ableton/Track Name.als"
+              />
+              <p className="text-xs text-muted-foreground">
+                Paste the absolute path to the .als file. The detail page will
+                show an &ldquo;Open in Finder&rdquo; button that copies it to
+                your clipboard.
+              </p>
+            </div>
+
             <div className="flex justify-end gap-2 pt-2">
               <Button asChild variant="ghost">
                 <Link href={`/tracks/${track.id}`}>Cancel</Link>

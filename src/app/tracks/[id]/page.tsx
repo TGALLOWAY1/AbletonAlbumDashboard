@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { format } from "date-fns";
-import { ArrowLeft, CalendarDays, Clock3, Play } from "lucide-react";
+import { ArrowLeft, CalendarDays, Clock3, Pencil, Play } from "lucide-react";
 import {
   Tabs,
   TabsContent,
@@ -15,6 +15,7 @@ import { BottleneckEditor } from "@/components/bottleneck-editor";
 import { NextActionEditor } from "@/components/next-action-editor";
 import { NotesEditor } from "@/components/notes-editor";
 import { AudioVersionList } from "@/components/audio-version-list";
+import { CopyPathButton } from "@/components/copy-path-button";
 import { getTrack } from "@/lib/data/tracks";
 import { getVersionsForTrack } from "@/lib/data/versions";
 
@@ -45,7 +46,11 @@ export default async function TrackDetailPage({
 
       <div className="flex flex-wrap items-start justify-between gap-6">
         <div className="flex items-start gap-5">
-          <div className="h-36 w-36 shrink-0 overflow-hidden rounded-lg bg-gradient-to-br from-primary/20 via-surface-2 to-accent/15">
+          <Link
+            href={`/tracks/${track.id}/edit`}
+            aria-label="Edit cover image"
+            className="group relative h-36 w-36 shrink-0 overflow-hidden rounded-lg bg-gradient-to-br from-primary/20 via-surface-2 to-accent/15"
+          >
             {track.cover_image_url ? (
               // eslint-disable-next-line @next/next/no-img-element
               <img
@@ -58,7 +63,10 @@ export default async function TrackDetailPage({
                 {track.name.slice(0, 2).toUpperCase()}
               </div>
             )}
-          </div>
+            <div className="pointer-events-none absolute inset-0 flex items-center justify-center bg-foreground/40 text-xs font-semibold uppercase tracking-wide text-background opacity-0 transition-opacity group-hover:opacity-100">
+              Edit cover
+            </div>
+          </Link>
           <div className="flex flex-col gap-2">
             <h1 className="text-3xl font-semibold tracking-tight">
               {track.name}
@@ -86,13 +94,37 @@ export default async function TrackDetailPage({
             </div>
           </div>
         </div>
-        <Button asChild>
-          <Link href={`/focus/${track.id}`}>
-            <Play className="h-4 w-4" />
-            Start focus session
-          </Link>
-        </Button>
+        <div className="flex items-center gap-2">
+          <Button asChild variant="outline">
+            <Link href={`/tracks/${track.id}/edit`}>
+              <Pencil className="h-4 w-4" />
+              Edit metadata
+            </Link>
+          </Button>
+          <Button asChild>
+            <Link href={`/focus/${track.id}`}>
+              <Play className="h-4 w-4" />
+              Start focus session
+            </Link>
+          </Button>
+        </div>
       </div>
+
+      {track.als_file_path && (
+        <div className="flex flex-wrap items-center gap-3 rounded-md border border-border bg-surface p-3 text-sm">
+          <span className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
+            Project file
+          </span>
+          <span className="truncate font-mono text-xs text-foreground">
+            {track.als_file_path}
+          </span>
+          <CopyPathButton
+            path={track.als_file_path}
+            size="sm"
+            className="ml-auto"
+          />
+        </div>
+      )}
 
       <Tabs defaultValue="overview">
         <TabsList>

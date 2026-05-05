@@ -4,6 +4,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { CoverImageUpload } from "@/components/cover-image-upload";
+import { SubmitButton } from "@/components/submit-button";
 import { createTrack } from "@/app/actions/tracks";
 import { countActiveTracks } from "@/lib/data/tracks";
 import { MAX_ACTIVE_TRACKS } from "@/lib/types";
@@ -82,7 +83,7 @@ export default async function NewTrackPage() {
               <Button asChild variant="ghost">
                 <Link href="/">Cancel</Link>
               </Button>
-              <Button type="submit">Create track</Button>
+              <SubmitButton pendingText="Creating…">Create track</SubmitButton>
             </div>
           </form>
         </CardContent>
