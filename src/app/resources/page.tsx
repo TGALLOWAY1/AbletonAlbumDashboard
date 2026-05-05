@@ -1,18 +1,15 @@
 import { ResourcesPageClient } from "@/components/resources/resources-page-client";
-import {
-  FEATURED_RESOURCES,
-  RECENT_RESOURCES,
-  RESOURCE_CATEGORIES,
-} from "@/lib/data/resources";
+import { getResourcesPageData } from "@/lib/data/resources-db";
 
 export const dynamic = "force-dynamic";
 
-export default function ResourcesPage() {
+export default async function ResourcesPage() {
+  const { categories, featured, recent } = await getResourcesPageData();
   return (
     <ResourcesPageClient
-      categories={RESOURCE_CATEGORIES}
-      featured={FEATURED_RESOURCES}
-      recent={RECENT_RESOURCES}
+      categories={categories}
+      featured={featured}
+      recent={recent}
     />
   );
 }

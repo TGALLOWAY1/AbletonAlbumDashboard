@@ -1,13 +1,18 @@
-import type { ResourceCategory } from "@/lib/data/resources";
+import type {
+  ResourceCategory,
+  ResourceCategoryId,
+} from "@/lib/data/resources";
 import { ResourcesSectionHeader } from "./resources-section-header";
 import { ResourceCategoryCard } from "./resource-category-card";
 
 export function ResourceCategoryGrid({
   categories,
+  activeCategoryId,
   onSelect,
   onViewAll,
 }: {
   categories: ResourceCategory[];
+  activeCategoryId?: ResourceCategoryId | null;
   onSelect?: (category: ResourceCategory) => void;
   onViewAll?: () => void;
 }) {
@@ -21,7 +26,7 @@ export function ResourceCategoryGrid({
             onClick={onViewAll}
             className="text-sm text-primary hover:underline"
           >
-            View all categories
+            {activeCategoryId ? "Clear filter" : "View all categories"}
           </button>
         }
       />
@@ -30,6 +35,7 @@ export function ResourceCategoryGrid({
           <ResourceCategoryCard
             key={category.id}
             category={category}
+            active={activeCategoryId === category.id}
             onSelect={onSelect}
           />
         ))}

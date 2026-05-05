@@ -4,9 +4,11 @@ import { RESOURCE_COLOR_CLASSES } from "./resource-colors";
 
 export function ResourceCategoryCard({
   category,
+  active = false,
   onSelect,
 }: {
   category: ResourceCategory;
+  active?: boolean;
   onSelect?: (category: ResourceCategory) => void;
 }) {
   const Icon = category.icon;
@@ -16,7 +18,13 @@ export function ResourceCategoryCard({
     <button
       type="button"
       onClick={() => onSelect?.(category)}
-      className="group flex flex-col gap-3 rounded-xl border border-border bg-surface p-4 text-left shadow-sm transition-colors hover:border-primary/30 hover:bg-surface-2/40"
+      aria-pressed={active}
+      className={cn(
+        "group flex flex-col gap-3 rounded-xl border bg-surface p-4 text-left shadow-sm transition-colors",
+        active
+          ? "border-primary/60 bg-surface-2/40"
+          : "border-border hover:border-primary/30 hover:bg-surface-2/40",
+      )}
     >
       <span
         className={cn(
@@ -35,7 +43,8 @@ export function ResourceCategoryCard({
         </p>
       </div>
       <div className="mt-auto pt-2 text-xs text-muted-foreground">
-        {category.articleCount} articles
+        {category.articleCount} article
+        {category.articleCount === 1 ? "" : "s"}
       </div>
     </button>
   );

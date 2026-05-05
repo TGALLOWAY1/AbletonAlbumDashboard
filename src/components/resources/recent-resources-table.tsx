@@ -4,7 +4,7 @@ import * as React from "react";
 import {
   Bookmark,
   FileText,
-  MoreHorizontal,
+  Link as LinkIcon,
   PlaySquare,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -32,6 +32,12 @@ function formatAddedDate(iso: string): string {
   });
 }
 
+function iconForResource(resource: ResourceItem) {
+  if (resource.type === "video") return PlaySquare;
+  if (resource.sourceKind === "url") return LinkIcon;
+  return FileText;
+}
+
 export function RecentResourcesTable({
   resources,
   page,
@@ -39,6 +45,7 @@ export function RecentResourcesTable({
   onToggleBookmark,
   onSelect,
   onViewAll,
+  bookmarkPending,
 }: {
   resources: ResourceItem[];
   page: number;
@@ -46,6 +53,7 @@ export function RecentResourcesTable({
   onToggleBookmark?: (id: string) => void;
   onSelect?: (resource: ResourceItem) => void;
   onViewAll?: () => void;
+  bookmarkPending?: boolean;
 }) {
   const totalPages = Math.max(1, Math.ceil(resources.length / PAGE_SIZE));
   const safePage = Math.min(page, totalPages);
@@ -93,7 +101,7 @@ export function RecentResourcesTable({
                 </tr>
               ) : (
                 visible.map((item) => {
-                  const Icon = item.type === "video" ? PlaySquare : FileText;
+                  const Icon = iconForResource(item);
                   return (
                     <tr
                       key={item.id}
@@ -130,12 +138,13 @@ export function RecentResourcesTable({
                               item.bookmarked ? "Remove bookmark" : "Bookmark"
                             }
                             aria-pressed={item.bookmarked ?? false}
+                            disabled={bookmarkPending}
                             onClick={(event) => {
                               event.stopPropagation();
                               onToggleBookmark?.(item.id);
                             }}
                             className={cn(
-                              "flex h-8 w-8 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-surface-2",
+                              "flex h-8 w-8 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-surface-2 disabled:opacity-50",
                               item.bookmarked && "text-primary",
                             )}
                           >
@@ -145,14 +154,6 @@ export function RecentResourcesTable({
                                 item.bookmarked && "fill-current",
                               )}
                             />
-                          </button>
-                          <button
-                            type="button"
-                            aria-label="More actions"
-                            onClick={(event) => event.stopPropagation()}
-                            className="flex h-8 w-8 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-surface-2"
-                          >
-                            <MoreHorizontal className="h-4 w-4" />
                           </button>
                         </div>
                       </td>

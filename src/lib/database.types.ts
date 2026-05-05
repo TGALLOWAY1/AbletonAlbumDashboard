@@ -193,6 +193,63 @@ export type Database = {
           },
         ];
       };
+      resources: {
+        Row: {
+          bookmarked: boolean;
+          category_id: string;
+          content: string | null;
+          created_at: string;
+          description: string;
+          featured: boolean;
+          id: string;
+          owner_id: string;
+          read_minutes: number;
+          source_kind: string;
+          storage_path: string | null;
+          thumbnail_url: string | null;
+          title: string;
+          type: string;
+          updated_at: string;
+          url: string | null;
+        };
+        Insert: {
+          bookmarked?: boolean;
+          category_id: string;
+          content?: string | null;
+          created_at?: string;
+          description?: string;
+          featured?: boolean;
+          id?: string;
+          owner_id: string;
+          read_minutes?: number;
+          source_kind: string;
+          storage_path?: string | null;
+          thumbnail_url?: string | null;
+          title: string;
+          type: string;
+          updated_at?: string;
+          url?: string | null;
+        };
+        Update: {
+          bookmarked?: boolean;
+          category_id?: string;
+          content?: string | null;
+          created_at?: string;
+          description?: string;
+          featured?: boolean;
+          id?: string;
+          owner_id?: string;
+          read_minutes?: number;
+          source_kind?: string;
+          storage_path?: string | null;
+          thumbnail_url?: string | null;
+          title?: string;
+          type?: string;
+          updated_at?: string;
+          url?: string | null;
+        };
+        Relationships: [];
+      };
       track_versions: {
         Row: {
           created_at: string;
