@@ -2,12 +2,14 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { ArrowLeft } from "lucide-react";
 import {
+  getCompletedActionsForTrack,
   getOpenActionsForTrack,
   getTrack,
 } from "@/lib/data/tracks";
 import { getVersionsForTrack } from "@/lib/data/versions";
 import { VersionItem } from "@/components/audio/version-item";
 import { TrackTodoList } from "@/components/mobile/track-todo-list";
+import { TrackTodoHistory } from "@/components/mobile/track-todo-history";
 
 export const dynamic = "force-dynamic";
 
@@ -17,10 +19,11 @@ export default async function MobileTrackPage({
   params: Promise<{ trackId: string }>;
 }) {
   const { trackId } = await params;
-  const [track, versions, todos] = await Promise.all([
+  const [track, versions, todos, completedTodos] = await Promise.all([
     getTrack(trackId),
     getVersionsForTrack(trackId),
     getOpenActionsForTrack(trackId),
+    getCompletedActionsForTrack(trackId),
   ]);
 
   if (!track) notFound();
@@ -88,6 +91,10 @@ export default async function MobileTrackPage({
 
       <section>
         <TrackTodoList trackId={track.id} initial={todos} />
+      </section>
+
+      <section>
+        <TrackTodoHistory trackId={track.id} initial={completedTodos} />
       </section>
     </div>
   );

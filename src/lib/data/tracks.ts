@@ -103,6 +103,20 @@ export async function getOpenActionsForTrack(
   return data ?? [];
 }
 
+export async function getCompletedActionsForTrack(
+  trackId: string,
+): Promise<ActionRow[]> {
+  const supabase = getServerSupabase();
+  const { data, error } = await supabase
+    .from("actions")
+    .select("*")
+    .eq("track_id", trackId)
+    .not("completed_at", "is", null)
+    .order("completed_at", { ascending: false });
+  if (error) throw error;
+  return data ?? [];
+}
+
 export async function countActiveTracks(): Promise<number> {
   const supabase = getServerSupabase();
   const { count, error } = await supabase

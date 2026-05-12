@@ -16,7 +16,11 @@ import { NextActionEditor } from "@/components/next-action-editor";
 import { NotesEditor } from "@/components/notes-editor";
 import { AudioVersionList } from "@/components/audio-version-list";
 import { CopyPathButton } from "@/components/copy-path-button";
-import { getTrack } from "@/lib/data/tracks";
+import { TrackTodoHistory } from "@/components/mobile/track-todo-history";
+import {
+  getCompletedActionsForTrack,
+  getTrack,
+} from "@/lib/data/tracks";
 import { getVersionsForTrack } from "@/lib/data/versions";
 
 export const dynamic = "force-dynamic";
@@ -27,9 +31,10 @@ export default async function TrackDetailPage({
   params: Promise<{ id: string }>;
 }) {
   const { id } = await params;
-  const [track, versions] = await Promise.all([
+  const [track, versions, completedTodos] = await Promise.all([
     getTrack(id),
     getVersionsForTrack(id),
+    getCompletedActionsForTrack(id),
   ]);
   if (!track) notFound();
 
@@ -140,6 +145,7 @@ export default async function TrackDetailPage({
           <TabsTrigger value="overview">Overview</TabsTrigger>
           <TabsTrigger value="notes">Notes</TabsTrigger>
           <TabsTrigger value="versions">Versions</TabsTrigger>
+          <TabsTrigger value="history">History</TabsTrigger>
           <TabsTrigger value="files" disabled>
             Files (soon)
           </TabsTrigger>
@@ -167,6 +173,14 @@ export default async function TrackDetailPage({
 
         <TabsContent value="versions">
           <AudioVersionList trackId={track.id} versions={versions} />
+        </TabsContent>
+
+        <TabsContent value="history">
+          <TrackTodoHistory
+            trackId={track.id}
+            initial={completedTodos}
+            variant="panel"
+          />
         </TabsContent>
       </Tabs>
     </div>
