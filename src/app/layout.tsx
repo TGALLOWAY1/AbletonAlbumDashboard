@@ -16,6 +16,19 @@ const geistMono = Geist_Mono({
 export const metadata: Metadata = {
   title: "Finish Five",
   description: "Five tracks. One focus. Finish them.",
+  applicationName: "Finish Five",
+  manifest: "/manifest.webmanifest",
+  openGraph: {
+    title: "Finish Five",
+    description: "Five tracks. One focus. Finish them.",
+    images: [{ url: "/icon.svg", width: 512, height: 512, alt: "Finish Five" }],
+  },
+  twitter: {
+    card: "summary",
+    title: "Finish Five",
+    description: "Five tracks. One focus. Finish them.",
+    images: ["/icon.svg"],
+  },
 };
 
 export const viewport: Viewport = {
