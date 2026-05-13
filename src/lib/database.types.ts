@@ -53,22 +53,37 @@ export type Database = {
           },
         ];
       };
-      album_settings: {
+      albums: {
         Row: {
           cover_image_url: string | null;
+          created_at: string;
+          id: string;
+          is_active: boolean;
           owner_id: string;
+          sort_order: number;
+          start_date: string | null;
           title: string | null;
           updated_at: string;
         };
         Insert: {
           cover_image_url?: string | null;
+          created_at?: string;
+          id?: string;
+          is_active?: boolean;
           owner_id: string;
+          sort_order?: number;
+          start_date?: string | null;
           title?: string | null;
           updated_at?: string;
         };
         Update: {
           cover_image_url?: string | null;
+          created_at?: string;
+          id?: string;
+          is_active?: boolean;
           owner_id?: string;
+          sort_order?: number;
+          start_date?: string | null;
           title?: string | null;
           updated_at?: string;
         };
@@ -478,6 +493,7 @@ export type Database = {
       };
       tracks: {
         Row: {
+          album_id: string | null;
           als_file_path: string | null;
           bpm: number | null;
           cover_image_url: string | null;
@@ -493,6 +509,7 @@ export type Database = {
           updated_at: string;
         };
         Insert: {
+          album_id?: string | null;
           als_file_path?: string | null;
           bpm?: number | null;
           cover_image_url?: string | null;
@@ -508,6 +525,7 @@ export type Database = {
           updated_at?: string;
         };
         Update: {
+          album_id?: string | null;
           als_file_path?: string | null;
           bpm?: number | null;
           cover_image_url?: string | null;
@@ -522,7 +540,15 @@ export type Database = {
           tags?: string[];
           updated_at?: string;
         };
-        Relationships: [];
+        Relationships: [
+          {
+            foreignKeyName: "tracks_album_id_fkey";
+            columns: ["album_id"];
+            isOneToOne: false;
+            referencedRelation: "albums";
+            referencedColumns: ["id"];
+          },
+        ];
       };
       weekly_reviews: {
         Row: {

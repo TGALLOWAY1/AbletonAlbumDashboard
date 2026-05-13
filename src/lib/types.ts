@@ -18,6 +18,11 @@ export type SessionRecurrenceRow =
   Database["public"]["Tables"]["session_recurrences"]["Row"];
 export type WeeklyReviewRow =
   Database["public"]["Tables"]["weekly_reviews"]["Row"];
+export type AlbumRow = Database["public"]["Tables"]["albums"]["Row"];
+
+export type AlbumWithTrackCount = AlbumRow & {
+  trackCount: number;
+};
 
 export const SESSION_STATUSES = [
   "planned",

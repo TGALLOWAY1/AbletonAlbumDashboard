@@ -7,13 +7,24 @@ import { CoverImageUpload } from "@/components/cover-image-upload";
 import { SubmitButton } from "@/components/submit-button";
 import { createTrack } from "@/app/actions/tracks";
 import { countActiveTracks } from "@/lib/data/tracks";
+import { listAlbums } from "@/lib/data/album";
 import { MAX_ACTIVE_TRACKS } from "@/lib/types";
 
 export const dynamic = "force-dynamic";
 
-export default async function NewTrackPage() {
-  const activeCount = await countActiveTracks();
+export default async function NewTrackPage({
+  searchParams,
+}: {
+  searchParams?: Promise<{ album?: string }>;
+}) {
+  const sp = (await searchParams) ?? {};
+  const [activeCount, albums] = await Promise.all([
+    countActiveTracks(),
+    listAlbums(),
+  ]);
   const atCap = activeCount >= MAX_ACTIVE_TRACKS;
+  const activeAlbum = albums.find((a) => a.is_active);
+  const defaultAlbumId = sp.album ?? activeAlbum?.id ?? "";
 
   return (
     <div className="mx-auto max-w-xl">
@@ -83,6 +94,31 @@ export default async function NewTrackPage() {
                 name="cover_image_url"
                 pathPrefix="covers/new"
               />
+            </div>
+
+            <div className="grid gap-2">
+              <Label htmlFor="album_id">Album</Label>
+              <select
+                id="album_id"
+                name="album_id"
+                defaultValue={defaultAlbumId}
+                className="flex h-9 w-full rounded-md border border-border bg-surface-2 px-3 text-sm text-foreground"
+              >
+                <option value="">No album</option>
+                {albums.map((a) => (
+                  <option key={a.id} value={a.id}>
+                    {(a.title?.trim() || "Untitled album") +
+                      (a.is_active ? " · active" : "")}
+                  </option>
+                ))}
+              </select>
+              <p className="text-xs text-muted-foreground">
+                Defaults to your active album.{" "}
+                <Link href="/albums/new" className="underline">
+                  Create a new album
+                </Link>
+                .
+              </p>
             </div>
 
             <div className="grid gap-2">
