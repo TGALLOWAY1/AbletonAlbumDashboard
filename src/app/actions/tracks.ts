@@ -24,6 +24,17 @@ const optionalBpm = z
   )
   .transform((v) => (v === "" ? null : Number(v)));
 
+const optionalUuid = z
+  .string()
+  .optional()
+  .default("")
+  .transform((v) => v.trim())
+  .refine(
+    (v) => v === "" || /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(v),
+    "Invalid album id",
+  )
+  .transform((v) => (v === "" ? null : v));
+
 const createSchema = z.object({
   name: z.string().min(1, "Name is required").max(120),
   tags: z.string().optional().default(""),
@@ -31,6 +42,7 @@ const createSchema = z.object({
   status: z.enum(["active", "backlog"]).default("active"),
   song_key: optionalTrimmed.pipe(z.string().max(20)),
   bpm: optionalBpm,
+  album_id: optionalUuid,
 });
 
 function parseTags(raw: string): string[] {
@@ -38,6 +50,20 @@ function parseTags(raw: string): string[] {
     .split(",")
     .map((t) => t.trim())
     .filter(Boolean);
+}
+
+async function resolveAlbumId(
+  supabase: ReturnType<typeof getServerSupabase>,
+  raw: string | null,
+): Promise<string | null> {
+  if (raw) return raw;
+  const { data } = await supabase
+    .from("albums")
+    .select("id")
+    .eq("owner_id", OWNER_ID)
+    .eq("is_active", true)
+    .maybeSingle();
+  return data?.id ?? null;
 }
 
 export async function createTrack(formData: FormData) {
@@ -48,6 +74,7 @@ export async function createTrack(formData: FormData) {
     status: formData.get("status") ?? "active",
     song_key: formData.get("song_key") ?? "",
     bpm: formData.get("bpm") ?? "",
+    album_id: formData.get("album_id") ?? "",
   });
 
   const supabase = getServerSupabase();
@@ -65,6 +92,8 @@ export async function createTrack(formData: FormData) {
     }
   }
 
+  const album_id = await resolveAlbumId(supabase, parsed.album_id);
+
   const { data, error } = await supabase
     .from("tracks")
     .insert({
@@ -75,6 +104,7 @@ export async function createTrack(formData: FormData) {
       status: parsed.status,
       song_key: parsed.song_key || null,
       bpm: parsed.bpm,
+      album_id,
     })
     .select("id")
     .single();
@@ -82,6 +112,8 @@ export async function createTrack(formData: FormData) {
 
   revalidatePath("/");
   revalidatePath("/tracks");
+  revalidatePath("/albums");
+  if (album_id) revalidatePath(`/albums/${album_id}`);
   redirect(`/tracks/${data.id}`);
 }
 
@@ -93,6 +125,7 @@ const updateSchema = z.object({
   als_file_path: z.string().max(1000).optional().default(""),
   song_key: optionalTrimmed.pipe(z.string().max(20)),
   bpm: optionalBpm,
+  album_id: optionalUuid,
 });
 
 export async function updateTrack(formData: FormData) {
@@ -104,6 +137,7 @@ export async function updateTrack(formData: FormData) {
     als_file_path: formData.get("als_file_path") ?? "",
     song_key: formData.get("song_key") ?? "",
     bpm: formData.get("bpm") ?? "",
+    album_id: formData.get("album_id") ?? "",
   });
   const supabase = getServerSupabase();
   const { error } = await supabase
@@ -115,12 +149,15 @@ export async function updateTrack(formData: FormData) {
       als_file_path: parsed.als_file_path.trim() || null,
       song_key: parsed.song_key || null,
       bpm: parsed.bpm,
+      album_id: parsed.album_id,
     })
     .eq("owner_id", OWNER_ID)
     .eq("id", parsed.id);
   if (error) throw error;
   revalidatePath(`/tracks/${parsed.id}`);
   revalidatePath("/");
+  revalidatePath("/albums");
+  if (parsed.album_id) revalidatePath(`/albums/${parsed.album_id}`);
 }
 
 export async function setTrackStatus(id: string, status: string) {

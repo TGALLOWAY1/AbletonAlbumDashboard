@@ -73,6 +73,34 @@ export async function getTracksByStatus(
   return attachDetails(data ?? []);
 }
 
+export async function getTracksByAlbum(
+  albumId: string,
+): Promise<TrackWithDetails[]> {
+  const supabase = getServerSupabase();
+  const { data, error } = await supabase
+    .from("tracks")
+    .select("*")
+    .eq("owner_id", OWNER_ID)
+    .eq("album_id", albumId)
+    .order("last_worked_at", { ascending: false, nullsFirst: false })
+    .order("created_at", { ascending: false });
+  if (error) throw error;
+  return attachDetails(data ?? []);
+}
+
+export async function getTracksWithoutAlbum(): Promise<TrackWithDetails[]> {
+  const supabase = getServerSupabase();
+  const { data, error } = await supabase
+    .from("tracks")
+    .select("*")
+    .eq("owner_id", OWNER_ID)
+    .is("album_id", null)
+    .order("last_worked_at", { ascending: false, nullsFirst: false })
+    .order("created_at", { ascending: false });
+  if (error) throw error;
+  return attachDetails(data ?? []);
+}
+
 export async function getAllTracks(): Promise<TrackWithDetails[]> {
   const supabase = getServerSupabase();
   const { data, error } = await supabase

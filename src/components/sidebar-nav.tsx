@@ -6,6 +6,7 @@ import {
   BarChart3,
   BookOpen,
   Calendar,
+  Disc3,
   Headphones,
   Home,
   LayoutTemplate,
@@ -24,6 +25,7 @@ type NavItem = {
 
 const NAV_ITEMS: NavItem[] = [
   { href: "/", label: "Dashboard", icon: Home },
+  { href: "/albums", label: "Albums", icon: Disc3 },
   { href: "/tracks", label: "All Tracks", icon: ListMusic },
   { href: "/library", label: "Library", icon: Library },
   { href: "/calendar", label: "Calendar", icon: Calendar },

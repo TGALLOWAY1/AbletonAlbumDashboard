@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { CoverImageUpload } from "@/components/cover-image-upload";
 import { updateTrack } from "@/app/actions/tracks";
 import { getTrack } from "@/lib/data/tracks";
+import { listAlbums } from "@/lib/data/album";
 
 export const dynamic = "force-dynamic";
 
@@ -16,7 +17,7 @@ export default async function EditTrackPage({
   params: Promise<{ id: string }>;
 }) {
   const { id } = await params;
-  const track = await getTrack(id);
+  const [track, albums] = await Promise.all([getTrack(id), listAlbums()]);
   if (!track) notFound();
 
   return (
@@ -92,6 +93,24 @@ export default async function EditTrackPage({
                 pathPrefix={`covers/${track.id}`}
                 defaultUrl={track.cover_image_url}
               />
+            </div>
+
+            <div className="grid gap-2">
+              <Label htmlFor="album_id">Album</Label>
+              <select
+                id="album_id"
+                name="album_id"
+                defaultValue={track.album_id ?? ""}
+                className="flex h-9 w-full rounded-md border border-border bg-surface-2 px-3 text-sm text-foreground"
+              >
+                <option value="">No album</option>
+                {albums.map((a) => (
+                  <option key={a.id} value={a.id}>
+                    {(a.title?.trim() || "Untitled album") +
+                      (a.is_active ? " · active" : "")}
+                  </option>
+                ))}
+              </select>
             </div>
 
             <div className="grid gap-2">

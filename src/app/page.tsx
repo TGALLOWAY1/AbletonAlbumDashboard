@@ -4,11 +4,16 @@ import { Plus, Sun } from "lucide-react";
 import { TrackCard } from "@/components/track-card";
 import { RecommendationCard } from "@/components/recommendation-card";
 import { TrackSortControl } from "@/components/track-sort-control";
+import { UpcomingAlbumsGallery } from "@/components/album/upcoming-albums-gallery";
 import { SORT_OPTIONS, type SortValue } from "@/lib/sort-options";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { getTracksByStatus } from "@/lib/data/tracks";
-import { getAlbumSettings } from "@/lib/data/album";
+import {
+  getTracksByAlbum,
+  getTracksByStatus,
+  getTracksWithoutAlbum,
+} from "@/lib/data/tracks";
+import { getActiveAlbum, listUpcomingAlbums } from "@/lib/data/album";
 import { recommendTrack } from "@/lib/recommend";
 import { getServerSupabase } from "@/lib/supabase/server";
 import { OWNER_ID } from "@/lib/owner";
@@ -82,39 +87,53 @@ export default async function DashboardPage({
   const sp = (await searchParams) ?? {};
   const sort: SortValue = isSortValue(sp.sort) ? sp.sort : "recommended";
 
-  const [active, sessionCounts, album] = await Promise.all([
-    getTracksByStatus("active"),
+  const [activeAlbum, upcomingAlbums, sessionCounts] = await Promise.all([
+    getActiveAlbum(),
+    listUpcomingAlbums(4),
     fetchSessionsLast7DaysByTrack(),
-    getAlbumSettings(),
   ]);
-  const recommendation = recommendTrack(active, sessionCounts);
 
-  // Build score map for sort=recommended.
+  // Active tracks live in the active album. If no album is set up yet (fresh
+  // install, or every album deleted), fall back to all status=active tracks so
+  // the dashboard never goes empty before the user creates their first album.
+  const activeTracks: TrackWithDetails[] = activeAlbum
+    ? (await getTracksByAlbum(activeAlbum.id)).filter(
+        (t) => t.status === "active",
+      )
+    : await getTracksByStatus("active");
+
+  // Tracks without an album: surface them so they don't get lost.
+  const orphanTracks = activeAlbum ? await getTracksWithoutAlbum() : [];
+
+  const recommendation = recommendTrack(activeTracks, sessionCounts);
+
   const scoreById = new Map<string, number>();
-  active.forEach((t) => {
+  activeTracks.forEach((t) => {
     const r = recommendTrack([t], sessionCounts);
     scoreById.set(t.id, r?.score ?? 0);
   });
-  const sorted = sortTracks(active, sort, scoreById);
+  const sorted = sortTracks(activeTracks, sort, scoreById);
 
   const now = new Date();
   const greeting = greetingForHour(now.getHours());
   const dateLabel = format(now, "MMMM d, yyyy");
 
+  const albumTitle = activeAlbum?.title?.trim() || null;
+
   return (
     <div className="flex flex-col gap-6">
       <header className="flex flex-wrap items-start justify-between gap-4">
         <div className="flex items-start gap-4">
-          {album?.cover_image_url && (
+          {activeAlbum?.cover_image_url && (
             <Link
-              href="/settings"
+              href={`/albums/${activeAlbum.id}`}
               className="h-16 w-16 shrink-0 overflow-hidden rounded-md border border-border bg-surface-2"
-              aria-label="Edit album cover"
+              aria-label="Edit active album"
             >
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img
-                src={album.cover_image_url}
-                alt={album.title ?? "Album cover"}
+                src={activeAlbum.cover_image_url}
+                alt={albumTitle ?? "Album cover"}
                 className="h-full w-full object-cover"
               />
             </Link>
@@ -124,8 +143,8 @@ export default async function DashboardPage({
               {greeting}, producer.
             </h1>
             <p className="mt-1 text-sm text-muted-foreground md:text-base">
-              {album?.title
-                ? `Working on “${album.title}”.`
+              {albumTitle
+                ? `Working on “${albumTitle}”.`
                 : "Focus on finishing, not starting."}
             </p>
           </div>
@@ -147,7 +166,8 @@ export default async function DashboardPage({
       <section>
         <div className="mb-3 flex items-center justify-between gap-3">
           <h2 className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
-            Your {active.length} {active.length === 1 ? "track" : "tracks"}
+            {activeAlbum ? "Active album" : "Your active tracks"} ·{" "}
+            {sorted.length} {sorted.length === 1 ? "track" : "tracks"}
           </h2>
           <TrackSortControl current={sort} />
         </div>
@@ -182,6 +202,29 @@ export default async function DashboardPage({
           </div>
         )}
       </section>
+
+      <UpcomingAlbumsGallery albums={upcomingAlbums} />
+
+      {orphanTracks.length > 0 && (
+        <section>
+          <div className="mb-3 flex items-center justify-between gap-3">
+            <h2 className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+              Unassigned tracks · {orphanTracks.length}
+            </h2>
+            <Button asChild variant="ghost" size="sm">
+              <Link href="/albums">Assign to album</Link>
+            </Button>
+          </div>
+          <Card>
+            <CardContent className="p-4 text-sm text-muted-foreground">
+              {orphanTracks.length}{" "}
+              {orphanTracks.length === 1 ? "track is" : "tracks are"} not yet
+              assigned to an album. Open a track to set its album, or use the
+              albums page to bulk-assign.
+            </CardContent>
+          </Card>
+        </section>
+      )}
 
       <RecommendationCard rec={recommendation} />
     </div>
