@@ -37,6 +37,28 @@ function logSupabaseError(label: string, err: unknown) {
   });
 }
 
+// Supabase PostgrestError is a plain object `{ code, message, details, hint }`,
+// not an `Error` instance — so `err instanceof Error` is false and we'd
+// otherwise drop the real message on the floor and show a generic fallback.
+function extractErrorMessage(err: unknown, fallback: string): string {
+  if (err instanceof Error && err.message) return err.message;
+  if (typeof err === "object" && err !== null) {
+    const e = err as {
+      message?: string;
+      details?: string;
+      hint?: string;
+      code?: string;
+    };
+    if (e.message) {
+      const parts = [e.message];
+      if (e.code) parts.push(`(${e.code})`);
+      if (e.hint) parts.push(`— ${e.hint}`);
+      return parts.join(" ");
+    }
+  }
+  return fallback;
+}
+
 const upsertSchema = z.object({
   id: z.string().uuid().optional(),
   title: z.string().max(120).optional().default(""),
@@ -102,10 +124,10 @@ export async function createAlbum(
       return { error: ALBUMS_MIGRATION_MISSING_MESSAGE };
     }
     return {
-      error:
-        err instanceof Error
-          ? err.message
-          : "Could not create album. Please try again.",
+      error: extractErrorMessage(
+        err,
+        "Could not create album. Please try again.",
+      ),
     };
   }
   // redirect() throws NEXT_REDIRECT internally — keep it outside the try/catch
