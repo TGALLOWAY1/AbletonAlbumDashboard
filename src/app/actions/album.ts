@@ -20,6 +20,23 @@ function throwIfMissingAlbums(
   }
 }
 
+export type CreateAlbumState = { error: string | null };
+
+function logSupabaseError(label: string, err: unknown) {
+  const e = err as {
+    code?: string;
+    message?: string;
+    details?: string;
+    hint?: string;
+  };
+  console.error(label, {
+    code: e?.code,
+    message: e?.message ?? (err instanceof Error ? err.message : String(err)),
+    details: e?.details,
+    hint: e?.hint,
+  });
+}
+
 const upsertSchema = z.object({
   id: z.string().uuid().optional(),
   title: z.string().max(120).optional().default(""),
@@ -40,40 +57,60 @@ function revalidateAlbumViews(id?: string) {
   if (id) revalidatePath(`/albums/${id}`);
 }
 
-export async function createAlbum(formData: FormData) {
-  const parsed = upsertSchema.parse({
-    title: formData.get("title") ?? "",
-    cover_image_url: formData.get("cover_image_url") ?? "",
-    start_date: formData.get("start_date") ?? "",
-  });
+export async function createAlbum(
+  _prev: CreateAlbumState,
+  formData: FormData,
+): Promise<CreateAlbumState> {
+  let newId: string;
+  try {
+    const parsed = upsertSchema.parse({
+      title: formData.get("title") ?? "",
+      cover_image_url: formData.get("cover_image_url") ?? "",
+      start_date: formData.get("start_date") ?? "",
+    });
 
-  const supabase = getServerSupabase();
+    const supabase = getServerSupabase();
 
-  const { count, error: countErr } = await supabase
-    .from("albums")
-    .select("*", { count: "exact", head: true })
-    .eq("owner_id", OWNER_ID);
-  throwIfMissingAlbums(countErr);
-  if (countErr) throw countErr;
-  const hasAny = (count ?? 0) > 0;
+    const { count, error: countErr } = await supabase
+      .from("albums")
+      .select("*", { count: "exact", head: true })
+      .eq("owner_id", OWNER_ID);
+    throwIfMissingAlbums(countErr);
+    if (countErr) throw countErr;
+    const hasAny = (count ?? 0) > 0;
 
-  const { data, error } = await supabase
-    .from("albums")
-    .insert({
-      owner_id: OWNER_ID,
-      title: parsed.title || null,
-      cover_image_url: parsed.cover_image_url || null,
-      start_date: parsed.start_date || null,
-      sort_order: count ?? 0,
-      is_active: !hasAny,
-    })
-    .select("id")
-    .single();
-  throwIfMissingAlbums(error);
-  if (error) throw error;
+    const { data, error } = await supabase
+      .from("albums")
+      .insert({
+        owner_id: OWNER_ID,
+        title: parsed.title || null,
+        cover_image_url: parsed.cover_image_url || null,
+        start_date: parsed.start_date || null,
+        sort_order: count ?? 0,
+        is_active: !hasAny,
+      })
+      .select("id")
+      .single();
+    throwIfMissingAlbums(error);
+    if (error) throw error;
 
-  revalidateAlbumViews(data.id);
-  redirect(`/albums/${data.id}`);
+    newId = data.id;
+    revalidateAlbumViews(newId);
+  } catch (err) {
+    logSupabaseError("[createAlbum] failed", err);
+    if (isMissingRelation(err as { code?: string | null })) {
+      return { error: ALBUMS_MIGRATION_MISSING_MESSAGE };
+    }
+    return {
+      error:
+        err instanceof Error
+          ? err.message
+          : "Could not create album. Please try again.",
+    };
+  }
+  // redirect() throws NEXT_REDIRECT internally — keep it outside the try/catch
+  // so we don't swallow it as a generic error.
+  redirect(`/albums/${newId}`);
 }
 
 export async function updateAlbum(formData: FormData) {
