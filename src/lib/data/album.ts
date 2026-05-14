@@ -8,18 +8,37 @@ import type { AlbumRow, AlbumWithTrackCount } from "@/lib/types";
 // the dashboard keeps rendering instead of throwing a Server Components
 // error; the user will see album features come online once they apply the
 // migration.
-function isMissingRelation(error: { code?: string | null } | null): boolean {
+export function isMissingRelation(
+  error: { code?: string | null } | null,
+): boolean {
   return error?.code === "PGRST205";
 }
 
+export const ALBUMS_MIGRATION_MISSING_MESSAGE =
+  "The albums feature is not available yet. Apply supabase/migrations/0010_albums.sql " +
+  "to your Supabase project, then try again.";
+
 let warnedAboutMissingAlbums = false;
-function warnMissingAlbumsOnce() {
+export function warnMissingAlbumsOnce() {
   if (warnedAboutMissingAlbums) return;
   warnedAboutMissingAlbums = true;
   console.warn(
     "[albums] `albums` table is missing from PostgREST schema cache. " +
       "Apply supabase/migrations/0010_albums.sql to enable album features.",
   );
+}
+
+export async function isAlbumsTableMissing(): Promise<boolean> {
+  const supabase = getServerSupabase();
+  const { error } = await supabase
+    .from("albums")
+    .select("id", { head: true, count: "exact" })
+    .limit(1);
+  if (error && isMissingRelation(error)) {
+    warnMissingAlbumsOnce();
+    return true;
+  }
+  return false;
 }
 
 export async function getActiveAlbum(): Promise<AlbumRow | null> {

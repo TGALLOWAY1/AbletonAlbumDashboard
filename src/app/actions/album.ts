@@ -5,6 +5,20 @@ import { redirect } from "next/navigation";
 import { z } from "zod";
 import { getServerSupabase } from "@/lib/supabase/server";
 import { OWNER_ID } from "@/lib/owner";
+import {
+  ALBUMS_MIGRATION_MISSING_MESSAGE,
+  isMissingRelation,
+  warnMissingAlbumsOnce,
+} from "@/lib/data/album";
+
+function throwIfMissingAlbums(
+  error: { code?: string | null } | null,
+): asserts error is null {
+  if (error && isMissingRelation(error)) {
+    warnMissingAlbumsOnce();
+    throw new Error(ALBUMS_MIGRATION_MISSING_MESSAGE);
+  }
+}
 
 const upsertSchema = z.object({
   id: z.string().uuid().optional(),
@@ -35,10 +49,12 @@ export async function createAlbum(formData: FormData) {
 
   const supabase = getServerSupabase();
 
-  const { count } = await supabase
+  const { count, error: countErr } = await supabase
     .from("albums")
     .select("*", { count: "exact", head: true })
     .eq("owner_id", OWNER_ID);
+  throwIfMissingAlbums(countErr);
+  if (countErr) throw countErr;
   const hasAny = (count ?? 0) > 0;
 
   const { data, error } = await supabase
@@ -53,6 +69,7 @@ export async function createAlbum(formData: FormData) {
     })
     .select("id")
     .single();
+  throwIfMissingAlbums(error);
   if (error) throw error;
 
   revalidateAlbumViews(data.id);
@@ -78,6 +95,7 @@ export async function updateAlbum(formData: FormData) {
     })
     .eq("owner_id", OWNER_ID)
     .eq("id", parsed.id);
+  throwIfMissingAlbums(error);
   if (error) throw error;
 
   revalidateAlbumViews(parsed.id);
@@ -94,6 +112,7 @@ export async function setActiveAlbum(id: string) {
     .update({ is_active: false })
     .eq("owner_id", OWNER_ID)
     .eq("is_active", true);
+  throwIfMissingAlbums(clearErr);
   if (clearErr) throw clearErr;
 
   const { error: setErr } = await supabase
@@ -101,6 +120,7 @@ export async function setActiveAlbum(id: string) {
     .update({ is_active: true })
     .eq("owner_id", OWNER_ID)
     .eq("id", id);
+  throwIfMissingAlbums(setErr);
   if (setErr) throw setErr;
 
   revalidateAlbumViews(id);
@@ -116,6 +136,7 @@ export async function deleteAlbum(id: string) {
     .eq("owner_id", OWNER_ID)
     .eq("id", id)
     .maybeSingle();
+  throwIfMissingAlbums(fetchErr);
   if (fetchErr) throw fetchErr;
   if (!album) return;
 
@@ -124,6 +145,7 @@ export async function deleteAlbum(id: string) {
     .delete()
     .eq("owner_id", OWNER_ID)
     .eq("id", id);
+  throwIfMissingAlbums(error);
   if (error) throw error;
 
   // If we just removed the active album, promote the next one so the

@@ -6,11 +6,14 @@ import { Button } from "@/components/ui/button";
 import { CoverImageUpload } from "@/components/cover-image-upload";
 import { SubmitButton } from "@/components/submit-button";
 import { createAlbum } from "@/app/actions/album";
+import { isAlbumsTableMissing } from "@/lib/data/album";
 import { OWNER_ID } from "@/lib/owner";
 
 export const dynamic = "force-dynamic";
 
-export default function NewAlbumPage() {
+export default async function NewAlbumPage() {
+  const albumsMissing = await isAlbumsTableMissing();
+
   return (
     <div className="mx-auto max-w-xl">
       <div className="mb-6 flex items-center justify-between">
@@ -19,6 +22,21 @@ export default function NewAlbumPage() {
           <Link href="/albums">Cancel</Link>
         </Button>
       </div>
+
+      {albumsMissing && (
+        <Card className="mb-4 border-warning/40 bg-warning/5">
+          <CardContent className="p-4 text-sm">
+            <p className="font-medium">Albums feature not enabled yet</p>
+            <p className="mt-1 text-muted-foreground">
+              Apply{" "}
+              <code className="rounded bg-surface-2 px-1 py-0.5 text-xs">
+                supabase/migrations/0010_albums.sql
+              </code>{" "}
+              to your Supabase project to enable album creation.
+            </p>
+          </CardContent>
+        </Card>
+      )}
 
       <Card>
         <CardHeader>
