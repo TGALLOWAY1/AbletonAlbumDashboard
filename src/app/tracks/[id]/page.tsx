@@ -60,12 +60,12 @@ export default async function TrackDetailPage({
         </Link>
       </Button>
 
-      <div className="flex flex-wrap items-start justify-between gap-6">
-        <div className="flex items-start gap-5">
+      <div className="flex flex-col gap-4 md:flex-row md:flex-wrap md:items-start md:justify-between md:gap-6">
+        <div className="flex flex-col items-start gap-4 sm:flex-row sm:gap-5">
           <Link
             href={`/tracks/${track.id}/edit`}
             aria-label="Edit cover image"
-            className="group relative h-36 w-36 shrink-0 overflow-hidden rounded-lg bg-gradient-to-br from-primary/20 via-surface-2 to-accent/15"
+            className="group relative h-28 w-28 shrink-0 overflow-hidden rounded-lg bg-gradient-to-br from-primary/20 via-surface-2 to-accent/15 sm:h-36 sm:w-36"
           >
             {track.cover_image_url ? (
               // eslint-disable-next-line @next/next/no-img-element
@@ -84,7 +84,7 @@ export default async function TrackDetailPage({
             </div>
           </Link>
           <div className="flex flex-col gap-2">
-            <h1 className="text-3xl font-semibold tracking-tight">
+            <h1 className="text-2xl font-semibold tracking-tight sm:text-3xl">
               {track.name}
             </h1>
             <div className="flex flex-wrap items-center gap-2">
@@ -115,7 +115,7 @@ export default async function TrackDetailPage({
             </div>
           </div>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
           <Button asChild variant="outline">
             <Link href={`/tracks/${track.id}/edit`}>
               <Pencil className="h-4 w-4" />
@@ -148,7 +148,7 @@ export default async function TrackDetailPage({
       )}
 
       <Tabs defaultValue="overview">
-        <TabsList>
+        <TabsList className="flex flex-wrap">
           <TabsTrigger value="overview">Overview</TabsTrigger>
           <TabsTrigger value="notes">Notes</TabsTrigger>
           <TabsTrigger value="versions">Versions</TabsTrigger>
