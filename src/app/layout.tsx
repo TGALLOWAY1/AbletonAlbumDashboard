@@ -3,6 +3,7 @@ import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import { Sidebar } from "@/components/sidebar";
 import { MobileBottomNav } from "@/components/mobile/bottom-nav";
+import { MobileHeader } from "@/components/mobile/mobile-header";
 import { FocusSessionProvider } from "@/components/focus-session-provider";
 import { FloatingFocusBar } from "@/components/floating-focus-bar";
 
@@ -58,9 +59,12 @@ export default function RootLayout({
         <FocusSessionProvider>
           <div className="flex min-h-screen">
             <Sidebar />
-            <main className="flex-1 px-4 pb-24 pt-4 md:px-8 md:pb-7 md:pt-7">
-              {children}
-            </main>
+            <div className="flex min-w-0 flex-1 flex-col">
+              <MobileHeader />
+              <main className="flex-1 px-4 pb-24 pt-4 md:px-8 md:pb-7 md:pt-7">
+                {children}
+              </main>
+            </div>
           </div>
           <MobileBottomNav />
           <FloatingFocusBar />
