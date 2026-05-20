@@ -62,7 +62,7 @@ export function WeekView({
   };
 
   return (
-    <div className="overflow-x-auto">
+    <div className="-mx-3 overflow-x-auto px-3 sm:mx-0 sm:px-0">
       <div
         className="grid min-w-[840px] border border-border bg-surface"
         style={{ gridTemplateColumns: "60px repeat(7, minmax(110px, 1fr))" }}

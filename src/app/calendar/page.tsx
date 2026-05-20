@@ -12,14 +12,15 @@ import {
   startOfWeekMonday,
 } from "@/lib/dates";
 import { materializeRecurrencesForWeek } from "@/app/actions/session-recurrences";
+import { isMobileUserAgent } from "@/lib/user-agent";
 
 export const dynamic = "force-dynamic";
 
-type View = "day" | "week" | "month";
+type View = "agenda" | "day" | "week" | "month";
 
-function parseView(s: string | undefined): View {
-  if (s === "day" || s === "week" || s === "month") return s;
-  return "week";
+function parseView(s: string | undefined, fallback: View): View {
+  if (s === "agenda" || s === "day" || s === "week" || s === "month") return s;
+  return fallback;
 }
 
 export default async function CalendarPage({
@@ -28,7 +29,8 @@ export default async function CalendarPage({
   searchParams: Promise<{ view?: string; d?: string }>;
 }) {
   const params = await searchParams;
-  const view = parseView(params.view);
+  const defaultView: View = (await isMobileUserAgent()) ? "agenda" : "week";
+  const view = parseView(params.view, defaultView);
 
   const anchor =
     view === "week" ? parseWeekParam(params.d) : parseDayParam(params.d);
@@ -42,6 +44,10 @@ export default async function CalendarPage({
   } else if (view === "week") {
     from = startOfWeekMonday(anchor);
     to = addDays(from, 7);
+  } else if (view === "agenda") {
+    from = new Date(anchor);
+    from.setHours(0, 0, 0, 0);
+    to = addDays(from, 30);
   } else {
     const monthStart = startOfMonth(anchor);
     const monthEnd = endOfMonth(monthStart);

@@ -10,6 +10,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { WeekView } from "./week-view";
 import { DayView } from "./day-view";
 import { MonthView } from "./month-view";
+import { AgendaView } from "./agenda-view";
 import { SessionPlanDialog, type PlanDialogInitial } from "./session-plan-dialog";
 import { SessionCompleteDialog } from "./session-complete-dialog";
 import { WeeklyIntentionPanel } from "./weekly-intention-panel";
@@ -24,7 +25,7 @@ import type {
 } from "@/lib/types";
 import type { TemplateWithTodos } from "@/lib/data/session-templates";
 
-type View = "day" | "week" | "month";
+type View = "agenda" | "day" | "week" | "month";
 
 function buildDraft(session: CalendarSessionRow) {
   const startedAt =
@@ -81,11 +82,13 @@ export function CalendarClient({
   const goPrev = () => {
     if (view === "day") navigate(subDays(anchor, 1));
     else if (view === "week") navigate(subDays(anchor, 7));
+    else if (view === "agenda") navigate(subDays(anchor, 7));
     else navigate(subMonths(anchor, 1));
   };
   const goNext = () => {
     if (view === "day") navigate(addDays(anchor, 1));
     else if (view === "week") navigate(addDays(anchor, 7));
+    else if (view === "agenda") navigate(addDays(anchor, 7));
     else navigate(addMonths(anchor, 1));
   };
   const goToday = () => navigate(new Date());
@@ -142,6 +145,9 @@ export function CalendarClient({
       const we = addDays(ws, 6);
       return `${format(ws, "MMM d")} – ${format(we, "MMM d, yyyy")}`;
     }
+    if (view === "agenda") {
+      return `Upcoming from ${format(anchor, "MMM d")}`;
+    }
     return format(anchor, "MMMM yyyy");
   })();
 
@@ -163,7 +169,7 @@ export function CalendarClient({
         </div>
         <div className="flex flex-wrap items-center gap-2">
           <div className="flex rounded-md border border-border bg-surface p-0.5">
-            {(["day", "week", "month"] as View[]).map((v) => (
+            {(["agenda", "day", "week", "month"] as View[]).map((v) => (
               <button
                 key={v}
                 onClick={() => setViewParam(v)}
@@ -276,6 +282,16 @@ export function CalendarClient({
               sessions={sessions}
               onCreateSlot={openPlanDialog}
               onSelectSession={openSessionDetail}
+            />
+          )}
+          {view === "agenda" && (
+            <AgendaView
+              rangeStart={anchor}
+              rangeEnd={addDays(anchor, 30)}
+              sessions={sessions}
+              onCreateSlot={openPlanDialog}
+              onSelectSession={openSessionDetail}
+              onStartNow={startNow}
             />
           )}
         </CardContent>
