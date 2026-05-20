@@ -102,7 +102,7 @@ export function LibraryToolbar({
         value={tab}
         onValueChange={(v) => onTabChange(v as LibraryCategory | "all")}
       >
-        <TabsList className="border-0 bg-transparent p-0">
+        <TabsList className="flex w-full flex-wrap border-0 bg-transparent p-0">
           {TABS.map((t) => (
             <TabsTrigger
               key={t.value}
@@ -115,8 +115,8 @@ export function LibraryToolbar({
         </TabsList>
       </Tabs>
 
-      <div className="flex flex-wrap items-center gap-3">
-        <div className="relative min-w-56 flex-1">
+      <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center">
+        <div className="relative w-full flex-1 sm:min-w-56">
           <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
           <Input
             value={search}
@@ -126,53 +126,55 @@ export function LibraryToolbar({
           />
         </div>
 
-        <div className="w-36">
-          <Select value={type} onValueChange={onTypeChange}>
-            <SelectTrigger>
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              {TYPE_OPTIONS.map((o) => (
-                <SelectItem key={o.value} value={o.value}>
-                  {o.label}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+        <div className="grid grid-cols-3 gap-2 sm:flex sm:gap-3">
+          <div className="sm:w-36">
+            <Select value={type} onValueChange={onTypeChange}>
+              <SelectTrigger>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {TYPE_OPTIONS.map((o) => (
+                  <SelectItem key={o.value} value={o.value}>
+                    {o.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
+          <div className="sm:w-32">
+            <Select value={musicKey} onValueChange={onKeyChange}>
+              <SelectTrigger>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {KEY_OPTIONS.map((o) => (
+                  <SelectItem key={o.value} value={o.value}>
+                    {o.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
+          <div className="sm:w-36">
+            <Select value={bpm} onValueChange={onBpmChange}>
+              <SelectTrigger>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {BPM_OPTIONS.map((o) => (
+                  <SelectItem key={o.value} value={o.value}>
+                    {o.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
         </div>
 
-        <div className="w-32">
-          <Select value={musicKey} onValueChange={onKeyChange}>
-            <SelectTrigger>
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              {KEY_OPTIONS.map((o) => (
-                <SelectItem key={o.value} value={o.value}>
-                  {o.label}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
-
-        <div className="w-36">
-          <Select value={bpm} onValueChange={onBpmChange}>
-            <SelectTrigger>
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              {BPM_OPTIONS.map((o) => (
-                <SelectItem key={o.value} value={o.value}>
-                  {o.label}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
-
-        <div className="ml-auto flex items-center gap-3">
-          <div className="w-52">
+        <div className="flex items-center gap-3 sm:ml-auto">
+          <div className="flex-1 sm:w-52 sm:flex-initial">
             <Select
               value={sort}
               onValueChange={(v) => onSortChange(v as SortKey)}

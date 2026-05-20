@@ -232,7 +232,7 @@ function LibraryPageInner({ items: initialItems }: { items: LibraryItem[] }) {
         />
       </div>
 
-      <aside className="flex w-full flex-col gap-5 xl:w-[340px] xl:shrink-0">
+      <aside className="hidden w-full flex-col gap-5 lg:flex xl:w-[340px] xl:shrink-0">
         <LibraryFiltersCard
           filters={filters}
           onChange={resetPage(setFilters)}

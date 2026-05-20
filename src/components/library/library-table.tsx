@@ -58,7 +58,105 @@ export function LibraryTable({
 
   return (
     <div className="overflow-hidden rounded-lg border border-border bg-surface shadow-sm">
-      <div className="grid grid-cols-[minmax(240px,2.2fr)_minmax(96px,0.9fr)_minmax(70px,0.6fr)_minmax(60px,0.5fr)_minmax(120px,1fr)_minmax(110px,0.9fr)_minmax(120px,0.9fr)_44px] items-center gap-3 border-b border-border bg-surface-2/60 px-4 py-2.5 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
+      {/* Mobile card list (<md) */}
+      <ul className="flex flex-col md:hidden">
+        {items.map((item) => {
+          const selected = item.id === selectedId;
+          return (
+            <li
+              key={item.id}
+              onClick={() => onSelect(item.id)}
+              className={cn(
+                "flex cursor-pointer flex-col gap-2 border-b border-border p-3 transition-colors last:border-b-0 hover:bg-surface-2/60",
+                selected && "bg-primary/5",
+              )}
+            >
+              <div className="flex items-start gap-3">
+                <button
+                  type="button"
+                  aria-label="Play"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onPlay(item);
+                  }}
+                  className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-primary text-primary-foreground shadow-sm"
+                >
+                  <Play className="h-4 w-4 translate-x-px" fill="currentColor" />
+                </button>
+                <div className="flex min-w-0 flex-1 flex-col">
+                  <span className="truncate text-sm font-medium text-foreground">
+                    {item.name}
+                  </span>
+                  <span className="truncate text-xs text-muted-foreground">
+                    {item.sourceProject}
+                  </span>
+                </div>
+                <div onClick={(e) => e.stopPropagation()}>
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <button
+                        type="button"
+                        aria-label="Actions"
+                        className="flex h-10 w-10 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-surface-2 hover:text-foreground"
+                      >
+                        <MoreHorizontal className="h-5 w-5" />
+                      </button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end">
+                      <DropdownMenuItem
+                        onSelect={() => onAction("Open in Finder", item)}
+                      >
+                        Open in Finder
+                      </DropdownMenuItem>
+                      <DropdownMenuItem
+                        onSelect={() => onAction("Reveal in Project", item)}
+                      >
+                        Reveal in Project
+                      </DropdownMenuItem>
+                      <DropdownMenuItem
+                        onSelect={() => onAction("Add to Pack", item)}
+                      >
+                        Add to Pack
+                      </DropdownMenuItem>
+                      <DropdownMenuSeparator />
+                      <DropdownMenuItem
+                        onSelect={() => onAction("Toggle favorite", item)}
+                      >
+                        {item.favorite
+                          ? "Remove favorite"
+                          : "Mark as favorite"}
+                      </DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+                </div>
+              </div>
+              <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
+                <Badge variant={TYPE_BADGE_VARIANT[item.type]}>
+                  {LIBRARY_TYPE_LABELS[item.type]}
+                </Badge>
+                {item.key && (
+                  <span className="tabular-nums">{item.key}</span>
+                )}
+                {item.bpm != null && (
+                  <span className="tabular-nums">{item.bpm} BPM</span>
+                )}
+                <span className="ml-auto">
+                  {format(parseISO(item.addedAt), "MMM d")}
+                </span>
+              </div>
+              <div onClick={(e) => e.stopPropagation()}>
+                <StarRating
+                  value={item.rating}
+                  onChange={(v) => onRatingChange(item.id, v)}
+                />
+              </div>
+            </li>
+          );
+        })}
+      </ul>
+
+      {/* Desktop grid table (md+) */}
+      <div className="hidden grid-cols-[minmax(240px,2.2fr)_minmax(96px,0.9fr)_minmax(70px,0.6fr)_minmax(60px,0.5fr)_minmax(120px,1fr)_minmax(110px,0.9fr)_minmax(120px,0.9fr)_44px] items-center gap-3 border-b border-border bg-surface-2/60 px-4 py-2.5 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground md:grid">
         <div>Name</div>
         <div>Type</div>
         <div>Key</div>
@@ -69,7 +167,7 @@ export function LibraryTable({
         <div />
       </div>
 
-      <ul className="flex flex-col">
+      <ul className="hidden flex-col md:flex">
         {items.map((item) => {
           const selected = item.id === selectedId;
           return (
