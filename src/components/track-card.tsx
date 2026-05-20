@@ -150,7 +150,7 @@ export function TrackCard({
                 <Link href={`/focus/${track.id}`}>Focus session</Link>
               </DropdownMenuItem>
               <DropdownMenuItem asChild>
-                <Link href={`/tracks/${track.id}`}>Open detail</Link>
+                <Link href={`/m/${track.id}`}>Open detail</Link>
               </DropdownMenuItem>
               <DropdownMenuItem asChild>
                 <Link href={`/tracks/${track.id}/edit`}>Edit metadata</Link>

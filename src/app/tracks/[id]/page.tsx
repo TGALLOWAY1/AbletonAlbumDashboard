@@ -1,6 +1,7 @@
 import Link from "next/link";
-import { notFound } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
 import { format } from "date-fns";
+import { isMobileUserAgent } from "@/lib/user-agent";
 import { ArrowLeft, CalendarDays, Clock3, Pencil, Play } from "lucide-react";
 import {
   Tabs,
@@ -33,6 +34,9 @@ export default async function TrackDetailPage({
   params: Promise<{ id: string }>;
 }) {
   const { id } = await params;
+  if (await isMobileUserAgent()) {
+    redirect(`/m/${id}`);
+  }
   const [track, versions, completedTodos, openTodos] = await Promise.all([
     getTrack(id),
     getVersionsForTrack(id),
