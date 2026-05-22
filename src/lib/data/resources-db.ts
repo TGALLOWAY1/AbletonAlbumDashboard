@@ -73,7 +73,12 @@ async function fetchAllResources(): Promise<ResourceItem[]> {
     .select("*")
     .eq("owner_id", OWNER_ID)
     .order("created_at", { ascending: false });
-  if (error) throw error;
+  if (error) {
+    // The resources table may not exist yet (migration not applied). Don't crash
+    // the page — fall back to seed content via getResourcesPageData's empty path.
+    console.error("[resources] fetch failed", error);
+    return [];
+  }
   return (data ?? [])
     .map((row) => rowToItem(row as ResourceRow))
     .filter((item): item is ResourceItem => item !== null);
