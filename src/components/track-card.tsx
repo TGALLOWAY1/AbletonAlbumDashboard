@@ -26,13 +26,8 @@ import {
 import { TrackCardActions } from "@/components/track-card-actions";
 import { DeleteTrackMenuItem } from "@/components/delete-track-menu-item";
 import { AddNoteDialog } from "@/components/add-note-dialog";
-import { MarkFocusButton } from "@/components/mark-focus-button";
-import {
-  BOTTLENECK_LABELS,
-  currentStageLabel,
-  progressFromStages,
-  type TrackWithDetails,
-} from "@/lib/types";
+import { CopyPathButton } from "@/components/copy-path-button";
+import { progressFromStages, type TrackWithDetails } from "@/lib/types";
 import { cn, formatDuration, formatMinutes } from "@/lib/utils";
 
 type SessionStats = { seconds: number; count: number };
@@ -102,23 +97,18 @@ function TaskBar({ completed, total }: { completed: number; total: number }) {
   );
 }
 
-function BlockerBand({
-  description,
-  category,
-}: {
-  description: string;
-  category?: string;
-}) {
+function NextAction({ description }: { description?: string }) {
   return (
-    <div className="rounded-md border border-danger/30 bg-danger/10 px-2.5 py-1.5">
-      <p className="text-sm leading-snug line-clamp-2">
-        <span className="font-semibold text-danger">Blocker:</span>{" "}
-        <span className="text-foreground">{description}</span>
-      </p>
-      {category && (
-        <p className="mt-0.5 text-[11px] uppercase tracking-wide text-danger/80">
-          {category}
+    <div>
+      <div className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
+        Next Action
+      </div>
+      {description ? (
+        <p className="mt-1 text-sm font-medium leading-snug line-clamp-2">
+          {description}
         </p>
+      ) : (
+        <p className="mt-1 text-sm text-muted-foreground">No next action set</p>
       )}
     </div>
   );
@@ -126,16 +116,13 @@ function BlockerBand({
 
 export function TrackCard({
   track,
-  recommended = false,
   sessionStats,
 }: {
   track: TrackWithDetails;
-  recommended?: boolean;
   sessionStats?: SessionStats;
 }) {
   const progress = progressFromStages(track.stages);
   const [genre] = track.tags;
-  const statusLabel = currentStageLabel(track.stages);
   const stats = sessionStats ?? { seconds: 0, count: 0 };
   const lastWorked = track.last_worked_at
     ? format(new Date(track.last_worked_at), "MMM d, yyyy")
@@ -147,46 +134,45 @@ export function TrackCard({
   ].filter(Boolean) as string[];
 
   return (
-    <Card className={cn(recommended && "ring-1 ring-primary/40")}>
+    <Card>
       {/* Mobile layout (<md) */}
       <div className="md:hidden">
-        <div className="flex items-start gap-4 p-4">
-          <Link
-            href={`/m/${track.id}`}
-            aria-label={`Open ${track.name}`}
-            className="relative h-28 w-28 shrink-0 overflow-hidden rounded-2xl bg-gradient-to-br from-primary/20 via-surface-2 to-accent/15"
-          >
-            {track.cover_image_url ? (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img
-                src={track.cover_image_url}
-                alt=""
-                className="h-full w-full object-cover"
-              />
-            ) : (
-              <div className="flex h-full items-center justify-center text-2xl font-bold text-foreground/30">
-                {track.name.slice(0, 2).toUpperCase()}
-              </div>
+        <div className="flex flex-col gap-3 p-4">
+          <div className="flex items-start gap-4">
+            <Link
+              href={`/m/${track.id}`}
+              aria-label={`Open ${track.name}`}
+              className="relative h-24 w-24 shrink-0 overflow-hidden rounded-2xl bg-gradient-to-br from-primary/20 via-surface-2 to-accent/15"
+            >
+              {track.cover_image_url ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img
+                  src={track.cover_image_url}
+                  alt=""
+                  className="h-full w-full object-cover"
+                />
+              ) : (
+                <div className="flex h-full items-center justify-center text-2xl font-bold text-foreground/30">
+                  {track.name.slice(0, 2).toUpperCase()}
+                </div>
+              )}
+            </Link>
+
+            <Link href={`/m/${track.id}`} className="min-w-0 flex-1">
+              <h3 className="text-xl font-semibold leading-tight line-clamp-2">
+                {track.name}
+              </h3>
+            </Link>
+
+            <ProgressRing value={progress} size={56} stroke={5} />
+          </div>
+
+          <div className="flex flex-col gap-2">
+            {genre && (
+              <Badge variant="primary" className="self-start">
+                {genre}
+              </Badge>
             )}
-          </Link>
-
-          <div className="flex min-w-0 flex-1 flex-col gap-1.5">
-            <div className="flex items-start justify-between gap-2">
-              <Link href={`/m/${track.id}`} className="min-w-0 flex-1">
-                <h3 className="text-xl font-semibold leading-tight line-clamp-2">
-                  {track.name}
-                </h3>
-              </Link>
-              <div className="flex shrink-0 items-center gap-1">
-                <MarkFocusButton trackId={track.id} isFocus={track.is_focus} />
-                <ProgressRing value={progress} size={56} stroke={5} />
-              </div>
-            </div>
-
-            <div className="flex flex-wrap items-center gap-1.5">
-              {genre && <Badge variant="primary">{genre}</Badge>}
-              <Badge variant="default">{statusLabel}</Badge>
-            </div>
 
             <MetaRow
               stats={stats}
@@ -194,14 +180,8 @@ export function TrackCard({
               estMinutes={track.estMinutesRemaining}
             />
 
-            <TaskBar
-              completed={track.completedTaskCount}
-              total={totalTasks}
-            />
+            <TaskBar completed={track.completedTaskCount} total={totalTasks} />
 
-            {track.bottleneck && (
-              <BlockerBand description={track.bottleneck.description} />
-            )}
             {track.primaryAction && (
               <p className="line-clamp-2 text-sm text-muted-foreground">
                 <span className="font-semibold text-foreground">Next:</span>{" "}
@@ -217,7 +197,7 @@ export function TrackCard({
             className="flex flex-1 items-center justify-center gap-1.5 px-2 py-3 text-sm font-medium text-primary"
           >
             <Play className="h-4 w-4" />
-            <span>Resume</span>
+            <span>Focus</span>
           </Link>
           <Link
             href={`/m/${track.id}`}
@@ -255,11 +235,6 @@ export function TrackCard({
               </button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">
-              <MarkFocusButton
-                trackId={track.id}
-                isFocus={track.is_focus}
-                variant="menu"
-              />
               <DropdownMenuItem asChild>
                 <Link href={`/m/${track.id}`}>Open detail</Link>
               </DropdownMenuItem>
@@ -276,7 +251,7 @@ export function TrackCard({
       </div>
 
       {/* Desktop layout (>=md) */}
-      <div className="hidden md:grid md:grid-cols-[88px_minmax(0,1.7fr)_auto_minmax(0,1.3fr)_minmax(0,1.3fr)] md:items-start md:gap-5 md:p-4">
+      <div className="hidden md:grid md:grid-cols-[88px_minmax(0,2fr)_auto_minmax(0,1.4fr)] md:items-start md:gap-5 md:p-4">
         <div className="relative h-20 w-20 overflow-hidden rounded-md bg-gradient-to-br from-primary/20 via-surface-2 to-accent/15">
           {track.cover_image_url ? (
             // eslint-disable-next-line @next/next/no-img-element
@@ -299,10 +274,11 @@ export function TrackCard({
           >
             {track.name}
           </Link>
-          <div className="mt-1.5 flex flex-wrap items-center gap-1.5">
-            {genre && <Badge variant="primary">{genre}</Badge>}
-            <Badge variant="default">{statusLabel}</Badge>
-          </div>
+          {genre && (
+            <div className="mt-1.5 flex flex-wrap items-center gap-1.5">
+              <Badge variant="primary">{genre}</Badge>
+            </div>
+          )}
           {meta.length > 0 && (
             <p className="mt-1.5 text-xs font-medium text-foreground/80 tabular-nums">
               {meta.join(" · ")}
@@ -315,11 +291,8 @@ export function TrackCard({
               estMinutes={track.estMinutesRemaining}
             />
           </div>
-          <div className="mt-2 max-w-[16rem]">
-            <TaskBar
-              completed={track.completedTaskCount}
-              total={totalTasks}
-            />
+          <div className="mt-2">
+            <TaskBar completed={track.completedTaskCount} total={totalTasks} />
           </div>
         </div>
 
@@ -330,56 +303,21 @@ export function TrackCard({
           <ProgressRing value={progress} size={68} />
         </div>
 
-        <div className="min-w-0">
-          <div className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
-            Current Bottleneck
-          </div>
-          {track.bottleneck ? (
-            <div className="mt-1">
-              <BlockerBand
-                description={track.bottleneck.description}
-                category={
-                  BOTTLENECK_LABELS[
-                    track.bottleneck
-                      .category as keyof typeof BOTTLENECK_LABELS
-                  ] ?? track.bottleneck.category
-                }
-              />
-            </div>
-          ) : (
-            <p className="mt-1 text-sm text-muted-foreground">
-              No active bottleneck
-            </p>
-          )}
-        </div>
-
         <div className="flex min-w-0 items-start gap-2">
           <div className="min-w-0 flex-1">
-            <div className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
-              Next Action
+            <NextAction description={track.primaryAction?.description} />
+            <div className="mt-2 flex flex-wrap gap-2">
+              <Button asChild size="sm">
+                <Link href={`/focus/${track.id}`}>
+                  <Play className="h-4 w-4" />
+                  Start focus session
+                </Link>
+              </Button>
+              {track.als_file_path && (
+                <CopyPathButton path={track.als_file_path} size="sm" />
+              )}
             </div>
-            {track.primaryAction ? (
-              <p className="mt-1 text-sm font-medium leading-snug line-clamp-2">
-                {track.primaryAction.description}
-              </p>
-            ) : (
-              <p className="mt-1 text-sm text-muted-foreground">
-                No next action set
-              </p>
-            )}
-            <Button
-              asChild
-              size="sm"
-              variant={recommended ? "default" : "outline"}
-              className="mt-2"
-            >
-              <Link href={`/focus/${track.id}`}>
-                <Play className="h-4 w-4" />
-                Resume session
-              </Link>
-            </Button>
           </div>
-          <MarkFocusButton trackId={track.id} isFocus={track.is_focus} />
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button
@@ -392,11 +330,6 @@ export function TrackCard({
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">
-              <MarkFocusButton
-                trackId={track.id}
-                isFocus={track.is_focus}
-                variant="menu"
-              />
               <DropdownMenuItem asChild>
                 <Link href={`/tracks/${track.id}`}>Open detail</Link>
               </DropdownMenuItem>

@@ -9,7 +9,6 @@ import {
   TrendingUp,
 } from "lucide-react";
 import { TrackCard } from "@/components/track-card";
-import { RecommendationCard } from "@/components/recommendation-card";
 import { TrackSortControl } from "@/components/track-sort-control";
 import { UpcomingAlbumsGallery } from "@/components/album/upcoming-albums-gallery";
 import { LibraryStatCard } from "@/components/library/library-stat-card";
@@ -26,9 +25,7 @@ import {
   getSessionStatsByTrack,
   type SessionStats,
 } from "@/lib/data/sessions";
-import { suggestFocusTrack } from "@/lib/focus";
-import type { Recommendation } from "@/lib/recommend";
-import { formatDuration, formatMinutes } from "@/lib/utils";
+import { formatDuration } from "@/lib/utils";
 import { progressFromStages, type TrackWithDetails } from "@/lib/types";
 
 export const dynamic = "force-dynamic";
@@ -85,21 +82,6 @@ function sortTracks(
   return list;
 }
 
-function buildFocusSuggestion(
-  tracks: TrackWithDetails[],
-): Recommendation | null {
-  const pinned = tracks.find((t) => t.is_focus);
-  const track = pinned ?? suggestFocusTrack(tracks);
-  if (!track) return null;
-  const progress = progressFromStages(track.stages);
-  const reason = pinned
-    ? "Pinned focus"
-    : track.estMinutesRemaining > 0
-      ? `${progress}% done · ${formatMinutes(track.estMinutesRemaining)} left`
-      : `Closest to finish · ${progress}% done`;
-  return { track, primaryAction: track.primaryAction, reason, score: 0 };
-}
-
 export default async function DashboardPage({
   searchParams,
 }: {
@@ -126,7 +108,6 @@ export default async function DashboardPage({
   // Tracks without an album: surface them so they don't get lost.
   const orphanTracks = activeAlbum ? await getTracksWithoutAlbum() : [];
 
-  const focus = buildFocusSuggestion(activeTracks);
   const sorted = sortTracks(activeTracks, sort, sessionStats);
 
   // Summary metrics across the active tracks.
@@ -217,8 +198,6 @@ export default async function DashboardPage({
         </div>
       )}
 
-      {focus && <RecommendationCard rec={focus} />}
-
       <section>
         <div className="mb-3 flex items-center justify-between gap-3">
           <h2 className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
@@ -252,7 +231,6 @@ export default async function DashboardPage({
               <TrackCard
                 key={track.id}
                 track={track}
-                recommended={focus?.track.id === track.id}
                 sessionStats={sessionStats.get(track.id)}
               />
             ))}
