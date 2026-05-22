@@ -9,22 +9,19 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { cn } from "@/lib/utils";
 import {
   TEMPLATE_CATEGORY_LABELS,
   type TemplateItem,
 } from "@/lib/data/templates";
 import type { TemplateAction } from "./types";
-import { TemplateThumbnail } from "./template-thumbnail";
+import { CategoryIcon } from "./category-icon";
 
 export function TemplateListRow({
   item,
-  selected,
   onSelect,
   onAction,
 }: {
   item: TemplateItem;
-  selected: boolean;
   onSelect: (id: string) => void;
   onAction: (action: TemplateAction, item: TemplateItem) => void;
 }) {
@@ -39,14 +36,9 @@ export function TemplateListRow({
           onSelect(item.id);
         }
       }}
-      className={cn(
-        "group flex cursor-pointer items-center gap-4 rounded-lg border border-border bg-surface p-3 text-left shadow-sm transition-colors hover:bg-surface-2/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
-        selected && "border-primary/40 bg-primary/5",
-      )}
+      className="group flex cursor-pointer items-center gap-3 rounded-lg border border-border bg-surface p-3 text-left shadow-sm transition-colors hover:bg-surface-2/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
     >
-      <div className="w-32 shrink-0">
-        <TemplateThumbnail seed={item.id} />
-      </div>
+      <CategoryIcon category={item.category} size="sm" />
       <div className="min-w-0 flex-1">
         <div className="flex items-center gap-2">
           <h3 className="truncate text-sm font-semibold text-foreground">
@@ -56,7 +48,7 @@ export function TemplateListRow({
             {TEMPLATE_CATEGORY_LABELS[item.category]}
           </Badge>
         </div>
-        <p className="mt-1 truncate text-xs text-muted-foreground">
+        <p className="mt-0.5 truncate text-xs text-muted-foreground">
           {item.description}
         </p>
       </div>

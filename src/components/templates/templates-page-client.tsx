@@ -1,26 +1,26 @@
 "use client";
 
 import * as React from "react";
-import { Plus, Upload } from "lucide-react";
+import { useRouter } from "next/navigation";
+import { ChevronLeft, Plus, Upload } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { ToastProvider, useToast } from "@/components/library/toast";
 import {
   TEMPLATE_CATEGORY_LABELS,
   TEMPLATE_CATEGORY_ORDER,
-  type AudioPreview,
   type TemplateCategory,
   type TemplateItem,
 } from "@/lib/data/templates";
-import { TemplateDetailPanel } from "./template-detail-panel";
-import { TemplateSection } from "./template-section";
+import { CategoryBrowseList } from "./category-browse-list";
+import { TemplateListRow } from "./template-list-row";
 import {
-  TemplatesToolbar,
+  TemplateSortControl,
   type TemplateSort,
-  type TemplateView,
-} from "./templates-toolbar";
+} from "./template-sort-control";
 import type { TemplateAction } from "./types";
 
 const DESKTOP_TOAST = "Desktop integration required to open local files.";
+const RECENT_LIMIT = 5;
 
 function compareTemplates(
   a: TemplateItem,
@@ -45,41 +45,46 @@ function compareTemplates(
 }
 
 function TemplatesPageInner({ items: initialItems }: { items: TemplateItem[] }) {
+  const router = useRouter();
   const { toast } = useToast();
   const [items, setItems] = React.useState<TemplateItem[]>(initialItems);
-  const [tab, setTab] = React.useState<"all" | TemplateCategory>("all");
   const [sort, setSort] = React.useState<TemplateSort>("recently-modified");
-  const [view, setView] = React.useState<TemplateView>("grid");
-  const [selectedId, setSelectedId] = React.useState<string | null>(null);
-  const notesRef = React.useRef<HTMLTextAreaElement | null>(null);
+  const [view, setView] = React.useState<"home" | "category">("home");
+  const [activeCategory, setActiveCategory] = React.useState<
+    "all" | TemplateCategory
+  >("all");
 
-  const sorted = React.useMemo(() => {
-    return [...items].sort((a, b) => compareTemplates(a, b, sort));
-  }, [items, sort]);
-
-  const visibleByCategory = React.useMemo(() => {
-    const map = new Map<TemplateCategory, TemplateItem[]>();
-    for (const cat of TEMPLATE_CATEGORY_ORDER) map.set(cat, []);
-    for (const item of sorted) {
-      if (tab !== "all" && item.category !== tab) continue;
-      map.get(item.category)!.push(item);
-    }
+  const counts = React.useMemo(() => {
+    const map = Object.fromEntries(
+      TEMPLATE_CATEGORY_ORDER.map((c) => [c, 0]),
+    ) as Record<TemplateCategory, number>;
+    for (const item of items) map[item.category] += 1;
     return map;
-  }, [sorted, tab]);
+  }, [items]);
 
-  const selected = React.useMemo(
-    () => items.find((i) => i.id === selectedId) ?? null,
-    [items, selectedId],
+  const recent = React.useMemo(
+    () =>
+      [...items]
+        .sort((a, b) => compareTemplates(a, b, "recently-modified"))
+        .slice(0, RECENT_LIMIT),
+    [items],
   );
 
-  const updateNotes = (id: string, notes: string) => {
-    setItems((prev) =>
-      prev.map((t) =>
-        t.id === id
-          ? { ...t, notes, updatedAt: new Date().toISOString() }
-          : t,
-      ),
-    );
+  const categoryItems = React.useMemo(() => {
+    const filtered =
+      activeCategory === "all"
+        ? items
+        : items.filter((i) => i.category === activeCategory);
+    return [...filtered].sort((a, b) => compareTemplates(a, b, sort));
+  }, [items, activeCategory, sort]);
+
+  const openCategory = (category: "all" | TemplateCategory) => {
+    setActiveCategory(category);
+    setView("category");
+  };
+
+  const handleSelect = (id: string) => {
+    router.push(`/templates/${id}`);
   };
 
   const handleAction = (action: TemplateAction, item?: TemplateItem) => {
@@ -110,12 +115,10 @@ function TemplatesPageInner({ items: initialItems }: { items: TemplateItem[] }) 
         toast(`Duplicated "${item.name}"`);
         return;
       }
-      case "edit-notes": {
+      case "edit-notes":
         if (!item) return;
-        setSelectedId(item.id);
-        requestAnimationFrame(() => notesRef.current?.focus());
+        router.push(`/templates/${item.id}`);
         return;
-      }
       case "archive":
         if (!item) return;
         toast(`Archived "${item.name}"`);
@@ -123,14 +126,9 @@ function TemplatesPageInner({ items: initialItems }: { items: TemplateItem[] }) 
       case "delete":
         if (!item) return;
         setItems((prev) => prev.filter((t) => t.id !== item.id));
-        setSelectedId((cur) => (cur === item.id ? null : cur));
         toast(`Deleted "${item.name}"`);
         return;
     }
-  };
-
-  const handlePreviewPlay = (item: TemplateItem, preview: AudioPreview) => {
-    toast(`Playing preview: ${preview.name}`);
   };
 
   return (
@@ -157,66 +155,91 @@ function TemplatesPageInner({ items: initialItems }: { items: TemplateItem[] }) 
         </div>
       </header>
 
-      <div className="flex flex-col gap-6 xl:flex-row">
-        <main className="flex min-w-0 flex-1 flex-col gap-5">
-          <TemplatesToolbar
-            tab={tab}
-            onTabChange={setTab}
-            sort={sort}
-            onSortChange={setSort}
-            view={view}
-            onViewChange={setView}
-          />
+      {view === "home" ? (
+        <div className="flex flex-col gap-8">
+          <section className="flex flex-col gap-3">
+            <h2 className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+              Browse by Category
+            </h2>
+            <CategoryBrowseList counts={counts} onSelect={openCategory} />
+          </section>
 
-          <div className="flex flex-col gap-6">
-            {tab === "all" ? (
-              TEMPLATE_CATEGORY_ORDER.map((cat) => {
-                const sectionItems = visibleByCategory.get(cat) ?? [];
-                if (sectionItems.length === 0) return null;
-                return (
-                  <TemplateSection
-                    key={cat}
-                    category={cat}
-                    items={sectionItems}
-                    view={view}
-                    selectedId={selectedId}
-                    onSelect={setSelectedId}
+          <section className="flex flex-col gap-3">
+            <div className="flex items-center justify-between gap-3">
+              <h2 className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+                Recent Templates
+              </h2>
+              <button
+                type="button"
+                onClick={() => openCategory("all")}
+                className="text-xs font-medium text-primary transition-colors hover:text-primary/80"
+              >
+                View all
+              </button>
+            </div>
+            {recent.length === 0 ? (
+              <div className="rounded-lg border border-dashed border-border bg-surface p-10 text-center text-sm text-muted-foreground">
+                No templates yet.
+              </div>
+            ) : (
+              <div className="flex flex-col gap-2">
+                {recent.map((item) => (
+                  <TemplateListRow
+                    key={item.id}
+                    item={item}
+                    onSelect={handleSelect}
                     onAction={handleAction}
                   />
-                );
-              })
-            ) : (
-              <TemplateSection
-                category={tab}
-                items={visibleByCategory.get(tab) ?? []}
-                view={view}
-                selectedId={selectedId}
-                showHeader={false}
-                onSelect={setSelectedId}
-                onAction={handleAction}
-              />
+                ))}
+              </div>
             )}
-
-            {tab !== "all" &&
-              (visibleByCategory.get(tab) ?? []).length === 0 && (
-                <div className="rounded-lg border border-dashed border-border bg-surface p-10 text-center text-sm text-muted-foreground">
-                  No {TEMPLATE_CATEGORY_LABELS[tab]} templates yet.
-                </div>
-              )}
+          </section>
+        </div>
+      ) : (
+        <div className="flex flex-col gap-4">
+          <div className="flex flex-wrap items-start justify-between gap-3">
+            <div className="flex items-start gap-3">
+              <Button
+                variant="ghost"
+                size="icon"
+                aria-label="Back to categories"
+                onClick={() => setView("home")}
+              >
+                <ChevronLeft className="h-4 w-4" />
+              </Button>
+              <div>
+                <h2 className="text-xl font-semibold tracking-tight">
+                  {activeCategory === "all"
+                    ? "All Templates"
+                    : TEMPLATE_CATEGORY_LABELS[activeCategory]}
+                </h2>
+                <p className="text-sm text-muted-foreground">
+                  {categoryItems.length}{" "}
+                  {categoryItems.length === 1 ? "template" : "templates"}
+                </p>
+              </div>
+            </div>
+            <TemplateSortControl sort={sort} onSortChange={setSort} />
           </div>
-        </main>
 
-        <aside className="hidden w-full lg:block xl:w-[360px] xl:shrink-0">
-          <TemplateDetailPanel
-            ref={notesRef}
-            item={selected}
-            onBack={() => setSelectedId(null)}
-            onAction={handleAction}
-            onNotesChange={updateNotes}
-            onPreviewPlay={handlePreviewPlay}
-          />
-        </aside>
-      </div>
+          {categoryItems.length === 0 ? (
+            <div className="rounded-lg border border-dashed border-border bg-surface p-10 text-center text-sm text-muted-foreground">
+              No templates in this category yet.
+            </div>
+          ) : (
+            <div className="flex flex-col gap-2">
+              {categoryItems.map((item) => (
+                <TemplateListRow
+                  key={item.id}
+                  item={item}
+                  onSelect={handleSelect}
+                  onAction={handleAction}
+                />
+              ))}
+            </div>
+          )}
+        </div>
+      )}
     </div>
   );
 }
