@@ -4,7 +4,7 @@ import { Folder, FolderOpen, Package, Play, Star } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import type { LibraryItem } from "@/lib/data/library-items";
-import { LIBRARY_TYPE_LABELS } from "@/lib/data/library-items";
+import { libraryItemBadgeLabel } from "@/lib/data/library-items";
 import { MiniWaveform } from "./mini-waveform";
 import { StarRating } from "./star-rating";
 
@@ -86,7 +86,7 @@ export function LibraryInspector({
       </div>
 
       <div className="grid grid-cols-2 gap-x-4 gap-y-3 text-sm">
-        <Meta label="Type" value={LIBRARY_TYPE_LABELS[item.type]} />
+        <Meta label="Type" value={libraryItemBadgeLabel(item)} />
         <Meta label="BPM" value={item.bpm ?? "—"} />
         <Meta label="Key" value={item.key ?? "—"} />
         <Meta label="Source" value={item.sourceProject} />

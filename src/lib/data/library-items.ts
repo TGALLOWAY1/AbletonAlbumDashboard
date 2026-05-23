@@ -1,4 +1,4 @@
-export type LibraryCategory = "audio" | "midi" | "preset" | "idea";
+export type LibraryCategory = "audio" | "midi" | "preset" | "instrument";
 
 export type LibraryType =
   | "drum"
@@ -8,7 +8,15 @@ export type LibraryType =
   | "vocal"
   | "fx"
   | "chord"
-  | "midi";
+  | "midi"
+  | "instrument";
+
+export const INSTRUMENT_DEVICE_TYPES = [
+  "Slicer",
+  "Drum Rack",
+  "Sampler",
+  "Instrument Rack",
+] as const;
 
 export interface LibraryItem {
   id: string;
@@ -29,6 +37,7 @@ export interface LibraryItem {
   notes?: string;
   filePath?: string;
   projectPath?: string;
+  instrumentType?: string;
 }
 
 export const LIBRARY_ITEMS: LibraryItem[] = [
@@ -417,64 +426,6 @@ export const LIBRARY_ITEMS: LibraryItem[] = [
     tags: ["sub", "donk"],
   },
   {
-    id: "li_026",
-    name: "Verse melody — humming",
-    category: "idea",
-    type: "vocal",
-    key: "C maj",
-    bpm: 96,
-    durationSec: 22,
-    sourceProject: "Voice Memos",
-    addedAt: "2026-03-27",
-    rating: 2,
-    favorite: false,
-    tags: ["voice memo", "wip"],
-    notes: "Starts at 0:08. Could be a bridge.",
-  },
-  {
-    id: "li_027",
-    name: "Bridge progression idea",
-    category: "idea",
-    type: "chord",
-    key: "G maj",
-    bpm: 110,
-    durationSec: 18,
-    sourceProject: "Voice Memos",
-    addedAt: "2026-03-25",
-    rating: 3,
-    favorite: false,
-    tags: ["voice memo", "chords"],
-  },
-  {
-    id: "li_028",
-    name: "Drum loop sketch",
-    category: "idea",
-    type: "drum",
-    key: null,
-    bpm: 130,
-    durationSec: 14,
-    sourceProject: "Voice Memos",
-    addedAt: "2026-03-24",
-    rating: 2,
-    favorite: false,
-    tags: ["wip", "rough"],
-  },
-  {
-    id: "li_029",
-    name: "Hook — chorus melody",
-    category: "idea",
-    type: "vocal",
-    key: "A min",
-    bpm: 100,
-    durationSec: 16,
-    sourceProject: "Voice Memos",
-    addedAt: "2026-03-22",
-    rating: 4,
-    favorite: true,
-    tags: ["hook", "wip"],
-    notes: "Strong contender for next single.",
-  },
-  {
     id: "li_030",
     name: "Eclipse_Snare Layer",
     category: "audio",
@@ -602,20 +553,6 @@ export const LIBRARY_ITEMS: LibraryItem[] = [
     tags: ["bell", "shimmer"],
   },
   {
-    id: "li_039",
-    name: "Outro idea — piano",
-    category: "idea",
-    type: "chord",
-    key: "C maj",
-    bpm: 80,
-    durationSec: 25,
-    sourceProject: "Voice Memos",
-    addedAt: "2026-03-12",
-    rating: 3,
-    favorite: false,
-    tags: ["piano", "wip"],
-  },
-  {
     id: "li_040",
     name: "Ocean Drive_Sub Drop",
     category: "audio",
@@ -640,4 +577,10 @@ export const LIBRARY_TYPE_LABELS: Record<LibraryType, string> = {
   fx: "FX",
   chord: "Chord Loop",
   midi: "MIDI",
+  instrument: "Instrument",
 };
+
+export function libraryItemBadgeLabel(item: LibraryItem): string {
+  if (item.category === "instrument") return item.instrumentType ?? "Instrument";
+  return LIBRARY_TYPE_LABELS[item.type];
+}

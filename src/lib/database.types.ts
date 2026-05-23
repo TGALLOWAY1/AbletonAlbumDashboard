@@ -399,6 +399,36 @@ export type Database = {
           },
         ];
       };
+      instruments: {
+        Row: {
+          created_at: string;
+          id: string;
+          instrument_type: string | null;
+          name: string;
+          notes: string;
+          owner_id: string;
+          updated_at: string;
+        };
+        Insert: {
+          created_at?: string;
+          id?: string;
+          instrument_type?: string | null;
+          name: string;
+          notes?: string;
+          owner_id: string;
+          updated_at?: string;
+        };
+        Update: {
+          created_at?: string;
+          id?: string;
+          instrument_type?: string | null;
+          name?: string;
+          notes?: string;
+          owner_id?: string;
+          updated_at?: string;
+        };
+        Relationships: [];
+      };
       resources: {
         Row: {
           bookmarked: boolean;

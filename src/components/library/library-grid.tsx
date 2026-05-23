@@ -4,7 +4,7 @@ import { Play } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 import type { LibraryItem } from "@/lib/data/library-items";
-import { LIBRARY_TYPE_LABELS } from "@/lib/data/library-items";
+import { libraryItemBadgeLabel } from "@/lib/data/library-items";
 import { MiniWaveform } from "./mini-waveform";
 import { StarRating } from "./star-rating";
 
@@ -48,7 +48,7 @@ export function LibraryGrid({
                   {item.sourceProject}
                 </div>
               </div>
-              <Badge variant="primary">{LIBRARY_TYPE_LABELS[item.type]}</Badge>
+              <Badge variant="primary">{libraryItemBadgeLabel(item)}</Badge>
             </div>
 
             <div className="flex items-center gap-3">

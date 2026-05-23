@@ -1,5 +1,6 @@
 import {
   AudioWaveform,
+  Blocks,
   Cloud,
   Download,
   Drum,
@@ -13,11 +14,13 @@ import { Button } from "@/components/ui/button";
 import { LibraryPageClient } from "@/components/library/library-page-client";
 import { LibraryStatCard } from "@/components/library/library-stat-card";
 import { LIBRARY_ITEMS } from "@/lib/data/library-items";
+import { fetchInstruments } from "@/lib/data/instruments-db";
 
 export const dynamic = "force-dynamic";
 
-export default function LibraryPage() {
-  const items = LIBRARY_ITEMS;
+export default async function LibraryPage() {
+  const instruments = await fetchInstruments();
+  const items = [...LIBRARY_ITEMS, ...instruments];
   const total = items.length;
   const drum = items.filter((i) => i.type === "drum").length;
   const bass = items.filter((i) => i.type === "bass").length;
@@ -27,6 +30,7 @@ export default function LibraryPage() {
   const midi = items.filter(
     (i) => i.type === "midi" || i.category === "midi",
   ).length;
+  const instrument = items.filter((i) => i.category === "instrument").length;
 
   const stats = [
     { label: "Total Items", value: total, icon: LibraryIcon, hint: "All items in your library" },
@@ -36,6 +40,7 @@ export default function LibraryPage() {
     { label: "Atmospheres", value: atmos, icon: Cloud },
     { label: "Vocals", value: vocal, icon: Mic2 },
     { label: "MIDI Ideas", value: midi, icon: Piano },
+    { label: "Instruments", value: instrument, icon: Blocks },
   ];
 
   return (
@@ -59,7 +64,7 @@ export default function LibraryPage() {
         </div>
       </header>
 
-      <section className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-7">
+      <section className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-8">
         {stats.map((s) => (
           <LibraryStatCard
             key={s.label}

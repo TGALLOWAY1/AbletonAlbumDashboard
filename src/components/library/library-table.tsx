@@ -15,7 +15,7 @@ import type {
   LibraryItem,
   LibraryType,
 } from "@/lib/data/library-items";
-import { LIBRARY_TYPE_LABELS } from "@/lib/data/library-items";
+import { libraryItemBadgeLabel } from "@/lib/data/library-items";
 import { MiniWaveform } from "./mini-waveform";
 import { StarRating } from "./star-rating";
 
@@ -31,6 +31,7 @@ const TYPE_BADGE_VARIANT: Record<
   fx: "danger",
   chord: "primary",
   midi: "default",
+  instrument: "accent",
 };
 
 export function LibraryTable({
@@ -132,7 +133,7 @@ export function LibraryTable({
               </div>
               <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
                 <Badge variant={TYPE_BADGE_VARIANT[item.type]}>
-                  {LIBRARY_TYPE_LABELS[item.type]}
+                  {libraryItemBadgeLabel(item)}
                 </Badge>
                 {item.key && (
                   <span className="tabular-nums">{item.key}</span>
@@ -199,14 +200,14 @@ export function LibraryTable({
                     {item.name}
                   </span>
                   <span className="truncate text-[11px] text-muted-foreground">
-                    {LIBRARY_TYPE_LABELS[item.type]}
+                    {libraryItemBadgeLabel(item)}
                   </span>
                 </div>
               </div>
 
               <div>
                 <Badge variant={TYPE_BADGE_VARIANT[item.type]}>
-                  {LIBRARY_TYPE_LABELS[item.type]}
+                  {libraryItemBadgeLabel(item)}
                 </Badge>
               </div>
 

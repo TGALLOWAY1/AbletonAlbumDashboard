@@ -10,6 +10,7 @@ import {
   DEFAULT_LIBRARY_FILTERS,
   type LibraryFilters,
 } from "./library-filters-card";
+import { AddInstrumentDialog } from "./add-instrument-dialog";
 import { LibraryGrid } from "./library-grid";
 import { LibraryInspector } from "./library-inspector";
 import { LibraryPagination } from "./library-pagination";
@@ -140,6 +141,13 @@ function LibraryPageInner({ items: initialItems }: { items: LibraryItem[] }) {
     );
   };
 
+  const handleInstrumentAdded = (item: LibraryItem) => {
+    setItems((prev) => [...prev, item]);
+    setSelectedId(item.id);
+    setPage(1);
+    toast(`Added “${item.name}”`);
+  };
+
   const handleAction = (action: string, item: LibraryItem) => {
     if (action === "Toggle favorite") {
       updateItem(item.id, { favorite: !item.favorite });
@@ -204,6 +212,15 @@ function LibraryPageInner({ items: initialItems }: { items: LibraryItem[] }) {
           view={view}
           onViewChange={setView}
         />
+
+        {tab === "instrument" && (
+          <div className="flex items-center justify-between gap-3">
+            <p className="text-sm text-muted-foreground">
+              Your saved Ableton instruments and racks.
+            </p>
+            <AddInstrumentDialog onAdded={handleInstrumentAdded} />
+          </div>
+        )}
 
         {view === "list" ? (
           <LibraryTable

@@ -21,7 +21,7 @@ const TABS: { value: LibraryCategory | "all"; label: string }[] = [
   { value: "audio", label: "Audio" },
   { value: "midi", label: "MIDI" },
   { value: "preset", label: "Presets" },
-  { value: "idea", label: "Project Ideas" },
+  { value: "instrument", label: "Instruments" },
 ];
 
 const TYPE_OPTIONS = [
