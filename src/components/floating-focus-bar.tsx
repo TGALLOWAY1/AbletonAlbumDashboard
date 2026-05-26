@@ -12,15 +12,14 @@ export function FloatingFocusBar() {
   const ctx = useFocusSession();
 
   const active = ctx.phase === "running" || ctx.phase === "paused";
-  if (!active || !ctx.trackId) return null;
+  if (!active) return null;
 
-  const focusPath = `/focus/${ctx.trackId}`;
+  const focusPath = ctx.trackId ? `/focus/${ctx.trackId}` : "/focus/new";
   if (pathname === focusPath) return null;
 
   const handleStop = () => {
-    const target = `/focus/${ctx.trackId}`;
     ctx.stop();
-    router.push(target);
+    router.push(focusPath);
   };
 
   return (

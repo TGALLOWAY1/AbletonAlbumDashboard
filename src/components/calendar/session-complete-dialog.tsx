@@ -41,6 +41,8 @@ export function SessionCompleteDialog({
   draft,
   sessionTypes,
   tracks,
+  initialSessionTypeId,
+  initialTrackId,
   initialTodos,
   initialNotes,
   onCompleted,
@@ -52,6 +54,8 @@ export function SessionCompleteDialog({
   draft: CompleteDraft | null;
   sessionTypes: SessionTypeRow[];
   tracks: TrackRow[];
+  initialSessionTypeId?: string | null;
+  initialTrackId?: string | null;
   initialTodos?: Array<{ id: string; description: string; done: boolean }>;
   initialNotes?: string;
   onCompleted?: () => void;
@@ -82,8 +86,8 @@ export function SessionCompleteDialog({
     setNotesMd(initialNotes ?? session?.notes_md ?? "");
     setEnergy(session?.energy_rating ?? null);
     setEnjoyment(session?.enjoyment_rating ?? null);
-    setTrackId(session?.track?.id ?? null);
-    setSessionTypeId(session?.session_type?.id ?? null);
+    setTrackId(session?.track?.id ?? initialTrackId ?? null);
+    setSessionTypeId(session?.session_type?.id ?? initialSessionTypeId ?? null);
     setTodoState(
       initialTodos
         ? initialTodos.map((t) => ({
@@ -102,7 +106,14 @@ export function SessionCompleteDialog({
     setBottleneckDesc("");
     setBottleneckCat("arrangement");
     /* eslint-enable react-hooks/set-state-in-effect */
-  }, [open, session, initialTodos, initialNotes]);
+  }, [
+    open,
+    session,
+    initialTodos,
+    initialNotes,
+    initialSessionTypeId,
+    initialTrackId,
+  ]);
 
   const computedDurationSec = (() => {
     if (manualMinutes && /^\d+$/.test(manualMinutes)) {
@@ -125,12 +136,6 @@ export function SessionCompleteDialog({
     }
     if (!startedAt || !endedAt) {
       alert("Missing start/end times.");
-      return;
-    }
-
-    const sessionType = sessionTypes.find((s) => s.id === sessionTypeId);
-    if (sessionType?.requires_track && !trackId) {
-      alert(`${sessionType.name} sessions require a track.`);
       return;
     }
 

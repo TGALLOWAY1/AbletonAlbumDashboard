@@ -18,6 +18,7 @@ type FocusSessionState = {
   phase: FocusPhase;
   trackId: string | null;
   trackName: string | null;
+  sessionTypeId: string | null;
   plannedSessionId: string | null;
   startedAtMs: number | null;
   accumulatedMs: number;
@@ -29,6 +30,7 @@ const INITIAL_STATE: FocusSessionState = {
   phase: "idle",
   trackId: null,
   trackName: null,
+  sessionTypeId: null,
   plannedSessionId: null,
   startedAtMs: null,
   accumulatedMs: 0,
@@ -37,8 +39,9 @@ const INITIAL_STATE: FocusSessionState = {
 };
 
 export type StartInput = {
-  trackId: string;
-  trackName: string;
+  trackId: string | null;
+  trackName: string | null;
+  sessionTypeId?: string | null;
   plannedSessionId?: string | null;
   initialTodos?: ChecklistItem[];
 };
@@ -114,6 +117,7 @@ export function FocusSessionProvider({ children }: { children: React.ReactNode }
       phase: "running",
       trackId: input.trackId,
       trackName: input.trackName,
+      sessionTypeId: input.sessionTypeId ?? null,
       plannedSessionId: input.plannedSessionId ?? null,
       startedAtMs: Date.now(),
       accumulatedMs: 0,

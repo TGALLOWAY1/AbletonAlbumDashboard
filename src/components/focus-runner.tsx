@@ -25,13 +25,15 @@ export function FocusRunner({
   track,
   primaryAction,
   plannedSession,
+  sessionType,
   sessionTypes,
   tracks,
   trackTodos,
 }: {
-  track: TrackRow;
+  track: TrackRow | null;
   primaryAction: ActionRow | null;
   plannedSession?: CalendarSessionRow | null;
+  sessionType?: SessionTypeRow | null;
   sessionTypes?: SessionTypeRow[];
   tracks?: TrackRow[];
   trackTodos?: ActionRow[];
@@ -40,40 +42,51 @@ export function FocusRunner({
   const ctx = useFocusSession();
   const [logOpen, setLogOpen] = useState(false);
 
-  const isOtherTrackActive =
-    (ctx.phase === "running" || ctx.phase === "paused") &&
-    ctx.trackId != null &&
-    ctx.trackId !== track.id;
+  // This page "owns" the running session when its track matches (track mode)
+  // or when the active session has no track (track-less mode).
+  const pageOwnsSession = track ? ctx.trackId === track.id : ctx.trackId === null;
 
-  const isSameTrack = ctx.trackId === track.id;
+  const isOtherSessionActive =
+    (ctx.phase === "running" || ctx.phase === "paused") && !pageOwnsSession;
 
-  // Open the log dialog automatically the moment a session stops for this track.
+  // Open the log dialog automatically the moment this page's session stops.
   useEffect(() => {
-    if (isSameTrack && ctx.phase === "stopped") {
+    if (pageOwnsSession && ctx.phase === "stopped") {
       /* eslint-disable react-hooks/set-state-in-effect */
       setLogOpen(true);
       /* eslint-enable react-hooks/set-state-in-effect */
     }
-  }, [isSameTrack, ctx.phase]);
+  }, [pageOwnsSession, ctx.phase]);
 
-  if (isOtherTrackActive) {
+  const activeFocusPath = ctx.trackId ? `/focus/${ctx.trackId}` : "/focus/new";
+
+  if (isOtherSessionActive) {
     return (
       <ActiveElsewhereNotice
         activeTrackName={ctx.trackName}
-        onReturn={() => router.push(`/focus/${ctx.trackId}`)}
+        onReturn={() => router.push(activeFocusPath)}
         onStopAndLog={() => {
-          const target = `/focus/${ctx.trackId}`;
           ctx.stop();
-          router.push(target);
+          router.push(activeFocusPath);
         }}
       />
     );
   }
 
-  const phase = isSameTrack ? ctx.phase : "idle";
-  const elapsedMs = isSameTrack ? ctx.elapsedMs : 0;
-  const todos = isSameTrack ? ctx.todos : [];
-  const notes = isSameTrack ? ctx.notes : "";
+  const phase = pageOwnsSession ? ctx.phase : "idle";
+  const elapsedMs = pageOwnsSession ? ctx.elapsedMs : 0;
+  const todos = pageOwnsSession ? ctx.todos : [];
+  const notes = pageOwnsSession ? ctx.notes : "";
+
+  const runningType = ctx.sessionTypeId
+    ? sessionTypes?.find((t) => t.id === ctx.sessionTypeId)
+    : null;
+  const headline =
+    track?.name ??
+    runningType?.name ??
+    sessionType?.name ??
+    plannedSession?.session_type?.name ??
+    "Focus";
 
   const start = () => {
     const plannedTodos = (plannedSession?.todos ?? []).map((t) => ({
@@ -86,14 +99,19 @@ export function FocusRunner({
     const initialTodos =
       plannedTodos.length > 0
         ? plannedTodos
-        : (trackTodos ?? []).map((t) => ({
-            id: t.id,
-            description: t.description,
-            done: t.completed_at != null,
-          }));
+        : track
+          ? (trackTodos ?? []).map((t) => ({
+              id: t.id,
+              description: t.description,
+              done: t.completed_at != null,
+            }))
+          : [];
     ctx.start({
-      trackId: track.id,
-      trackName: track.name,
+      trackId: track?.id ?? null,
+      trackName: track?.name ?? sessionType?.name ?? null,
+      sessionTypeId: track
+        ? (plannedSession?.session_type?.id ?? null)
+        : (sessionType?.id ?? plannedSession?.session_type?.id ?? null),
       plannedSessionId: plannedSession?.id ?? null,
       initialTodos,
     });
@@ -113,29 +131,39 @@ export function FocusRunner({
         })()
       : null;
 
-  const useEnhancedDialog = !!plannedSession && !!sessionTypes && !!tracks;
+  const useEnhancedDialog =
+    !!sessionTypes && !!tracks && (!!plannedSession || !track);
 
   return (
     <div className="flex min-h-[70vh] flex-col items-center justify-center gap-10 text-center">
       <div className="flex w-full justify-start">
         <Button asChild variant="ghost" size="sm">
-          <Link href={`/tracks/${track.id}`}>
-            <ArrowLeft className="h-4 w-4" />
-            Back to track
-          </Link>
+          {track ? (
+            <Link href={`/tracks/${track.id}`}>
+              <ArrowLeft className="h-4 w-4" />
+              Back to track
+            </Link>
+          ) : (
+            <Link href="/">
+              <ArrowLeft className="h-4 w-4" />
+              Back to dashboard
+            </Link>
+          )}
         </Button>
       </div>
 
       <div className="flex flex-col gap-3">
         <div className="text-xs uppercase tracking-[0.2em] text-muted-foreground">
-          {plannedSession?.session_type?.name ?? "Focus"}
+          {track ? (plannedSession?.session_type?.name ?? "Focus") : "Session"}
         </div>
-        <h1 className="text-4xl font-semibold tracking-tight">{track.name}</h1>
-        <p className="text-lg text-muted-foreground">
-          {primaryAction
-            ? primaryAction.description
-            : "No primary action — set one to anchor the session."}
-        </p>
+        <h1 className="text-4xl font-semibold tracking-tight">{headline}</h1>
+        {track && (
+          <p className="text-lg text-muted-foreground">
+            {primaryAction
+              ? primaryAction.description
+              : "No primary action — set one to anchor the session."}
+          </p>
+        )}
         <div className="mx-auto mt-2 w-full max-w-md text-left">
           <SessionTodoChecklist
             items={todos}
@@ -221,15 +249,17 @@ export function FocusRunner({
           draft={draft}
           sessionTypes={sessionTypes!}
           tracks={tracks!}
+          initialSessionTypeId={sessionType?.id ?? ctx.sessionTypeId ?? null}
+          initialTrackId={track?.id ?? null}
           initialTodos={todos}
           initialNotes={notes}
           onCompleted={() => {
             setLogOpen(false);
             ctx.reset();
           }}
-          redirectTo="/calendar"
+          redirectTo={track ? "/calendar" : "/sessions"}
         />
-      ) : (
+      ) : track ? (
         <SessionLogDialog
           open={logOpen}
           onOpenChange={setLogOpen}
@@ -244,7 +274,7 @@ export function FocusRunner({
           }}
           redirectTo="/"
         />
-      )}
+      ) : null}
     </div>
   );
 }

@@ -14,6 +14,7 @@ type SessionSlim = {
   duration_seconds: number | null;
   started_at: string | null;
   status: string;
+  track: { owner_id: string } | null;
 };
 
 type TrackSlim = { id: string; status: string };
@@ -26,9 +27,8 @@ async function fetchAnalyticsData() {
     supabase
       .from("sessions")
       .select(
-        "track_id, duration_seconds, started_at, status, tracks!inner(owner_id)",
-      )
-      .eq("tracks.owner_id", OWNER_ID),
+        "track_id, duration_seconds, started_at, status, track:tracks!sessions_track_id_fkey(owner_id)",
+      ),
     supabase
       .from("bottlenecks")
       .select("category, created_at, tracks!inner(owner_id)")
@@ -41,6 +41,8 @@ async function fetchAnalyticsData() {
     []) as unknown as BottleneckSlim[];
 
   const sessions: AnalyticsSession[] = sessionRows
+    // Left join: keep track-less rows, and (single-user) only the owner's tracks.
+    .filter((s) => !s.track || s.track.owner_id === OWNER_ID)
     .filter((s) => s.started_at && s.duration_seconds != null)
     .map((s) => ({
       trackId: s.track_id,

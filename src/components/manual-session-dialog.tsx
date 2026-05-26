@@ -98,7 +98,9 @@ function ManualSessionDialog({
   }, [minutes]);
 
   const startValid = !Number.isNaN(new Date(start).getTime());
-  const canSave = !!trackId && startValid && durationSec > 0 && !!start;
+  // Track is optional; a track-less session must be anchored by a session type.
+  const hasAnchor = !!trackId || !!sessionTypeId;
+  const canSave = hasAnchor && startValid && durationSec > 0 && !!start;
 
   const reset = () => {
     setTrackId(fixedTrackId);
@@ -118,7 +120,7 @@ function ManualSessionDialog({
   };
 
   const submit = () => {
-    if (!canSave || !trackId) return;
+    if (!canSave) return;
     const startDate = new Date(start);
     const startedAt = startDate.toISOString();
     const endedAt = new Date(startDate.getTime() + durationSec * 1000).toISOString();
@@ -163,12 +165,7 @@ function ManualSessionDialog({
           {!fixedTrackId && (
             <div className="grid gap-2">
               <Label>Track</Label>
-              <TrackPicker
-                tracks={tracks}
-                value={trackId}
-                onChange={setTrackId}
-                required
-              />
+              <TrackPicker tracks={tracks} value={trackId} onChange={setTrackId} />
             </div>
           )}
 
@@ -207,7 +204,9 @@ function ManualSessionDialog({
 
           {sessionTypes.length > 0 && (
             <div className="grid gap-2">
-              <Label>Session type (optional)</Label>
+              <Label>
+                Session type{trackId || fixedTrackId ? " (optional)" : ""}
+              </Label>
               <SessionTypePicker
                 types={sessionTypes}
                 value={sessionTypeId}

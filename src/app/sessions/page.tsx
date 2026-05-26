@@ -13,13 +13,14 @@ export const dynamic = "force-dynamic";
 
 type SessionRow = {
   id: string;
-  track_id: string;
+  track_id: string | null;
   duration_seconds: number | null;
   started_at: string;
   improved: string | null;
   still_broken: string | null;
   new_bottleneck: string | null;
-  tracks: { name: string; owner_id: string };
+  track: { name: string; owner_id: string } | null;
+  session_type: { name: string; color: string } | null;
 };
 
 async function fetchSessions(): Promise<SessionRow[]> {
@@ -27,12 +28,15 @@ async function fetchSessions(): Promise<SessionRow[]> {
   const { data } = await supabase
     .from("sessions")
     .select(
-      "id, track_id, duration_seconds, started_at, improved, still_broken, new_bottleneck, tracks!inner(name, owner_id)",
+      "id, track_id, duration_seconds, started_at, improved, still_broken, new_bottleneck, track:tracks!sessions_track_id_fkey(name, owner_id), session_type:session_types(name, color)",
     )
-    .eq("tracks.owner_id", OWNER_ID)
+    .not("started_at", "is", null)
     .order("started_at", { ascending: false })
     .limit(100);
-  return (data ?? []) as unknown as SessionRow[];
+  // Left join: keep track-less rows, and (single-user) only the owner's tracks.
+  return ((data ?? []) as unknown as SessionRow[]).filter(
+    (s) => !s.track || s.track.owner_id === OWNER_ID,
+  );
 }
 
 function formatDuration(seconds: number | null) {
@@ -89,12 +93,21 @@ export default async function SessionsPage() {
             <Card key={s.id}>
               <CardContent className="flex flex-col gap-2 p-5">
                 <div className="flex flex-wrap items-center justify-between gap-2">
-                  <Link
-                    href={`/tracks/${s.track_id}`}
-                    className="text-sm font-semibold hover:underline"
-                  >
-                    {s.tracks.name}
-                  </Link>
+                  {s.track && s.track_id ? (
+                    <Link
+                      href={`/tracks/${s.track_id}`}
+                      className="text-sm font-semibold hover:underline"
+                    >
+                      {s.track.name}
+                    </Link>
+                  ) : (
+                    <span className="flex items-center gap-2 text-sm font-semibold">
+                      {s.session_type?.name ?? "Session"}
+                      <Badge variant="default" className="font-normal">
+                        No track
+                      </Badge>
+                    </span>
+                  )}
                   <div className="flex items-center gap-3 text-xs text-muted-foreground">
                     <span>{formatDuration(s.duration_seconds)}</span>
                     <span>·</span>

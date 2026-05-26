@@ -20,11 +20,15 @@ async function fetchStats() {
       .eq("owner_id", OWNER_ID),
     supabase
       .from("sessions")
-      .select("duration_seconds, id, tracks!inner(owner_id)")
-      .eq("tracks.owner_id", OWNER_ID),
+      .select("duration_seconds, id, track:tracks!sessions_track_id_fkey(owner_id)")
+      .not("started_at", "is", null),
   ]);
 
-  const sessionRows = sessions.data ?? [];
+  // Left join: keep track-less rows, and (single-user) only the owner's tracks.
+  const sessionRows = ((sessions.data ?? []) as unknown as Array<{
+    duration_seconds: number | null;
+    track: { owner_id: string } | null;
+  }>).filter((s) => !s.track || s.track.owner_id === OWNER_ID);
   const totalSeconds = sessionRows.reduce(
     (acc, s) => acc + (s.duration_seconds ?? 0),
     0,

@@ -2,10 +2,15 @@ import Link from "next/link";
 import { Play } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { getTracksByStatus } from "@/lib/data/tracks";
+import { getSessionTypes } from "@/lib/data/session-types";
 import { recommendTrack } from "@/lib/recommend";
+import { StartSessionButton } from "@/components/start-session-button";
 
 export async function SidebarFocusPanel() {
-  const active = await getTracksByStatus("active");
+  const [active, sessionTypes] = await Promise.all([
+    getTracksByStatus("active"),
+    getSessionTypes(),
+  ]);
   const recommendation = recommendTrack(active);
 
   return (
@@ -43,6 +48,8 @@ export async function SidebarFocusPanel() {
           </Button>
         </>
       )}
+
+      <StartSessionButton sessionTypes={sessionTypes} />
     </section>
   );
 }
