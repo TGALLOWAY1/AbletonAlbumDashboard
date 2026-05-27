@@ -1,4 +1,5 @@
 import {
+  AudioLines,
   BarChart3,
   BookOpen,
   Calendar,
@@ -23,6 +24,7 @@ export const NAV_ITEMS: NavItem[] = [
   { href: "/albums", label: "Albums", icon: Disc3 },
   { href: "/tracks", label: "All Tracks", icon: ListMusic },
   { href: "/library", label: "Library", icon: Library },
+  { href: "/samples", label: "Samples", icon: AudioLines },
   { href: "/calendar", label: "Calendar", icon: Calendar },
   { href: "/sessions", label: "Focus Sessions", icon: Headphones },
   { href: "/analytics", label: "Analytics", icon: BarChart3 },

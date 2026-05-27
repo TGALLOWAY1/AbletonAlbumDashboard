@@ -429,6 +429,45 @@ export type Database = {
         };
         Relationships: [];
       };
+      samples: {
+        Row: {
+          created_at: string;
+          favorite_dest: string | null;
+          favorited_at: string | null;
+          id: string;
+          original_file_name: string;
+          original_path: string;
+          owner_id: string;
+          review_status: string;
+          sample_key: string;
+          updated_at: string;
+        };
+        Insert: {
+          created_at?: string;
+          favorite_dest?: string | null;
+          favorited_at?: string | null;
+          id?: string;
+          original_file_name: string;
+          original_path: string;
+          owner_id: string;
+          review_status?: string;
+          sample_key: string;
+          updated_at?: string;
+        };
+        Update: {
+          created_at?: string;
+          favorite_dest?: string | null;
+          favorited_at?: string | null;
+          id?: string;
+          original_file_name?: string;
+          original_path?: string;
+          owner_id?: string;
+          review_status?: string;
+          sample_key?: string;
+          updated_at?: string;
+        };
+        Relationships: [];
+      };
       resources: {
         Row: {
           bookmarked: boolean;
