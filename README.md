@@ -18,10 +18,15 @@ open first.
   Arrangement, Mixing, Mastering), bottleneck editor, primary-action editor,
   markdown notes, and audio versions with wavesurfer.js playback.
 - **Focus Mode** — minimal-chrome timer with start/pause/resume/stop. Stop
-  flows directly into a session log dialog with reflection prompts.
-- **Sessions** — duration, "what improved / still broken / new bottleneck"
-  prompts, plus a one-click "mark action complete." Saving updates the
-  active bottleneck, completes the action, and bumps `last_worked_at`.
+  flows into a full-screen production-logging page (`/focus/log`).
+- **Session logging** — break the tracked time down across nine production
+  activities (sound design, arrangement, mixing, organization, melody/harmony,
+  automation, reference/listening, FX design, other) with +/− 5-min steppers,
+  manual entry, and per-activity notes; rate Progress/Impact and Enjoyment 1–5;
+  add a general note; and (track sessions) optionally update the bottleneck.
+  Live total/untracked/completion summary. Saving persists the session,
+  per-activity allocations (`session_activities`), ratings, updates the active
+  bottleneck, and bumps `last_worked_at`.
 - **All Tracks** — library view with status + tag filters, 5-active-cap
   enforced server-side on activation.
 - **Calendar** — month grid of session logs with per-day minutes.
@@ -67,7 +72,8 @@ to your project: `supabase db push`. Otherwise paste each file into the SQL
 editor in the Supabase dashboard.
 
 Tables: `tracks`, `track_stages`, `bottlenecks`, `actions`, `sessions`,
-`track_versions`. Triggers seed the 5 stages on track insert and bump
+`session_activities` (per-activity time + notes), `track_versions`. Triggers
+seed the 5 stages on track insert and bump
 `tracks.last_worked_at` on session insert. Partial unique indexes enforce
 "one active bottleneck per track" and "one open primary action per track."
 
@@ -104,7 +110,8 @@ src/
       new/page.tsx           Add Track
       [id]/page.tsx          Detail (Overview / Notes / Versions)
       [id]/edit/page.tsx     Edit metadata
-    focus/[trackId]/page.tsx Focus Mode
+    focus/[trackId]/page.tsx Focus Mode (timer)
+    focus/log/page.tsx       Production-logging page (post-session)
     calendar/page.tsx        Month history grid
     analytics/page.tsx       V1 metrics
     actions/                 Server Actions (one file per resource)
