@@ -8,6 +8,7 @@ import { Input } from "@/components/ui/input";
 import { getBrowserSupabase } from "@/lib/supabase/browser";
 import { addVersionRecord } from "@/app/actions/versions";
 import { VersionItem } from "@/components/audio/version-item";
+import { useToast } from "@/components/toast";
 import type { VersionRow } from "@/lib/types";
 
 export function AudioVersionList({
@@ -20,6 +21,7 @@ export function AudioVersionList({
   const [label, setLabel] = useState("");
   const [file, setFile] = useState<File | null>(null);
   const [uploading, setUploading] = useState(false);
+  const { toast } = useToast();
 
   const upload = async () => {
     if (!file) return;
@@ -44,7 +46,7 @@ export function AudioVersionList({
       setFile(null);
       setLabel("");
     } catch (e) {
-      alert((e as Error).message);
+      toast((e as Error).message);
     } finally {
       setUploading(false);
     }

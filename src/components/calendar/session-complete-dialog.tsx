@@ -18,6 +18,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Badge } from "@/components/ui/badge";
 import { RatingPicker } from "@/components/ui/rating-picker";
 import { completeSession } from "@/app/actions/sessions";
+import { useToast } from "@/components/toast";
 import { TrackPicker } from "./track-picker";
 import { SessionTypePicker } from "./session-type-picker";
 import { cn } from "@/lib/utils";
@@ -64,6 +65,7 @@ export function SessionCompleteDialog({
 }) {
   const router = useRouter();
   const [pending, startTx] = useTransition();
+  const { toast } = useToast();
   const [improved, setImproved] = useState("");
   const [stillBroken, setStillBroken] = useState("");
   const [notesMd, setNotesMd] = useState("");
@@ -136,7 +138,7 @@ export function SessionCompleteDialog({
       endedAt = end.toISOString();
     }
     if (!startedAt || !endedAt) {
-      alert("Missing start/end times.");
+      toast("Missing start/end times.");
       return;
     }
 
@@ -174,7 +176,7 @@ export function SessionCompleteDialog({
         router.refresh();
         if (redirectTo) router.push(redirectTo);
       } catch (e) {
-        alert((e as Error).message);
+        toast((e as Error).message);
       }
     });
   };

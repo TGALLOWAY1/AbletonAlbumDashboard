@@ -9,6 +9,7 @@ import { Card } from "@/components/ui/card";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { useFocusSession } from "@/components/focus-session-provider";
+import { useToast } from "@/components/toast";
 import { completeSession } from "@/app/actions/sessions";
 import {
   PRODUCTION_ACTIVITIES,
@@ -43,6 +44,7 @@ export function SessionLogPage({
   const ctx = useFocusSession();
   const [pending, startTx] = useTransition();
   const [settled, setSettled] = useState(false);
+  const { toast } = useToast();
 
   // Freeze the start/end window once, when the page first has a session, so the
   // displayed "Started" time and the saved start/end don't drift on re-render.
@@ -159,7 +161,7 @@ export function SessionLogPage({
         router.push(track ? `/tracks/${track.id}` : "/");
         router.refresh();
       } catch (e) {
-        alert((e as Error).message);
+        toast((e as Error).message);
       }
     });
   };

@@ -36,16 +36,22 @@ function MetaStat({
   icon: Icon,
   value,
   emphasis = false,
+  warn = false,
 }: {
   icon: LucideIcon;
   value: string;
   emphasis?: boolean;
+  warn?: boolean;
 }) {
   return (
     <span
       className={cn(
         "flex items-center gap-1.5",
-        emphasis ? "text-foreground" : "text-muted-foreground",
+        warn
+          ? "text-warning"
+          : emphasis
+            ? "text-foreground"
+            : "text-muted-foreground",
       )}
     >
       <Icon className="h-3.5 w-3.5 shrink-0" />
@@ -57,10 +63,12 @@ function MetaStat({
 function MetaRow({
   stats,
   lastWorked,
+  stale,
   estMinutes,
 }: {
   stats: SessionStats;
   lastWorked: string;
+  stale: boolean;
   estMinutes: number;
 }) {
   return (
@@ -70,7 +78,7 @@ function MetaRow({
         icon={AudioLines}
         value={`${stats.count} ${stats.count === 1 ? "session" : "sessions"}`}
       />
-      <MetaStat icon={CalendarDays} value={lastWorked} />
+      <MetaStat icon={CalendarDays} value={lastWorked} warn={stale} />
       {estMinutes > 0 && (
         <MetaStat
           icon={Hourglass}
@@ -117,9 +125,12 @@ function NextAction({ description }: { description?: string }) {
 export function TrackCard({
   track,
   sessionStats,
+  stale = false,
 }: {
   track: TrackWithDetails;
   sessionStats?: SessionStats;
+  // Computed by the (server) caller — render must stay pure, no Date.now().
+  stale?: boolean;
 }) {
   const progress = progressFromStages(track.stages);
   const [genre] = track.tags;
@@ -177,6 +188,7 @@ export function TrackCard({
             <MetaRow
               stats={stats}
               lastWorked={lastWorked}
+              stale={stale}
               estMinutes={track.estMinutesRemaining}
             />
 
@@ -288,6 +300,7 @@ export function TrackCard({
             <MetaRow
               stats={stats}
               lastWorked={lastWorked}
+              stale={stale}
               estMinutes={track.estMinutesRemaining}
             />
           </div>

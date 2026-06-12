@@ -20,6 +20,7 @@ import { Badge } from "@/components/ui/badge";
 import { TrackPicker } from "@/components/calendar/track-picker";
 import { SessionTypePicker } from "@/components/calendar/session-type-picker";
 import { completeSession } from "@/app/actions/sessions";
+import { useToast } from "@/components/toast";
 import {
   BOTTLENECK_CATEGORIES,
   BOTTLENECK_LABELS,
@@ -91,6 +92,7 @@ function ManualSessionDialog({
   const [newBottleneckCategory, setNewBottleneckCategory] =
     useState<string>("arrangement");
   const [pending, startTx] = useTransition();
+  const { toast } = useToast();
 
   const durationSec = useMemo(() => {
     if (!/^\d+$/.test(minutes)) return 0;
@@ -145,7 +147,7 @@ function ManualSessionDialog({
         onOpenChange(false);
         router.refresh();
       } catch (e) {
-        alert((e as Error).message);
+        toast((e as Error).message);
       }
     });
   };

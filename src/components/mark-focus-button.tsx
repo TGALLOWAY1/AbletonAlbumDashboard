@@ -4,16 +4,18 @@ import { useTransition } from "react";
 import { Star } from "lucide-react";
 import { toggleTrackFocus } from "@/app/actions/tracks";
 import { DropdownMenuItem } from "@/components/ui/dropdown-menu";
+import { useToast } from "@/components/toast";
 import { cn } from "@/lib/utils";
 
 function useToggleFocus(trackId: string) {
   const [pending, start] = useTransition();
+  const { toast } = useToast();
   const run = () => {
     start(async () => {
       try {
         await toggleTrackFocus(trackId);
       } catch (e) {
-        alert((e as Error).message);
+        toast((e as Error).message);
       }
     });
   };

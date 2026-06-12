@@ -12,6 +12,7 @@ import {
   setPrimaryAction,
   completeAction,
 } from "@/app/actions/actions";
+import { useToast } from "@/components/toast";
 import type { ActionRow } from "@/lib/types";
 
 export function NextActionEditor({
@@ -28,6 +29,7 @@ export function NextActionEditor({
     action?.estimated_minutes ? String(action.estimated_minutes) : "",
   );
   const [pending, start] = useTransition();
+  const { toast } = useToast();
 
   const submit = () => {
     if (!description.trim()) return;
@@ -41,7 +43,7 @@ export function NextActionEditor({
         });
         setEditing(false);
       } catch (e) {
-        alert((e as Error).message);
+        toast((e as Error).message);
       }
     });
   };
@@ -56,7 +58,7 @@ export function NextActionEditor({
         setEstimate("");
         setEditing(true);
       } catch (e) {
-        alert((e as Error).message);
+        toast((e as Error).message);
       }
     });
   };

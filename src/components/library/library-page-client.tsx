@@ -20,7 +20,7 @@ import {
   type SortKey,
   type ViewMode,
 } from "./library-toolbar";
-import { ToastProvider, useToast } from "./toast";
+import { useToast } from "@/components/toast";
 
 const PAGE_SIZE = 10;
 
@@ -272,9 +272,5 @@ function LibraryPageInner({ items: initialItems }: { items: LibraryItem[] }) {
 }
 
 export function LibraryPageClient({ items }: { items: LibraryItem[] }) {
-  return (
-    <ToastProvider>
-      <LibraryPageInner items={items} />
-    </ToastProvider>
-  );
+  return <LibraryPageInner items={items} />;
 }

@@ -4,6 +4,7 @@ import { useTransition, useState, useRef } from "react";
 import { Check } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { setStagePercent, toggleStage } from "@/app/actions/stages";
+import { useToast } from "@/components/toast";
 import {
   STAGE_KEYS,
   STAGE_LABELS,
@@ -26,6 +27,7 @@ export function StagesChecklist({
 }) {
   const [pending, start] = useTransition();
   const [optimistic, setOptimistic] = useState<Record<string, number>>({});
+  const { toast } = useToast();
 
   const byKey = new Map(stages.map((s) => [s.stage_key, s]));
   const ordered = STAGE_KEYS.map(
@@ -54,7 +56,7 @@ export function StagesChecklist({
       try {
         await setStagePercent(trackId, key, percent);
       } catch (e) {
-        alert((e as Error).message);
+        toast((e as Error).message);
       }
     });
   };
@@ -65,7 +67,7 @@ export function StagesChecklist({
       try {
         await toggleStage(trackId, key, !current);
       } catch (e) {
-        alert((e as Error).message);
+        toast((e as Error).message);
       }
     });
   };

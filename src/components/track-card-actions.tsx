@@ -3,6 +3,7 @@
 import { useTransition } from "react";
 import { setTrackStatus } from "@/app/actions/tracks";
 import { DropdownMenuItem } from "@/components/ui/dropdown-menu";
+import { useToast } from "@/components/toast";
 
 export function TrackCardActions({
   trackId,
@@ -12,13 +13,14 @@ export function TrackCardActions({
   status: string;
 }) {
   const [pending, start] = useTransition();
+  const { toast } = useToast();
 
   const run = (next: string) => {
     start(async () => {
       try {
         await setTrackStatus(trackId, next);
       } catch (e) {
-        alert((e as Error).message);
+        toast((e as Error).message);
       }
     });
   };

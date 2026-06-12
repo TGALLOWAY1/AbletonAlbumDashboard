@@ -48,11 +48,17 @@ export function recommendTrack(
       WEIGHTS.freshness * freshness +
       WEIGHTS.bottleneck * hasBottleneck;
 
+    // Reason attribution: every candidate mirrors a positive contributor to
+    // the actual score, so the badge can never claim a quality (e.g.
+    // staleness) that the score penalizes.
     const contribs: Array<[string, number]> = [
       ["Closest to done", WEIGHTS.progress * progress],
       ["High momentum", WEIGHTS.momentum * momentum],
-      ["Quick win — no active bottleneck", hasBottleneck ? -1 : WEIGHTS.freshness * 0.5],
-      ["Hasn’t been touched in a while", WEIGHTS.freshness * (1 - freshness)],
+      ["Fresh in your mind", WEIGHTS.freshness * freshness],
+      [
+        "Quick win — no active bottleneck",
+        hasBottleneck ? -Infinity : -WEIGHTS.bottleneck,
+      ],
     ];
     const [reason] = contribs.sort((a, b) => b[1] - a[1])[0];
 

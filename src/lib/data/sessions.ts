@@ -24,3 +24,25 @@ export async function getSessionStatsByTrack(): Promise<
   });
   return map;
 }
+
+// Per-track count of completed sessions started within the last `days` days.
+// Feeds the momentum signal in `recommendTrack`.
+export async function getSessionCountsByTrackSince(
+  days: number,
+): Promise<Map<string, number>> {
+  const supabase = getServerSupabase();
+  const sinceIso = new Date(Date.now() - days * 86_400_000).toISOString();
+  const { data } = await supabase
+    .from("sessions")
+    .select("track_id, tracks!inner(owner_id)")
+    .eq("tracks.owner_id", OWNER_ID)
+    .eq("status", "completed")
+    .gte("started_at", sinceIso);
+
+  const map = new Map<string, number>();
+  (data ?? []).forEach((row) => {
+    if (!row.track_id) return;
+    map.set(row.track_id, (map.get(row.track_id) ?? 0) + 1);
+  });
+  return map;
+}

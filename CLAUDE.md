@@ -48,12 +48,15 @@ The `src/components/mobile/` directory currently holds components used on **both
 
 ### Known parity gaps (snapshot — file follow-ups under the rule above)
 
-- Mobile lacks audio version upload (`/m/[trackId]` is read-only for versions; uses `VersionItem`, not `AudioVersionList`).
-- Mobile lacks the metadata editor at `/tracks/[id]/edit`.
+None currently. Both `/tracks/[id]` and `/m/[trackId]` render `AudioVersionList`
+(including upload) and link to the shared metadata editor at
+`/tracks/[id]/edit`. The `.als` file-path copy renders on both but is only
+useful on desktop (documented exception).
 
 ## Conventions
 
 - Server components are the default; mark client components with `"use client"` only when they need state, refs, or browser APIs.
-- Server actions return after `revalidatePath` for **both** route shapes when they mutate track-level data — see `src/app/actions/track-todos.ts` for the pattern.
+- Server actions that mutate track-level data must call `revalidateTrackSurfaces(trackId)` from `src/lib/revalidate-track.ts`, which revalidates **both** route shapes plus the dashboard/focus/session surfaces. Do not hand-roll `revalidatePath` lists.
+- User-facing errors in client components go through `useToast()` (`src/components/toast.tsx`, provider mounted in the root layout) — never `window.alert()`.
 - Optimistic UI uses React 19's `useOptimistic` (see `TrackTodoList`).
 - Styling: Tailwind utility classes, no CSS modules. Use `cn()` / `tailwind-merge` for conditional classes.

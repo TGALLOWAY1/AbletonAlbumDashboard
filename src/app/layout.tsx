@@ -6,6 +6,7 @@ import { MobileBottomNav } from "@/components/mobile/bottom-nav";
 import { MobileHeader } from "@/components/mobile/mobile-header";
 import { FocusSessionProvider } from "@/components/focus-session-provider";
 import { FloatingFocusBar } from "@/components/floating-focus-bar";
+import { ToastProvider } from "@/components/toast";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -56,19 +57,21 @@ export default function RootLayout({
       className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
     >
       <body className="min-h-full">
-        <FocusSessionProvider>
-          <div className="flex min-h-screen">
-            <Sidebar />
-            <div className="flex min-w-0 flex-1 flex-col">
-              <MobileHeader />
-              <main className="flex-1 px-4 pb-24 pt-4 md:px-8 md:pb-7 md:pt-7">
-                {children}
-              </main>
+        <ToastProvider>
+          <FocusSessionProvider>
+            <div className="flex min-h-screen">
+              <Sidebar />
+              <div className="flex min-w-0 flex-1 flex-col">
+                <MobileHeader />
+                <main className="flex-1 px-4 pb-24 pt-4 md:px-8 md:pb-7 md:pt-7">
+                  {children}
+                </main>
+              </div>
             </div>
-          </div>
-          <MobileBottomNav />
-          <FloatingFocusBar />
-        </FocusSessionProvider>
+            <MobileBottomNav />
+            <FloatingFocusBar />
+          </FocusSessionProvider>
+        </ToastProvider>
       </body>
     </html>
   );

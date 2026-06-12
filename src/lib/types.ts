@@ -96,6 +96,10 @@ export const BOTTLENECK_LABELS: Record<string, string> = {
 
 export const MAX_ACTIVE_TRACKS = 5;
 
+// A track untouched for longer than this is considered going stale and gets
+// flagged on the dashboard ("Needs attention") and on track cards.
+export const STALE_AFTER_DAYS = 7;
+
 // Aggregate shape used by dashboard + detail views.
 export type TrackWithDetails = TrackRow & {
   stages: StageRow[];

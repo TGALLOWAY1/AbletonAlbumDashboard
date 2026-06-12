@@ -1,8 +1,8 @@
 "use server";
 
-import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { getServerSupabase } from "@/lib/supabase/server";
+import { revalidateTrackSurfaces } from "@/lib/revalidate-track";
 import { BOTTLENECK_CATEGORIES } from "@/lib/types";
 
 const schema = z.object({
@@ -34,8 +34,7 @@ export async function setActiveBottleneck(input: {
   });
   if (error) throw error;
 
-  revalidatePath(`/tracks/${parsed.trackId}`);
-  revalidatePath("/");
+  revalidateTrackSurfaces(parsed.trackId);
 }
 
 export async function resolveActiveBottleneck(trackId: string) {
@@ -46,6 +45,5 @@ export async function resolveActiveBottleneck(trackId: string) {
     .eq("track_id", trackId)
     .eq("is_active", true);
   if (error) throw error;
-  revalidatePath(`/tracks/${trackId}`);
-  revalidatePath("/");
+  revalidateTrackSurfaces(trackId);
 }

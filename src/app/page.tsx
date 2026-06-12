@@ -9,6 +9,7 @@ import {
   TrendingUp,
 } from "lucide-react";
 import { TrackCard } from "@/components/track-card";
+import { NextUpCard } from "@/components/next-up-card";
 import { UpcomingAlbumsGallery } from "@/components/album/upcoming-albums-gallery";
 import { LibraryStatCard } from "@/components/library/library-stat-card";
 import { Button } from "@/components/ui/button";
@@ -19,9 +20,17 @@ import {
   getTracksWithoutAlbum,
 } from "@/lib/data/tracks";
 import { getActiveAlbum, listUpcomingAlbums } from "@/lib/data/album";
-import { getSessionStatsByTrack } from "@/lib/data/sessions";
+import {
+  getSessionCountsByTrackSince,
+  getSessionStatsByTrack,
+} from "@/lib/data/sessions";
+import { recommendTrack } from "@/lib/recommend";
 import { formatDuration } from "@/lib/utils";
-import { progressFromStages, type TrackWithDetails } from "@/lib/types";
+import {
+  progressFromStages,
+  STALE_AFTER_DAYS,
+  type TrackWithDetails,
+} from "@/lib/types";
 
 export const dynamic = "force-dynamic";
 
@@ -31,18 +40,32 @@ function greetingForHour(hour: number) {
   return "Good evening";
 }
 
-function sortTracks(tracks: TrackWithDetails[]): TrackWithDetails[] {
-  return [...tracks].sort(
-    (a, b) => progressFromStages(b.stages) - progressFromStages(a.stages),
-  );
+function daysSinceWorked(track: TrackWithDetails): number {
+  if (!track.last_worked_at) return Infinity;
+  return (Date.now() - new Date(track.last_worked_at).getTime()) / 86_400_000;
+}
+
+// Opinionated triage order instead of a sort control: tracks being worked
+// ("in motion", closest to done first) vs. tracks going stale ("needs
+// attention", stalest first).
+function triageTracks(tracks: TrackWithDetails[]) {
+  const inMotion = tracks
+    .filter((t) => daysSinceWorked(t) <= STALE_AFTER_DAYS)
+    .sort((a, b) => progressFromStages(b.stages) - progressFromStages(a.stages));
+  const needsAttention = tracks
+    .filter((t) => daysSinceWorked(t) > STALE_AFTER_DAYS)
+    .sort((a, b) => daysSinceWorked(b) - daysSinceWorked(a));
+  return { inMotion, needsAttention };
 }
 
 export default async function DashboardPage() {
-  const [activeAlbum, upcomingAlbums, sessionStats] = await Promise.all([
-    getActiveAlbum(),
-    listUpcomingAlbums(4),
-    getSessionStatsByTrack(),
-  ]);
+  const [activeAlbum, upcomingAlbums, sessionStats, recentCounts] =
+    await Promise.all([
+      getActiveAlbum(),
+      listUpcomingAlbums(4),
+      getSessionStatsByTrack(),
+      getSessionCountsByTrackSince(7),
+    ]);
 
   // Active tracks live in the active album. If no album is set up yet (fresh
   // install, or every album deleted), fall back to all status=active tracks so
@@ -56,7 +79,10 @@ export default async function DashboardPage() {
   // Tracks without an album: surface them so they don't get lost.
   const orphanTracks = activeAlbum ? await getTracksWithoutAlbum() : [];
 
-  const sorted = sortTracks(activeTracks);
+  // One recommended track up top; everything else triaged below it.
+  const recommendation = recommendTrack(activeTracks, recentCounts);
+  const rest = activeTracks.filter((t) => t.id !== recommendation?.track.id);
+  const { inMotion, needsAttention } = triageTracks(rest);
 
   // Summary metrics across the active tracks.
   const totalSeconds = activeTracks.reduce(
@@ -120,6 +146,8 @@ export default async function DashboardPage() {
         </div>
       </header>
 
+      <NextUpCard rec={recommendation} />
+
       {activeTracks.length > 0 && (
         <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
           <LibraryStatCard
@@ -146,15 +174,8 @@ export default async function DashboardPage() {
         </div>
       )}
 
-      <section>
-        <div className="mb-3">
-          <h2 className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
-            {activeAlbum ? "Active album" : "Your active tracks"} ·{" "}
-            {sorted.length} {sorted.length === 1 ? "track" : "tracks"}
-          </h2>
-        </div>
-
-        {sorted.length === 0 ? (
+      {activeTracks.length === 0 ? (
+        <section>
           <Card>
             <CardContent className="flex flex-col items-start gap-3 p-8">
               <h3 className="text-lg font-semibold">
@@ -172,18 +193,51 @@ export default async function DashboardPage() {
               </Button>
             </CardContent>
           </Card>
-        ) : (
-          <div className="flex flex-col gap-3">
-            {sorted.map((track) => (
-              <TrackCard
-                key={track.id}
-                track={track}
-                sessionStats={sessionStats.get(track.id)}
-              />
-            ))}
-          </div>
-        )}
-      </section>
+        </section>
+      ) : (
+        <>
+          {inMotion.length > 0 && (
+            <section>
+              <div className="mb-3">
+                <h2 className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+                  In motion · {inMotion.length}{" "}
+                  {inMotion.length === 1 ? "track" : "tracks"}
+                </h2>
+              </div>
+              <div className="flex flex-col gap-3">
+                {inMotion.map((track) => (
+                  <TrackCard
+                    key={track.id}
+                    track={track}
+                    sessionStats={sessionStats.get(track.id)}
+                  />
+                ))}
+              </div>
+            </section>
+          )}
+
+          {needsAttention.length > 0 && (
+            <section>
+              <div className="mb-3">
+                <h2 className="text-[11px] font-semibold uppercase tracking-wider text-warning">
+                  Needs attention · {needsAttention.length}{" "}
+                  {needsAttention.length === 1 ? "track" : "tracks"}
+                </h2>
+              </div>
+              <div className="flex flex-col gap-3">
+                {needsAttention.map((track) => (
+                  <TrackCard
+                    key={track.id}
+                    track={track}
+                    sessionStats={sessionStats.get(track.id)}
+                    stale
+                  />
+                ))}
+              </div>
+            </section>
+          )}
+        </>
+      )}
 
       <UpcomingAlbumsGallery albums={upcomingAlbums} />
 

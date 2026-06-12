@@ -14,6 +14,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { updateNotes } from "@/app/actions/tracks";
+import { useToast } from "@/components/toast";
 
 export function AddNoteDialog({
   trackId,
@@ -29,6 +30,7 @@ export function AddNoteDialog({
   const [open, setOpen] = useState(false);
   const [value, setValue] = useState(currentNotes);
   const [pending, start] = useTransition();
+  const { toast } = useToast();
 
   const handleOpenChange = (next: boolean) => {
     if (next) setValue(currentNotes);
@@ -41,7 +43,7 @@ export function AddNoteDialog({
         await updateNotes(trackId, value);
         setOpen(false);
       } catch (e) {
-        alert((e as Error).message);
+        toast((e as Error).message);
       }
     });
   };

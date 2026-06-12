@@ -4,7 +4,7 @@ import * as React from "react";
 import { useRouter } from "next/navigation";
 import { ChevronLeft, Plus, Upload } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { ToastProvider, useToast } from "@/components/library/toast";
+import { useToast } from "@/components/toast";
 import {
   TEMPLATE_CATEGORY_LABELS,
   TEMPLATE_CATEGORY_ORDER,
@@ -245,9 +245,5 @@ function TemplatesPageInner({ items: initialItems }: { items: TemplateItem[] }) 
 }
 
 export function TemplatesPageClient({ items }: { items: TemplateItem[] }) {
-  return (
-    <ToastProvider>
-      <TemplatesPageInner items={items} />
-    </ToastProvider>
-  );
+  return <TemplatesPageInner items={items} />;
 }

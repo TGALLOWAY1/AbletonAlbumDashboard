@@ -1,8 +1,8 @@
 "use server";
 
-import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { getServerSupabase } from "@/lib/supabase/server";
+import { revalidateTrackSurfaces } from "@/lib/revalidate-track";
 
 const addSchema = z.object({
   trackId: z.string().uuid(),
@@ -26,7 +26,7 @@ export async function addVersionRecord(input: {
     duration_seconds: parsed.durationSeconds ?? null,
   });
   if (error) throw error;
-  revalidatePath(`/tracks/${parsed.trackId}`);
+  revalidateTrackSurfaces(parsed.trackId);
 }
 
 export async function deleteVersion(versionId: string, trackId: string) {
@@ -46,7 +46,7 @@ export async function deleteVersion(versionId: string, trackId: string) {
     .delete()
     .eq("id", versionId);
   if (error) throw error;
-  revalidatePath(`/tracks/${trackId}`);
+  revalidateTrackSurfaces(trackId);
 }
 
 export async function getSignedUrl(storagePath: string) {

@@ -39,6 +39,7 @@ import {
   type StatusMap,
 } from "@/lib/samples/types";
 import { upsertSampleStatus } from "@/app/actions/samples";
+import { useToast } from "@/components/toast";
 import type { ReviewStatus, SampleRow } from "@/lib/types";
 
 function isTypingTarget(el: EventTarget | null): boolean {
@@ -57,6 +58,7 @@ export function SamplesWorkspace({
 }: {
   initialStatuses: Record<string, SampleRow>;
 }) {
+  const { toast } = useToast();
   const [supported, setSupported] = useState<boolean | null>(null);
   const [sources, setSources] = useState<SourceRef[]>([]);
   const [favoritesRoot, setFavoritesRoot] =
@@ -188,10 +190,10 @@ export function SamplesWorkspace({
         });
       } catch (e) {
         setStatuses((m) => ({ ...m, [vm.key]: prev }));
-        alert((e as Error).message);
+        toast((e as Error).message);
       }
     },
-    [statuses],
+    [statuses, toast],
   );
 
   const advance = useCallback(() => {
@@ -203,17 +205,17 @@ export function SamplesWorkspace({
   const addToFavorites = useCallback(
     async (vm: SampleVM) => {
       if (!favoritesRoot) {
-        alert("Set a Favorites folder first.");
+        toast("Set a Favorites folder first.");
         return;
       }
       if (!lockedDest) {
-        alert("Lock a destination folder in the Favorites panel first.");
+        toast("Lock a destination folder in the Favorites panel first.");
         return;
       }
       try {
         const granted = await verifyPermission(favoritesRoot, true);
         if (!granted) {
-          alert("Permission to write to the Favorites folder was denied.");
+          toast("Permission to write to the Favorites folder was denied.");
           return;
         }
         const destDir = await ensureDestPath(favoritesRoot, lockedDest.segments);
@@ -233,10 +235,10 @@ export function SamplesWorkspace({
         );
         advance();
       } catch (e) {
-        alert((e as Error).message);
+        toast((e as Error).message);
       }
     },
-    [favoritesRoot, lockedDest, persistStatus, advance],
+    [favoritesRoot, lockedDest, persistStatus, advance, toast],
   );
 
   const markReviewed = useCallback(

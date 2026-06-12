@@ -1,17 +1,8 @@
 "use server";
 
-import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { getServerSupabase } from "@/lib/supabase/server";
-
-const revalidateAll = (trackId: string) => {
-  revalidatePath(`/m/${trackId}`);
-  revalidatePath(`/tracks/${trackId}`);
-  revalidatePath(`/focus/${trackId}`);
-  revalidatePath("/");
-  revalidatePath("/calendar");
-  revalidatePath("/sessions");
-};
+import { revalidateTrackSurfaces } from "@/lib/revalidate-track";
 
 const addSchema = z.object({
   trackId: z.string().uuid(),
@@ -30,7 +21,7 @@ export async function addTrackTodo(input: {
     is_primary: false,
   });
   if (error) throw error;
-  revalidateAll(parsed.trackId);
+  revalidateTrackSurfaces(parsed.trackId);
 }
 
 export async function toggleTrackTodo(
@@ -49,7 +40,7 @@ export async function toggleTrackTodo(
     })
     .eq("id", id);
   if (error) throw error;
-  revalidateAll(trackId);
+  revalidateTrackSurfaces(trackId);
 }
 
 const updateSchema = z.object({
@@ -70,12 +61,12 @@ export async function updateTrackTodo(
     .update({ description: parsed.description })
     .eq("id", parsed.id);
   if (error) throw error;
-  revalidateAll(parsed.trackId);
+  revalidateTrackSurfaces(parsed.trackId);
 }
 
 export async function deleteTrackTodo(id: string, trackId: string) {
   const supabase = getServerSupabase();
   const { error } = await supabase.from("actions").delete().eq("id", id);
   if (error) throw error;
-  revalidateAll(trackId);
+  revalidateTrackSurfaces(trackId);
 }

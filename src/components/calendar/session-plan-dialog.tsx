@@ -35,6 +35,7 @@ import {
 } from "@/app/actions/sessions";
 import { replaceSessionTodos } from "@/app/actions/session-todos";
 import { instantiateTemplate } from "@/app/actions/session-templates";
+import { useToast } from "@/components/toast";
 import type {
   CalendarSessionRow,
   SessionTypeRow,
@@ -73,6 +74,7 @@ export function SessionPlanDialog({
 }) {
   const router = useRouter();
   const [pending, startTx] = useTransition();
+  const { toast } = useToast();
   const [start, setStart] = useState<string>("");
   const [end, setEnd] = useState<string>("");
   const [sessionTypeId, setSessionTypeId] = useState<string | null>(null);
@@ -127,7 +129,7 @@ export function SessionPlanDialog({
     const startIso = new Date(start).toISOString();
     const endIso = new Date(end).toISOString();
     if (sessionType?.requires_track && !trackId) {
-      alert(`${sessionType.name} sessions require a track.`);
+      toast(`${sessionType.name} sessions require a track.`);
       return;
     }
     startTx(async () => {
@@ -177,7 +179,7 @@ export function SessionPlanDialog({
         onOpenChange(false);
         router.refresh();
       } catch (e) {
-        alert((e as Error).message);
+        toast((e as Error).message);
       }
     });
   };

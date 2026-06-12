@@ -163,9 +163,6 @@ export default async function TrackDetailPage({
           <TabsTrigger value="notes">Notes</TabsTrigger>
           <TabsTrigger value="versions">Versions</TabsTrigger>
           <TabsTrigger value="history">History</TabsTrigger>
-          <TabsTrigger value="files" disabled>
-            Files (soon)
-          </TabsTrigger>
         </TabsList>
 
         <TabsContent value="overview">

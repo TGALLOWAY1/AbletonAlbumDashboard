@@ -11,6 +11,7 @@ import {
   toggleTrackTodo,
   updateTrackTodo,
 } from "@/app/actions/track-todos";
+import { useToast } from "@/components/toast";
 import type { ActionRow } from "@/lib/types";
 
 type TodoItem = ActionRow & { _temp?: boolean };
@@ -106,6 +107,7 @@ export function TrackTodoList({
   const [, startTransition] = useTransition();
   const [draft, setDraft] = useState("");
   const inputRef = useRef<HTMLInputElement | null>(null);
+  const { toast } = useToast();
 
   const submitDraft = () => {
     const description = draft.trim();
@@ -130,7 +132,7 @@ export function TrackTodoList({
       try {
         await addTrackTodo({ trackId, description });
       } catch (e) {
-        alert((e as Error).message);
+        toast((e as Error).message);
       }
     });
     inputRef.current?.focus();
@@ -143,7 +145,7 @@ export function TrackTodoList({
       try {
         await toggleTrackTodo(item.id, next, trackId);
       } catch (e) {
-        alert((e as Error).message);
+        toast((e as Error).message);
       }
     });
   };
@@ -156,7 +158,7 @@ export function TrackTodoList({
       try {
         await updateTrackTodo(item.id, trimmed, trackId);
       } catch (e) {
-        alert((e as Error).message);
+        toast((e as Error).message);
       }
     });
   };
@@ -168,7 +170,7 @@ export function TrackTodoList({
       try {
         await deleteTrackTodo(item.id, trackId);
       } catch (e) {
-        alert((e as Error).message);
+        toast((e as Error).message);
       }
     });
   };

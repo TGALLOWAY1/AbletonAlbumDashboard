@@ -1,8 +1,8 @@
 "use server";
 
-import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { getServerSupabase } from "@/lib/supabase/server";
+import { revalidateTrackSurfaces } from "@/lib/revalidate-track";
 
 const setSchema = z.object({
   trackId: z.string().uuid(),
@@ -42,8 +42,7 @@ export async function setPrimaryAction(input: {
   });
   if (error) throw error;
 
-  revalidatePath(`/tracks/${parsed.trackId}`);
-  revalidatePath("/");
+  revalidateTrackSurfaces(parsed.trackId);
 }
 
 export async function completeAction(actionId: string, trackId: string) {
@@ -53,6 +52,5 @@ export async function completeAction(actionId: string, trackId: string) {
     .update({ completed_at: new Date().toISOString(), is_primary: false })
     .eq("id", actionId);
   if (error) throw error;
-  revalidatePath(`/tracks/${trackId}`);
-  revalidatePath("/");
+  revalidateTrackSurfaces(trackId);
 }

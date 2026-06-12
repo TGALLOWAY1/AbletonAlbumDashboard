@@ -7,6 +7,7 @@ import {
   deleteTrackTodo,
   toggleTrackTodo,
 } from "@/app/actions/track-todos";
+import { useToast } from "@/components/toast";
 import type { ActionRow } from "@/lib/types";
 
 type Action =
@@ -36,6 +37,7 @@ export function TrackTodoHistory({
   );
   const [, startTransition] = useTransition();
   const [open, setOpen] = useState(variant === "panel");
+  const { toast } = useToast();
 
   const onRestore = (item: ActionRow) => {
     startTransition(async () => {
@@ -43,7 +45,7 @@ export function TrackTodoHistory({
       try {
         await toggleTrackTodo(item.id, false, trackId);
       } catch (e) {
-        alert((e as Error).message);
+        toast((e as Error).message);
       }
     });
   };
@@ -55,7 +57,7 @@ export function TrackTodoHistory({
       try {
         await deleteTrackTodo(item.id, trackId);
       } catch (e) {
-        alert((e as Error).message);
+        toast((e as Error).message);
       }
     });
   };

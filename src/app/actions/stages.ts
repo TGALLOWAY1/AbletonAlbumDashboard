@@ -1,8 +1,8 @@
 "use server";
 
-import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { getServerSupabase } from "@/lib/supabase/server";
+import { revalidateTrackSurfaces } from "@/lib/revalidate-track";
 import { STAGE_KEYS } from "@/lib/types";
 
 const stageSchema = z.enum(STAGE_KEYS as unknown as [string, ...string[]]);
@@ -20,8 +20,7 @@ export async function toggleStage(
     .eq("track_id", trackId)
     .eq("stage_key", key);
   if (error) throw error;
-  revalidatePath(`/tracks/${trackId}`);
-  revalidatePath("/");
+  revalidateTrackSurfaces(trackId);
 }
 
 export async function setStagePercent(
@@ -38,6 +37,5 @@ export async function setStagePercent(
     .eq("track_id", trackId)
     .eq("stage_key", key);
   if (error) throw error;
-  revalidatePath(`/tracks/${trackId}`);
-  revalidatePath("/");
+  revalidateTrackSurfaces(trackId);
 }

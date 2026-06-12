@@ -5,6 +5,7 @@ import { Pause, Play, Trash2 } from "lucide-react";
 import WaveSurfer from "wavesurfer.js";
 import { Button } from "@/components/ui/button";
 import { deleteVersion, getSignedUrl } from "@/app/actions/versions";
+import { useToast } from "@/components/toast";
 import type { VersionRow } from "@/lib/types";
 
 function formatDuration(seconds: number | null): string {
@@ -31,6 +32,7 @@ export function VersionItem({
     version.duration_seconds,
   );
   const [pending, start] = useTransition();
+  const { toast } = useToast();
 
   useEffect(() => {
     let cancelled = false;
@@ -82,7 +84,7 @@ export function VersionItem({
       try {
         await deleteVersion(version.id, trackId);
       } catch (e) {
-        alert((e as Error).message);
+        toast((e as Error).message);
       }
     });
   };

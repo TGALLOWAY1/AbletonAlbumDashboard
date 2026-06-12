@@ -3,6 +3,7 @@
 import { useTransition } from "react";
 import { deleteTrack } from "@/app/actions/tracks";
 import { DropdownMenuItem } from "@/components/ui/dropdown-menu";
+import { useToast } from "@/components/toast";
 
 export function DeleteTrackMenuItem({
   trackId,
@@ -12,6 +13,7 @@ export function DeleteTrackMenuItem({
   trackName: string;
 }) {
   const [pending, start] = useTransition();
+  const { toast } = useToast();
 
   return (
     <DropdownMenuItem
@@ -23,7 +25,7 @@ export function DeleteTrackMenuItem({
           try {
             await deleteTrack(trackId);
           } catch (err) {
-            alert((err as Error).message);
+            toast((err as Error).message);
           }
         });
       }}

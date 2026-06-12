@@ -10,6 +10,7 @@ import {
   setActiveBottleneck,
   resolveActiveBottleneck,
 } from "@/app/actions/bottlenecks";
+import { useToast } from "@/components/toast";
 import {
   BOTTLENECK_CATEGORIES,
   BOTTLENECK_LABELS,
@@ -29,6 +30,7 @@ export function BottleneckEditor({
     bottleneck?.category ?? "arrangement",
   );
   const [pending, start] = useTransition();
+  const { toast } = useToast();
 
   const submit = () => {
     if (!description.trim()) return;
@@ -41,7 +43,7 @@ export function BottleneckEditor({
         });
         setEditing(false);
       } catch (e) {
-        alert((e as Error).message);
+        toast((e as Error).message);
       }
     });
   };
@@ -53,7 +55,7 @@ export function BottleneckEditor({
         setDescription("");
         setEditing(true);
       } catch (e) {
-        alert((e as Error).message);
+        toast((e as Error).message);
       }
     });
   };

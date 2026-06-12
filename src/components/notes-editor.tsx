@@ -7,6 +7,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { updateNotes } from "@/app/actions/tracks";
+import { useToast } from "@/components/toast";
 
 export function NotesEditor({
   trackId,
@@ -18,6 +19,7 @@ export function NotesEditor({
   const [editing, setEditing] = useState(initial.trim() === "");
   const [value, setValue] = useState(initial);
   const [pending, start] = useTransition();
+  const { toast } = useToast();
 
   const save = () => {
     start(async () => {
@@ -25,7 +27,7 @@ export function NotesEditor({
         await updateNotes(trackId, value);
         setEditing(false);
       } catch (e) {
-        alert((e as Error).message);
+        toast((e as Error).message);
       }
     });
   };

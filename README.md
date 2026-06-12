@@ -71,6 +71,11 @@ If you have the [Supabase CLI](https://supabase.com/docs/guides/cli) linked
 to your project: `supabase db push`. Otherwise paste each file into the SQL
 editor in the Supabase dashboard.
 
+> **Note:** the `0012` prefix is duplicated (`0012_albums_disable_rls.sql` and
+> `0012_track_focus.sql`). Both are independent and safe to apply in either
+> order; they are left as-is because renaming an already-applied migration
+> would desync the Supabase CLI's migration history.
+
 Tables: `tracks`, `track_stages`, `bottlenecks`, `actions`, `sessions`,
 `session_activities` (per-activity time + notes), `track_versions`. Triggers
 seed the 5 stages on track insert and bump

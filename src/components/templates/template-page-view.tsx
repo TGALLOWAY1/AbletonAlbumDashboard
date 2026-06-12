@@ -5,7 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { ChevronLeft } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { ToastProvider, useToast } from "@/components/library/toast";
+import { useToast } from "@/components/toast";
 import {
   type AudioPreview,
   type TemplateItem,
@@ -80,9 +80,5 @@ function TemplatePageInner({ initial }: { initial: TemplateItem }) {
 }
 
 export function TemplatePageView({ template }: { template: TemplateItem }) {
-  return (
-    <ToastProvider>
-      <TemplatePageInner initial={template} />
-    </ToastProvider>
-  );
+  return <TemplatePageInner initial={template} />;
 }
