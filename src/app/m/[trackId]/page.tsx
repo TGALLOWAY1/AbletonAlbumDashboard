@@ -8,6 +8,8 @@ import {
 } from "@/lib/data/tracks";
 import { getVersionsForTrack } from "@/lib/data/versions";
 import { getSessionTypes } from "@/lib/data/session-types";
+import { getSessionsForTrack } from "@/lib/data/sessions";
+import { TrackSessionHistory } from "@/components/track-session-history";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { TrackTodoList } from "@/components/mobile/track-todo-list";
@@ -36,13 +38,14 @@ export default async function MobileTrackPage({
   params: Promise<{ trackId: string }>;
 }) {
   const { trackId } = await params;
-  const [track, versions, todos, completedTodos, sessionTypes] =
+  const [track, versions, todos, completedTodos, sessionTypes, sessions] =
     await Promise.all([
       getTrack(trackId),
       getVersionsForTrack(trackId),
       getOpenActionsForTrack(trackId),
       getCompletedActionsForTrack(trackId),
       getSessionTypes(),
+      getSessionsForTrack(trackId),
     ]);
 
   if (!track) notFound();
@@ -163,6 +166,11 @@ export default async function MobileTrackPage({
           </div>
         </section>
       )}
+
+      <section className="flex flex-col gap-2">
+        <SectionHeading>Sessions</SectionHeading>
+        <TrackSessionHistory sessions={sessions} />
+      </section>
 
       <section>
         <TrackTodoHistory trackId={track.id} initial={completedTodos} />

@@ -66,11 +66,15 @@ export function SessionCompleteDialog({
   const router = useRouter();
   const [pending, startTx] = useTransition();
   const { toast } = useToast();
+  // improved / still_broken / energy no longer have inputs (the outcome
+  // schema is unified on progress-impact + enjoyment + notes), but existing
+  // values are kept in state so re-completing a session doesn't wipe them.
   const [improved, setImproved] = useState("");
   const [stillBroken, setStillBroken] = useState("");
   const [notesMd, setNotesMd] = useState("");
   const [energy, setEnergy] = useState<number | null>(null);
   const [enjoyment, setEnjoyment] = useState<number | null>(null);
+  const [progressImpact, setProgressImpact] = useState<number | null>(null);
   const [trackId, setTrackId] = useState<string | null>(null);
   const [sessionTypeId, setSessionTypeId] = useState<string | null>(null);
   const [todoState, setTodoState] = useState<
@@ -89,6 +93,7 @@ export function SessionCompleteDialog({
     setNotesMd(initialNotes ?? session?.notes_md ?? "");
     setEnergy(session?.energy_rating ?? null);
     setEnjoyment(session?.enjoyment_rating ?? null);
+    setProgressImpact(session?.progress_impact_rating ?? null);
     setTrackId(session?.track?.id ?? initialTrackId ?? null);
     setSessionTypeId(session?.session_type?.id ?? initialSessionTypeId ?? null);
     setTodoState(
@@ -161,6 +166,7 @@ export function SessionCompleteDialog({
           notesMd,
           energyRating: energy,
           enjoymentRating: enjoyment,
+          progressImpact,
           newBottleneckDescription: bottleneckDesc,
           newBottleneckCategory: bottleneckDesc ? bottleneckCat : undefined,
           carryOverTodoIds: carryIds,
@@ -274,38 +280,20 @@ export function SessionCompleteDialog({
             </div>
           )}
 
+          {/* Same two scales as the focus log page — one outcome schema for
+              every completion path. */}
           <div className="grid grid-cols-2 gap-4">
             <RatingPicker
-              label="Energy"
-              value={energy}
-              onChange={setEnergy}
-              hint="How energized did you feel?"
+              label="Progress / Impact"
+              value={progressImpact}
+              onChange={setProgressImpact}
+              hint="How much did the track move?"
             />
             <RatingPicker
               label="Enjoyment"
               value={enjoyment}
               onChange={setEnjoyment}
               hint="How much did you enjoy it?"
-            />
-          </div>
-
-          <div className="grid gap-2">
-            <Label htmlFor="improved">What improved?</Label>
-            <Textarea
-              id="improved"
-              value={improved}
-              onChange={(e) => setImproved(e.target.value)}
-              rows={2}
-            />
-          </div>
-
-          <div className="grid gap-2">
-            <Label htmlFor="stillBroken">What&apos;s still broken?</Label>
-            <Textarea
-              id="stillBroken"
-              value={stillBroken}
-              onChange={(e) => setStillBroken(e.target.value)}
-              rows={2}
             />
           </div>
 

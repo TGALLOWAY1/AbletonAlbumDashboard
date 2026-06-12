@@ -7,9 +7,11 @@ import { ArrowLeft, Pause, Play, Square } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { Input } from "@/components/ui/input";
 import { SessionTodoChecklist } from "@/components/calendar/session-todo-checklist";
 import { TrackTodoList } from "@/components/mobile/track-todo-list";
 import { useFocusSession } from "@/components/focus-session-provider";
+import { useToast } from "@/components/toast";
 import type {
   ActionRow,
   CalendarSessionRow,
@@ -35,6 +37,7 @@ export function FocusRunner({
 }) {
   const router = useRouter();
   const ctx = useFocusSession();
+  const { toast } = useToast();
 
   // This page "owns" the running session when its track matches (track mode)
   // or when the active session has no track (track-less mode).
@@ -71,6 +74,7 @@ export function FocusRunner({
   const elapsedMs = pageOwnsSession ? ctx.elapsedMs : 0;
   const todos = pageOwnsSession ? ctx.todos : [];
   const notes = pageOwnsSession ? ctx.notes : "";
+  const goal = pageOwnsSession ? ctx.goal : "";
 
   const runningType = ctx.sessionTypeId
     ? sessionTypes?.find((t) => t.id === ctx.sessionTypeId)
@@ -83,6 +87,13 @@ export function FocusRunner({
     "Focus";
 
   const start = () => {
+    // Calendar planning enforces requires_track; mirror it here so a
+    // track-required session type can't start track-less from /focus/new.
+    const effectiveType = sessionType ?? plannedSession?.session_type ?? null;
+    if (!track && effectiveType?.requires_track) {
+      toast(`${effectiveType.name} sessions require a track.`);
+      return;
+    }
     // Track sessions own their to-dos through the live TrackTodoList (which
     // writes straight to the track), so only the track-less / planned-session
     // flows seed the ephemeral checklist here.
@@ -99,6 +110,9 @@ export function FocusRunner({
         : (sessionType?.id ?? plannedSession?.session_type?.id ?? null),
       plannedSessionId: plannedSession?.id ?? null,
       initialTodos,
+      // Committing to one outcome up front; the log page asks whether you
+      // got there. Defaults to the track's primary action.
+      goal: primaryAction?.description ?? "",
     });
   };
 
@@ -147,6 +161,20 @@ export function FocusRunner({
             />
           )}
         </div>
+        {phase !== "idle" && (
+          <div className="mx-auto mt-1 w-full max-w-md text-left">
+            <Label htmlFor="focus-goal" className="text-xs text-muted-foreground">
+              This session&apos;s goal
+            </Label>
+            <Input
+              id="focus-goal"
+              value={goal}
+              onChange={(e) => ctx.setGoal(e.target.value)}
+              placeholder="One outcome you're aiming for…"
+              className="mt-1"
+            />
+          </div>
+        )}
         <div className="mx-auto mt-1 w-full max-w-md text-left">
           <Label htmlFor="focus-notes" className="text-xs text-muted-foreground">
             Session notes

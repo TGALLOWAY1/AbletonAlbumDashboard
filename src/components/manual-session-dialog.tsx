@@ -17,6 +17,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
+import { RatingPicker } from "@/components/ui/rating-picker";
 import { TrackPicker } from "@/components/calendar/track-picker";
 import { SessionTypePicker } from "@/components/calendar/session-type-picker";
 import { completeSession } from "@/app/actions/sessions";
@@ -85,8 +86,8 @@ function ManualSessionDialog({
   const [sessionTypeId, setSessionTypeId] = useState<string | null>(null);
   const [start, setStart] = useState<string>(defaultStart());
   const [minutes, setMinutes] = useState<string>("");
-  const [improved, setImproved] = useState("");
-  const [stillBroken, setStillBroken] = useState("");
+  const [progressImpact, setProgressImpact] = useState<number | null>(null);
+  const [enjoyment, setEnjoyment] = useState<number | null>(null);
   const [notesMd, setNotesMd] = useState("");
   const [newBottleneckDescription, setNewBottleneckDescription] = useState("");
   const [newBottleneckCategory, setNewBottleneckCategory] =
@@ -109,8 +110,8 @@ function ManualSessionDialog({
     setSessionTypeId(null);
     setStart(defaultStart());
     setMinutes("");
-    setImproved("");
-    setStillBroken("");
+    setProgressImpact(null);
+    setEnjoyment(null);
     setNotesMd("");
     setNewBottleneckDescription("");
     setNewBottleneckCategory("arrangement");
@@ -135,8 +136,8 @@ function ManualSessionDialog({
           sessionTypeId,
           startedAt,
           endedAt,
-          improved,
-          stillBroken,
+          progressImpact,
+          enjoymentRating: enjoyment,
           notesMd,
           newBottleneckDescription,
           newBottleneckCategory: newBottleneckDescription
@@ -217,25 +218,20 @@ function ManualSessionDialog({
             </div>
           )}
 
-          <div className="grid gap-2">
-            <Label htmlFor="manual-improved">What improved?</Label>
-            <Textarea
-              id="manual-improved"
-              value={improved}
-              onChange={(e) => setImproved(e.target.value)}
-              rows={2}
-              placeholder="Drum bus is tighter, vocals sit better…"
+          {/* Same two scales as the focus log page — one outcome schema for
+              every completion path. */}
+          <div className="grid grid-cols-2 gap-4">
+            <RatingPicker
+              label="Progress / Impact"
+              value={progressImpact}
+              onChange={setProgressImpact}
+              hint="How much did the track move?"
             />
-          </div>
-
-          <div className="grid gap-2">
-            <Label htmlFor="manual-stillBroken">What&apos;s still broken?</Label>
-            <Textarea
-              id="manual-stillBroken"
-              value={stillBroken}
-              onChange={(e) => setStillBroken(e.target.value)}
-              rows={2}
-              placeholder="Drop transition feels abrupt…"
+            <RatingPicker
+              label="Enjoyment"
+              value={enjoyment}
+              onChange={setEnjoyment}
+              hint="How much did you enjoy it?"
             />
           </div>
 

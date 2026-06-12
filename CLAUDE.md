@@ -16,8 +16,9 @@ An album-in-progress dashboard for tracks built in Ableton. Helps the user surfa
 - `pnpm build` — production build
 - `pnpm lint` — ESLint (Next.js config)
 - `pnpm typecheck` — `tsc --noEmit`
+- `pnpm test` — vitest (unit tests in `src/**/__tests__/`)
 
-Run `pnpm typecheck && pnpm lint` before committing.
+Run `pnpm typecheck && pnpm lint && pnpm test` before committing.
 
 ## Layout
 

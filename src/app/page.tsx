@@ -5,6 +5,7 @@ import {
   Clock,
   ListMusic,
   Plus,
+  Sparkles,
   Sun,
   TrendingUp,
 } from "lucide-react";
@@ -24,6 +25,9 @@ import {
   getSessionCountsByTrackSince,
   getSessionStatsByTrack,
 } from "@/lib/data/sessions";
+import { getWeeklyDelta } from "@/lib/data/weekly-delta";
+import { getWeeklyReview } from "@/lib/data/weekly-reviews";
+import { startOfWeekMonday } from "@/lib/dates";
 import { recommendTrack } from "@/lib/recommend";
 import { formatDuration } from "@/lib/utils";
 import {
@@ -59,13 +63,24 @@ function triageTracks(tracks: TrackWithDetails[]) {
 }
 
 export default async function DashboardPage() {
-  const [activeAlbum, upcomingAlbums, sessionStats, recentCounts] =
-    await Promise.all([
-      getActiveAlbum(),
-      listUpcomingAlbums(4),
-      getSessionStatsByTrack(),
-      getSessionCountsByTrackSince(7),
-    ]);
+  const now = new Date();
+  const weekStart = startOfWeekMonday(now);
+
+  const [
+    activeAlbum,
+    upcomingAlbums,
+    sessionStats,
+    recentCounts,
+    weeklyDelta,
+    weeklyReview,
+  ] = await Promise.all([
+    getActiveAlbum(),
+    listUpcomingAlbums(4),
+    getSessionStatsByTrack(),
+    getSessionCountsByTrackSince(7),
+    getWeeklyDelta(weekStart.toISOString()),
+    getWeeklyReview(weekStart),
+  ]);
 
   // Active tracks live in the active album. If no album is set up yet (fresh
   // install, or every album deleted), fall back to all status=active tracks so
@@ -84,24 +99,19 @@ export default async function DashboardPage() {
   const rest = activeTracks.filter((t) => t.id !== recommendation?.track.id);
   const { inMotion, needsAttention } = triageTracks(rest);
 
-  // Summary metrics across the active tracks.
-  const totalSeconds = activeTracks.reduce(
-    (acc, t) => acc + (sessionStats.get(t.id)?.seconds ?? 0),
-    0,
-  );
-  const tasksCompleted = activeTracks.reduce(
-    (acc, t) => acc + t.completedTaskCount,
-    0,
-  );
   const nearCompletion = activeTracks.filter(
     (t) => progressFromStages(t.stages) > 60,
   ).length;
 
-  const now = new Date();
   const greeting = greetingForHour(now.getHours());
   const dateLabel = format(now, "MMMM d, yyyy");
 
   const albumTitle = activeAlbum?.title?.trim() || null;
+
+  const intention = weeklyReview?.intention?.trim() || null;
+  // From Friday on, nudge toward the weekly reflection if it's still empty.
+  const promptReflection =
+    [5, 6, 0].includes(now.getDay()) && !weeklyReview?.reflection?.trim();
 
   return (
     <div className="flex flex-col gap-6">
@@ -146,24 +156,57 @@ export default async function DashboardPage() {
         </div>
       </header>
 
+      {/* Weekly intention / reflection — bookends from the calendar's weekly
+          review, surfaced where the week actually happens. */}
+      <div className="flex items-center gap-2 rounded-md border border-border bg-surface px-3 py-2 text-sm">
+        <Sparkles className="h-4 w-4 shrink-0 text-primary" />
+        {intention ? (
+          <span className="min-w-0 truncate">
+            <span className="font-medium">This week:</span>{" "}
+            <span className="text-muted-foreground">{intention}</span>
+          </span>
+        ) : (
+          <Link href="/calendar" className="text-primary hover:underline">
+            Set your intention for this week →
+          </Link>
+        )}
+        {promptReflection && (
+          <Link
+            href="/calendar"
+            className="ml-auto shrink-0 text-primary hover:underline"
+          >
+            Reflect on your week →
+          </Link>
+        )}
+      </div>
+
       <NextUpCard rec={recommendation} />
 
       {activeTracks.length > 0 && (
         <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
           <LibraryStatCard
-            label="Active Tracks"
-            value={activeTracks.length}
+            label="Sessions This Week"
+            value={weeklyDelta.sessionCount}
             icon={ListMusic}
           />
           <LibraryStatCard
-            label="Total Time Worked"
-            value={formatDuration(totalSeconds)}
+            label="Time This Week"
+            value={formatDuration(weeklyDelta.sessionSeconds)}
             icon={Clock}
           />
           <LibraryStatCard
-            label="Tasks Completed"
-            value={tasksCompleted}
+            label="Tasks Done This Week"
+            value={weeklyDelta.todosCompleted}
             icon={CheckCircle2}
+            hint={
+              weeklyDelta.bottlenecksResolved > 0
+                ? `+${weeklyDelta.bottlenecksResolved} ${
+                    weeklyDelta.bottlenecksResolved === 1
+                      ? "bottleneck"
+                      : "bottlenecks"
+                  } resolved`
+                : undefined
+            }
           />
           <LibraryStatCard
             label="Near Completion"

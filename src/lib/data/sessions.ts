@@ -1,7 +1,37 @@
 import { getServerSupabase } from "@/lib/supabase/server";
 import { OWNER_ID } from "@/lib/owner";
+import type { SessionActivityRow, SessionRow } from "@/lib/types";
 
 export type SessionStats = { seconds: number; count: number };
+
+export type TrackSessionWithActivities = SessionRow & {
+  activities: SessionActivityRow[];
+};
+
+// Recent completed sessions for one track, newest first, with their
+// per-activity time breakdown. Powers the track-page session history.
+export async function getSessionsForTrack(
+  trackId: string,
+  limit = 20,
+): Promise<TrackSessionWithActivities[]> {
+  const supabase = getServerSupabase();
+  const { data, error } = await supabase
+    .from("sessions")
+    .select("*, session_activities(*)")
+    .eq("track_id", trackId)
+    .eq("status", "completed")
+    .order("started_at", { ascending: false })
+    .limit(limit);
+  if (error) throw error;
+
+  return (data ?? []).map((row) => {
+    const { session_activities, ...session } = row;
+    return {
+      ...(session as SessionRow),
+      activities: (session_activities ?? []) as SessionActivityRow[],
+    };
+  });
+}
 
 // Per-track aggregate of all-time logged session time and session count.
 export async function getSessionStatsByTrack(): Promise<

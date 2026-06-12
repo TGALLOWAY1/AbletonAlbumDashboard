@@ -24,6 +24,8 @@ type FocusSessionState = {
   accumulatedMs: number;
   todos: ChecklistItem[];
   notes: string;
+  // The one thing this session is trying to achieve. Checked at log time.
+  goal: string;
 };
 
 const INITIAL_STATE: FocusSessionState = {
@@ -36,6 +38,7 @@ const INITIAL_STATE: FocusSessionState = {
   accumulatedMs: 0,
   todos: [],
   notes: "",
+  goal: "",
 };
 
 export type StartInput = {
@@ -44,6 +47,7 @@ export type StartInput = {
   sessionTypeId?: string | null;
   plannedSessionId?: string | null;
   initialTodos?: ChecklistItem[];
+  goal?: string;
 };
 
 type FocusSessionContextValue = FocusSessionState & {
@@ -55,6 +59,7 @@ type FocusSessionContextValue = FocusSessionState & {
   reset: () => void;
   setTodos: (next: ChecklistItem[]) => void;
   setNotes: (next: string) => void;
+  setGoal: (next: string) => void;
 };
 
 const FocusSessionContext = createContext<FocusSessionContextValue | null>(null);
@@ -78,7 +83,11 @@ export function FocusSessionProvider({ children }: { children: React.ReactNode }
     try {
       const raw = sessionStorage.getItem(STORAGE_KEY);
       if (!raw) return;
-      const parsed = JSON.parse(raw) as FocusSessionState;
+      // `goal` was added after launch; older persisted sessions won't have it.
+      const parsed = {
+        ...INITIAL_STATE,
+        ...(JSON.parse(raw) as Partial<FocusSessionState>),
+      };
       /* eslint-disable react-hooks/set-state-in-effect */
       setState(parsed);
       /* eslint-enable react-hooks/set-state-in-effect */
@@ -123,6 +132,7 @@ export function FocusSessionProvider({ children }: { children: React.ReactNode }
       accumulatedMs: 0,
       todos: input.initialTodos ?? [],
       notes: "",
+      goal: input.goal ?? "",
     });
   }, []);
 
@@ -163,6 +173,10 @@ export function FocusSessionProvider({ children }: { children: React.ReactNode }
     setState((prev) => ({ ...prev, notes: next }));
   }, []);
 
+  const setGoal = useCallback((next: string) => {
+    setState((prev) => ({ ...prev, goal: next }));
+  }, []);
+
   const value: FocusSessionContextValue = {
     ...state,
     elapsedMs,
@@ -173,6 +187,7 @@ export function FocusSessionProvider({ children }: { children: React.ReactNode }
     reset,
     setTodos,
     setNotes,
+    setGoal,
   };
 
   return (

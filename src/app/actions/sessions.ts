@@ -5,6 +5,7 @@ import { z } from "zod";
 import { getServerSupabase } from "@/lib/supabase/server";
 import { setActiveBottleneck } from "@/app/actions/bottlenecks";
 import { completeAction } from "@/app/actions/actions";
+import { revalidateTrackSurfaces } from "@/lib/revalidate-track";
 import { BOTTLENECK_CATEGORIES } from "@/lib/types";
 import { PRODUCTION_ACTIVITY_KEYS } from "@/lib/production-activities";
 import type { Database } from "@/lib/database.types";
@@ -416,52 +417,8 @@ export async function completeSession(input: {
   }
 
   if (parsed.trackId) {
-    revalidatePath(`/tracks/${parsed.trackId}`);
-    revalidatePath(`/m/${parsed.trackId}`);
-    revalidatePath(`/focus/${parsed.trackId}`);
+    revalidateTrackSurfaces(parsed.trackId);
   }
   REVALIDATE();
   return { id: resolvedSessionId! };
-}
-
-// ---------------------------------------------------------------------------
-// Backward-compatible wrapper for the existing focus-runner flow.
-// ---------------------------------------------------------------------------
-
-export async function logSession(input: {
-  trackId: string;
-  actionId?: string | null;
-  startedAt: string;
-  endedAt: string;
-  improved?: string;
-  stillBroken?: string;
-  newBottleneckDescription?: string;
-  newBottleneckCategory?: string;
-  completeAction?: boolean;
-  sessionId?: string | null;
-  sessionTypeId?: string | null;
-  notesMd?: string;
-  energyRating?: number | null;
-  enjoymentRating?: number | null;
-  carryOverTodoIds?: string[];
-  todos?: Array<{ description: string; done: boolean }>;
-}) {
-  return completeSession({
-    sessionId: input.sessionId ?? null,
-    trackId: input.trackId,
-    sessionTypeId: input.sessionTypeId ?? null,
-    actionId: input.actionId ?? null,
-    startedAt: input.startedAt,
-    endedAt: input.endedAt,
-    improved: input.improved,
-    stillBroken: input.stillBroken,
-    notesMd: input.notesMd,
-    energyRating: input.energyRating ?? null,
-    enjoymentRating: input.enjoymentRating ?? null,
-    newBottleneckDescription: input.newBottleneckDescription,
-    newBottleneckCategory: input.newBottleneckCategory,
-    completeAction: input.completeAction ?? false,
-    carryOverTodoIds: input.carryOverTodoIds,
-    todos: input.todos,
-  });
 }

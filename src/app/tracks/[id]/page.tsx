@@ -27,6 +27,8 @@ import {
 } from "@/lib/data/tracks";
 import { getVersionsForTrack } from "@/lib/data/versions";
 import { getSessionTypes } from "@/lib/data/session-types";
+import { getSessionsForTrack } from "@/lib/data/sessions";
+import { TrackSessionHistory } from "@/components/track-session-history";
 
 export const dynamic = "force-dynamic";
 
@@ -39,13 +41,14 @@ export default async function TrackDetailPage({
   if (await isMobileUserAgent()) {
     redirect(`/m/${id}`);
   }
-  const [track, versions, completedTodos, openTodos, sessionTypes] =
+  const [track, versions, completedTodos, openTodos, sessionTypes, sessions] =
     await Promise.all([
       getTrack(id),
       getVersionsForTrack(id),
       getCompletedActionsForTrack(id),
       getOpenActionsForTrack(id),
       getSessionTypes(),
+      getSessionsForTrack(id),
     ]);
   if (!track) notFound();
 
@@ -197,11 +200,14 @@ export default async function TrackDetailPage({
         </TabsContent>
 
         <TabsContent value="history">
-          <TrackTodoHistory
-            trackId={track.id}
-            initial={completedTodos}
-            variant="panel"
-          />
+          <div className="flex flex-col gap-4">
+            <TrackSessionHistory sessions={sessions} />
+            <TrackTodoHistory
+              trackId={track.id}
+              initial={completedTodos}
+              variant="panel"
+            />
+          </div>
         </TabsContent>
       </Tabs>
     </div>
