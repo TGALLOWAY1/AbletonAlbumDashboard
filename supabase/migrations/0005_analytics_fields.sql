@@ -5,21 +5,22 @@
 -- ---------------------------------------------------------------------------
 -- tracks: genre, started_at, completed_at
 -- ---------------------------------------------------------------------------
-alter table tracks add column genre        text;
-alter table tracks add column started_at   timestamptz;
-alter table tracks add column completed_at timestamptz;
+alter table tracks add column if not exists genre        text;
+alter table tracks add column if not exists started_at   timestamptz;
+alter table tracks add column if not exists completed_at timestamptz;
 
 -- Backfill from existing data. started_at = first session ever logged for the
 -- track. completed_at is best-effort: if the track is currently completed, use
 -- updated_at as a stand-in for the completion moment.
 update tracks t
-   set started_at = (select min(started_at) from sessions where track_id = t.id);
+   set started_at = (select min(started_at) from sessions where track_id = t.id)
+ where started_at is null;
 
 update tracks t
    set completed_at = t.updated_at
- where t.status = 'completed';
+  where t.status = 'completed' and completed_at is null;
 
-create index tracks_completed_at_idx on tracks (completed_at desc)
+create index if not exists tracks_completed_at_idx on tracks (completed_at desc)
   where completed_at is not null;
 
 -- started_at trigger: set on first session insert, never overwrite. Keeping it
@@ -37,6 +38,7 @@ begin
 end;
 $$;
 
+drop trigger if exists sessions_set_started_at on sessions;
 create trigger sessions_set_started_at
   after insert on sessions
   for each row execute function set_track_started_at();
@@ -57,6 +59,7 @@ begin
 end;
 $$;
 
+drop trigger if exists tracks_set_completed_at on tracks;
 create trigger tracks_set_completed_at
   before update on tracks
   for each row execute function set_track_completed_at();
@@ -65,30 +68,36 @@ create trigger tracks_set_completed_at
 -- sessions: category + activity, optional track_id
 -- ---------------------------------------------------------------------------
 alter table sessions
-  add column category text
-    check (category in (
-      'production-guides',
-      'sound-design',
-      'mixing-mastering',
-      'workflow-mindset',
-      'tools-plugins',
-      'file-organization'
-    )),
-  add column activity text not null default 'working_on_track'
-    check (activity in (
-      'working_on_track',
-      'watching_guide',
-      'reading_article',
-      'using_templates',
-      'other'
-    ));
+  add column if not exists category text,
+  add column if not exists activity text not null default 'working_on_track';
+
+alter table sessions drop constraint if exists sessions_category_check;
+alter table sessions add constraint sessions_category_check
+  check (category in (
+    'production-guides',
+    'sound-design',
+    'mixing-mastering',
+    'workflow-mindset',
+    'tools-plugins',
+    'file-organization'
+  ));
+
+alter table sessions drop constraint if exists sessions_activity_check;
+alter table sessions add constraint sessions_activity_check
+  check (activity in (
+    'working_on_track',
+    'watching_guide',
+    'reading_article',
+    'using_templates',
+    'other'
+  ));
 
 -- Activities other than 'working_on_track' (e.g. reading an article) aren't
 -- attached to a track.
 alter table sessions alter column track_id drop not null;
 
-create index sessions_category_started_idx on sessions (category, started_at desc);
-create index sessions_activity_started_idx on sessions (activity, started_at desc);
+create index if not exists sessions_category_started_idx on sessions (category, started_at desc);
+create index if not exists sessions_activity_started_idx on sessions (activity, started_at desc);
 
 -- last_worked_at trigger now needs to no-op when track_id is null.
 create or replace function bump_track_last_worked()
