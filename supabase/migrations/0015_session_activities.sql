@@ -5,7 +5,7 @@
 -- per-activity note. One row per (session, activity_key). This child table
 -- mirrors the session_todos shape (single-user app, no RLS).
 
-create table session_activities (
+create table if not exists session_activities (
   id           uuid primary key default gen_random_uuid(),
   session_id   uuid not null references sessions(id) on delete cascade,
   activity_key text not null check (activity_key in (
@@ -18,11 +18,14 @@ create table session_activities (
   unique (session_id, activity_key)
 );
 
-create index session_activities_session_idx on session_activities (session_id);
-create index session_activities_key_idx on session_activities (activity_key);
+create index if not exists session_activities_session_idx on session_activities (session_id);
+create index if not exists session_activities_key_idx on session_activities (activity_key);
 
 -- Progress/Impact rating (Counterproductive → Breakthrough). Distinct from the
 -- existing energy_rating and enjoyment_rating columns.
 alter table sessions
-  add column progress_impact_rating smallint
-    check (progress_impact_rating between 1 and 5);
+  add column if not exists progress_impact_rating smallint;
+
+alter table sessions drop constraint if exists sessions_progress_impact_rating_check;
+alter table sessions add constraint sessions_progress_impact_rating_check
+  check (progress_impact_rating between 1 and 5);

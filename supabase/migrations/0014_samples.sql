@@ -7,7 +7,7 @@
 -- Files are never moved/renamed at the source. "added_to_favorites" means a copy
 -- was written into the user's Favorites folder; original_path traces it back.
 
-create table samples (
+create table if not exists samples (
   id                 uuid primary key default gen_random_uuid(),
   owner_id           uuid not null,
   -- deterministic id: `${sourceRootName}:${relativePath}`
@@ -25,8 +25,9 @@ create table samples (
   updated_at         timestamptz not null default now()
 );
 
-create unique index samples_owner_key_idx on samples (owner_id, sample_key);
+create unique index if not exists samples_owner_key_idx on samples (owner_id, sample_key);
 
+drop trigger if exists samples_set_updated_at on samples;
 create trigger samples_set_updated_at
   before update on samples
   for each row execute function set_updated_at();

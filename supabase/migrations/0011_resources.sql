@@ -6,7 +6,7 @@
 -- ---------------------------------------------------------------------------
 -- resources table
 -- ---------------------------------------------------------------------------
-create table resources (
+create table if not exists resources (
   id            uuid primary key default gen_random_uuid(),
   owner_id      uuid not null,
   title         text not null,
@@ -45,13 +45,14 @@ create table resources (
   )
 );
 
-create index resources_owner_created_idx
+create index if not exists resources_owner_created_idx
   on resources (owner_id, created_at desc);
-create index resources_owner_featured_idx
+create index if not exists resources_owner_featured_idx
   on resources (owner_id, featured) where featured;
-create index resources_owner_category_idx
+create index if not exists resources_owner_category_idx
   on resources (owner_id, category_id);
 
+drop trigger if exists resources_set_updated_at on resources;
 create trigger resources_set_updated_at
   before update on resources
   for each row execute function set_updated_at();
@@ -69,22 +70,26 @@ values (
 )
 on conflict (id) do nothing;
 
+drop policy if exists "anon read resource-files" on storage.objects;
 create policy "anon read resource-files"
   on storage.objects for select
   to anon, authenticated
   using (bucket_id = 'resource-files');
 
+drop policy if exists "anon insert resource-files" on storage.objects;
 create policy "anon insert resource-files"
   on storage.objects for insert
   to anon, authenticated
   with check (bucket_id = 'resource-files');
 
+drop policy if exists "anon update resource-files" on storage.objects;
 create policy "anon update resource-files"
   on storage.objects for update
   to anon, authenticated
   using (bucket_id = 'resource-files')
   with check (bucket_id = 'resource-files');
 
+drop policy if exists "anon delete resource-files" on storage.objects;
 create policy "anon delete resource-files"
   on storage.objects for delete
   to anon, authenticated

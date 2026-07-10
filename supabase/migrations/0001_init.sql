@@ -7,7 +7,7 @@ create extension if not exists "pgcrypto";
 -- ---------------------------------------------------------------------------
 -- tracks
 -- ---------------------------------------------------------------------------
-create table tracks (
+create table if not exists tracks (
   id              uuid primary key default gen_random_uuid(),
   owner_id        uuid not null,
   name            text not null,
@@ -20,9 +20,9 @@ create table tracks (
   last_worked_at  timestamptz
 );
 
-create index tracks_status_lastworked_idx
+create index if not exists tracks_status_lastworked_idx
   on tracks (status, last_worked_at desc nulls last);
-create index tracks_owner_idx on tracks (owner_id);
+create index if not exists tracks_owner_idx on tracks (owner_id);
 
 -- bump updated_at on row mutation
 create or replace function set_updated_at()
@@ -33,6 +33,7 @@ begin
 end;
 $$;
 
+drop trigger if exists tracks_set_updated_at on tracks;
 create trigger tracks_set_updated_at
   before update on tracks
   for each row execute function set_updated_at();
@@ -40,7 +41,7 @@ create trigger tracks_set_updated_at
 -- ---------------------------------------------------------------------------
 -- track_stages: 5 rows seeded per track via trigger
 -- ---------------------------------------------------------------------------
-create table track_stages (
+create table if not exists track_stages (
   track_id   uuid not null references tracks(id) on delete cascade,
   stage_key  text not null check (stage_key in ('idea','sound_design','arrangement','mixing','mastering')),
   complete   boolean not null default false,
@@ -61,6 +62,7 @@ begin
 end;
 $$;
 
+drop trigger if exists tracks_seed_stages on tracks;
 create trigger tracks_seed_stages
   after insert on tracks
   for each row execute function seed_track_stages();
@@ -68,7 +70,7 @@ create trigger tracks_seed_stages
 -- ---------------------------------------------------------------------------
 -- bottlenecks: at most one active per track
 -- ---------------------------------------------------------------------------
-create table bottlenecks (
+create table if not exists bottlenecks (
   id          uuid primary key default gen_random_uuid(),
   track_id    uuid not null references tracks(id) on delete cascade,
   description text not null,
@@ -78,13 +80,13 @@ create table bottlenecks (
   resolved_at timestamptz
 );
 
-create unique index bottlenecks_one_active_per_track
+create unique index if not exists bottlenecks_one_active_per_track
   on bottlenecks (track_id) where is_active;
 
 -- ---------------------------------------------------------------------------
 -- actions: at most one primary per track
 -- ---------------------------------------------------------------------------
-create table actions (
+create table if not exists actions (
   id                uuid primary key default gen_random_uuid(),
   track_id          uuid not null references tracks(id) on delete cascade,
   description       text not null,
@@ -95,14 +97,14 @@ create table actions (
   created_at        timestamptz not null default now()
 );
 
-create unique index actions_one_primary_per_track
+create unique index if not exists actions_one_primary_per_track
   on actions (track_id) where is_primary and completed_at is null;
-create index actions_track_idx on actions (track_id, created_at desc);
+create index if not exists actions_track_idx on actions (track_id, created_at desc);
 
 -- ---------------------------------------------------------------------------
 -- sessions
 -- ---------------------------------------------------------------------------
-create table sessions (
+create table if not exists sessions (
   id               uuid primary key default gen_random_uuid(),
   track_id         uuid not null references tracks(id) on delete cascade,
   action_id        uuid references actions(id) on delete set null,
@@ -117,8 +119,8 @@ create table sessions (
   check (ended_at >= started_at)
 );
 
-create index sessions_track_started_idx on sessions (track_id, started_at desc);
-create index sessions_started_idx on sessions (started_at desc);
+create index if not exists sessions_track_started_idx on sessions (track_id, started_at desc);
+create index if not exists sessions_started_idx on sessions (started_at desc);
 
 -- bump tracks.last_worked_at on session insert
 create or replace function bump_track_last_worked()
@@ -131,6 +133,7 @@ begin
 end;
 $$;
 
+drop trigger if exists sessions_bump_last_worked on sessions;
 create trigger sessions_bump_last_worked
   after insert on sessions
   for each row execute function bump_track_last_worked();
@@ -138,7 +141,7 @@ create trigger sessions_bump_last_worked
 -- ---------------------------------------------------------------------------
 -- track_versions (audio previews)
 -- ---------------------------------------------------------------------------
-create table track_versions (
+create table if not exists track_versions (
   id               uuid primary key default gen_random_uuid(),
   track_id         uuid not null references tracks(id) on delete cascade,
   label            text not null,
@@ -147,5 +150,5 @@ create table track_versions (
   created_at       timestamptz not null default now()
 );
 
-create index track_versions_track_idx
+create index if not exists track_versions_track_idx
   on track_versions (track_id, created_at desc);
