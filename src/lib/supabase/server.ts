@@ -3,6 +3,9 @@ import type { Database } from "@/lib/database.types";
 
 const url = process.env.NEXT_PUBLIC_SUPABASE_URL!;
 const anonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
+// Server-only secret. Bypasses Row Level Security. Must never reach the browser,
+// so it is intentionally not prefixed with NEXT_PUBLIC_.
+const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
 
 if (!url || !anonKey) {
   throw new Error(
@@ -10,10 +13,13 @@ if (!url || !anonKey) {
   );
 }
 
-// Server-side client. RLS is disabled on user tables in V1, so the anon key
-// has full access. Storage is gated by permissive policies (see 0003).
+// Server-side client. Prefers the service_role key so table access keeps working
+// once RLS is enabled on the user tables (service_role bypasses RLS). Falls back
+// to the anon key when the secret isn't set — e.g. before it has been added to the
+// deploy environment — so nothing breaks during the transition. Storage uploads
+// still go through the browser's anon client against public buckets (see 0003).
 export function getServerSupabase() {
-  return createClient<Database>(url, anonKey, {
+  return createClient<Database>(url, serviceRoleKey ?? anonKey, {
     auth: { persistSession: false, autoRefreshToken: false },
   });
 }
