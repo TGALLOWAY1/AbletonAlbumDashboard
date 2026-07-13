@@ -12,6 +12,7 @@
 -- Storage buckets are unaffected: browser uploads use the anon key against public
 -- buckets, which are gated by their own storage.objects policies (see 0003, 0011).
 
+alter table albums                enable row level security;
 alter table tracks                enable row level security;
 alter table track_stages          enable row level security;
 alter table bottlenecks           enable row level security;
