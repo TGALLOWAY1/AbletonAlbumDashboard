@@ -32,7 +32,9 @@ type ResourceRow = {
   created_at: string;
 };
 
-function rowToItem(row: ResourceRow): ResourceItem | null {
+type ServerSupabase = ReturnType<typeof getServerSupabase>;
+
+function rowToItem(supabase: ServerSupabase, row: ResourceRow): ResourceItem | null {
   if (
     !isResourceType(row.type) ||
     !isResourceCategoryId(row.category_id) ||
@@ -42,7 +44,6 @@ function rowToItem(row: ResourceRow): ResourceItem | null {
   }
   let url: string | null = row.url;
   if (row.source_kind === "pdf" && row.storage_path) {
-    const supabase = getServerSupabase();
     const { data } = supabase.storage
       .from(RESOURCE_FILES_BUCKET)
       .getPublicUrl(row.storage_path);
@@ -79,9 +80,17 @@ async function fetchAllResources(): Promise<ResourceItem[]> {
     console.error("[resources] fetch failed", error);
     return [];
   }
-  return (data ?? [])
-    .map((row) => rowToItem(row as ResourceRow))
-    .filter((item): item is ResourceItem => item !== null);
+  const items: ResourceItem[] = [];
+  for (const row of data ?? []) {
+    // A single corrupt row must not kill the page — skip it and move on.
+    try {
+      const item = rowToItem(supabase, row as ResourceRow);
+      if (item) items.push(item);
+    } catch (e) {
+      console.error("[resources] skipping bad row", (row as ResourceRow).id, e);
+    }
+  }
+  return items;
 }
 
 export async function getResourcesPageData(): Promise<{

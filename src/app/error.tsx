@@ -2,7 +2,7 @@
 
 import { ErrorView } from "@/components/error-view";
 
-export default function AlbumsError({
+export default function RootError({
   error,
   reset,
 }: {
@@ -13,8 +13,8 @@ export default function AlbumsError({
     <ErrorView
       error={error}
       reset={reset}
-      fallbackHref="/albums"
-      fallbackLabel="Back to albums"
+      fallbackHref="/"
+      fallbackLabel="Back to dashboard"
     />
   );
 }
