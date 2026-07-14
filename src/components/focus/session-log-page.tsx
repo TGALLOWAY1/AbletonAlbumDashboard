@@ -218,7 +218,7 @@ export function SessionLogPage({
           Start a focus session, then stop it to log how you spent your time.
         </p>
         <Button asChild>
-          <Link href="/">Back to dashboard</Link>
+          <Link href="/">Back to Home</Link>
         </Button>
       </div>
     );

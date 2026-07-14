@@ -63,7 +63,7 @@ export default async function TrackDetailPage({
       <Button asChild variant="ghost" size="sm" className="self-start">
         <Link href="/">
           <ArrowLeft className="h-4 w-4" />
-          Back to Dashboard
+          Back to Home
         </Link>
       </Button>
 

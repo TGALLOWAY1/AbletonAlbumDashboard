@@ -54,7 +54,7 @@ export default async function AllTracksPage({
     <div className="flex flex-col gap-6">
       <header className="flex items-end justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-semibold tracking-tight">All tracks</h1>
+          <h1 className="text-3xl font-semibold tracking-tight">Tracks</h1>
           <p className="mt-1 text-muted-foreground">
             Library view — beyond the active five.
           </p>

@@ -20,14 +20,14 @@ export type NavItem = {
 };
 
 export const NAV_ITEMS: NavItem[] = [
-  { href: "/", label: "Dashboard", icon: Home },
+  { href: "/", label: "Home", icon: Home },
   { href: "/albums", label: "Albums", icon: Disc3 },
-  { href: "/tracks", label: "All Tracks", icon: ListMusic },
+  { href: "/tracks", label: "Tracks", icon: ListMusic },
   { href: "/library", label: "Library", icon: Library },
   { href: "/samples", label: "Samples", icon: AudioLines },
   { href: "/calendar", label: "Calendar", icon: Calendar },
   { href: "/sessions", label: "Focus Sessions", icon: Headphones },
-  { href: "/analytics", label: "Analytics", icon: BarChart3 },
+  { href: "/analytics", label: "Progress", icon: BarChart3 },
   { href: "/templates", label: "Templates", icon: LayoutTemplate },
   { href: "/resources", label: "Resources", icon: BookOpen },
   { href: "/settings", label: "Settings", icon: Settings },

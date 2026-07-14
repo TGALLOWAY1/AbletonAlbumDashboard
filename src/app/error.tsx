@@ -14,7 +14,7 @@ export default function RootError({
       error={error}
       reset={reset}
       fallbackHref="/"
-      fallbackLabel="Back to dashboard"
+      fallbackLabel="Back to Home"
     />
   );
 }

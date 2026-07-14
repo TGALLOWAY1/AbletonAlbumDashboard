@@ -112,7 +112,7 @@ function NewTemplateForm({
         />
       </div>
       <div className="grid gap-1.5">
-        <Label>Default todos</Label>
+        <Label>Default tasks</Label>
         <SessionTodoChecklist
           items={todos}
           onChange={setTodos}
@@ -214,7 +214,7 @@ function TemplateRow({
         />
       </div>
       <div className="grid gap-1.5">
-        <Label>Default todos</Label>
+        <Label>Default tasks</Label>
         <SessionTodoChecklist
           items={todos}
           onChange={setTodos}

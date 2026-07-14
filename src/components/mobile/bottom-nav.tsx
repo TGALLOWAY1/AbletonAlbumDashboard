@@ -5,7 +5,7 @@ import { usePathname } from "next/navigation";
 import {
   Activity,
   Calendar as CalendarIcon,
-  CheckSquare,
+  Home,
   Settings as SettingsIcon,
   type LucideIcon,
 } from "lucide-react";
@@ -20,9 +20,9 @@ type Tab = {
 
 const TABS: Tab[] = [
   {
-    label: "Tracks",
+    label: "Home",
     href: "/",
-    icon: CheckSquare,
+    icon: Home,
     match: (p) => p === "/" || p.startsWith("/tracks") || p.startsWith("/m/"),
   },
   {
@@ -70,7 +70,7 @@ export function MobileBottomNav() {
                 <Icon
                   className="h-5 w-5"
                   strokeWidth={active ? 2.5 : 2}
-                  fill={active && tab.label === "Tracks" ? "currentColor" : "none"}
+                  fill={active && tab.label === "Home" ? "currentColor" : "none"}
                 />
                 <span>{tab.label}</span>
               </Link>

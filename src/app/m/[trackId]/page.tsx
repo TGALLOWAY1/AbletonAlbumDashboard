@@ -62,7 +62,7 @@ export default async function MobileTrackPage({
         <Link
           href="/"
           className="-ml-2 inline-flex h-11 w-11 items-center justify-center text-muted-foreground"
-          aria-label="Back to dashboard"
+          aria-label="Back to Home"
         >
           <ArrowLeft className="h-5 w-5" />
         </Link>

@@ -128,7 +128,7 @@ export function FocusRunner({
           ) : (
             <Link href="/">
               <ArrowLeft className="h-4 w-4" />
-              Back to dashboard
+              Back to Home
             </Link>
           )}
         </Button>
@@ -157,7 +157,7 @@ export function FocusRunner({
             <SessionTodoChecklist
               items={todos}
               onChange={ctx.setTodos}
-              placeholder="Add a todo for this session…"
+              placeholder="Add a task for this session…"
             />
           )}
         </div>

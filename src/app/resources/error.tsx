@@ -14,7 +14,7 @@ export default function ResourcesError({
       error={error}
       reset={reset}
       fallbackHref="/"
-      fallbackLabel="Back to dashboard"
+      fallbackLabel="Back to Home"
       title="Couldn't load resources"
     />
   );

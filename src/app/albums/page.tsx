@@ -21,7 +21,7 @@ export default async function AlbumsPage() {
           </h1>
           <p className="mt-1 text-sm text-muted-foreground">
             Group tracks into albums. One album is your current focus; the rest
-            sit on the dashboard&apos;s upcoming shelf.
+            sit on the home page&apos;s upcoming shelf.
           </p>
         </div>
         <Button asChild size="sm">

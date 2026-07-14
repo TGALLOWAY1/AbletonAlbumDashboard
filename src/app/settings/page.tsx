@@ -22,7 +22,7 @@ export default async function SettingsPage() {
       <header>
         <h1 className="text-3xl font-semibold tracking-tight">Settings</h1>
         <p className="mt-1 text-muted-foreground">
-          Albums and dashboard preferences.
+          Albums and home preferences.
         </p>
       </header>
 
@@ -73,7 +73,7 @@ export default async function SettingsPage() {
             href="/settings/session-templates"
             icon={LayoutTemplate}
             title="Session templates"
-            description="Reusable session shapes with default duration and todo lists."
+            description="Reusable session shapes with default duration and task lists."
           />
           <SettingsTile
             href="/settings/recurring-blocks"

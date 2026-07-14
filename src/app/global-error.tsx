@@ -110,7 +110,7 @@ export default function GlobalError({
                 textDecoration: "none",
               }}
             >
-              Back to dashboard
+              Back to Home
             </a>
           </div>
         </div>

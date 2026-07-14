@@ -20,7 +20,7 @@ export function SessionTodoChecklist({
   items,
   onChange,
   showDone = true,
-  placeholder = "Add a todo…",
+  placeholder = "Add a task…",
   className,
 }: {
   items: ChecklistItem[];
@@ -74,7 +74,7 @@ export function SessionTodoChecklist({
                 type="button"
                 onClick={() => onChange(items.filter((_, i) => i !== idx))}
                 className="text-muted-foreground hover:text-danger"
-                aria-label="Remove todo"
+                aria-label="Remove task"
               >
                 <Trash2 className="h-3.5 w-3.5" />
               </button>

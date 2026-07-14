@@ -142,7 +142,7 @@ export function AnalyticsDashboard({
   return (
     <div className="flex flex-col gap-6">
       <header>
-        <h1 className="text-3xl font-semibold tracking-tight">Analytics</h1>
+        <h1 className="text-3xl font-semibold tracking-tight">Progress</h1>
         <p className="mt-1 text-muted-foreground">
           The patterns underneath the work.
         </p>

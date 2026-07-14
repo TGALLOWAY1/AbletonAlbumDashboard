@@ -82,7 +82,7 @@ export default async function SessionsPage() {
             </span>
             <h2 className="text-lg font-semibold">No sessions yet</h2>
             <p className="text-sm text-muted-foreground">
-              Start a focus session from the dashboard or any track to log
+              Start a focus session from the home page or any track to log
               your first one.
             </p>
           </CardContent>

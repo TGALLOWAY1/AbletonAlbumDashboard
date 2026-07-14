@@ -78,7 +78,7 @@ export function SessionBlock({
               )}
               {totalTodos > 0 && (
                 <span>
-                  {doneTodos}/{totalTodos} todos
+                  {doneTodos}/{totalTodos} tasks
                 </span>
               )}
             </div>
