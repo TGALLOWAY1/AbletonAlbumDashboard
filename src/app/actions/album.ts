@@ -5,6 +5,7 @@ import { redirect } from "next/navigation";
 import { z } from "zod";
 import { getServerSupabase } from "@/lib/supabase/server";
 import { OWNER_ID } from "@/lib/owner";
+import { revalidateAlbumSurfaces } from "@/lib/revalidate-track";
 import {
   ALBUMS_MIGRATION_MISSING_MESSAGE,
   isMissingRelation,
@@ -73,12 +74,6 @@ const upsertSchema = z.object({
     ),
 });
 
-function revalidateAlbumViews(id?: string) {
-  revalidatePath("/");
-  revalidatePath("/albums");
-  if (id) revalidatePath(`/albums/${id}`);
-}
-
 export async function createAlbum(
   _prev: CreateAlbumState,
   formData: FormData,
@@ -117,7 +112,7 @@ export async function createAlbum(
     if (error) throw error;
 
     newId = data.id;
-    revalidateAlbumViews(newId);
+    revalidateAlbumSurfaces(newId);
   } catch (err) {
     logSupabaseError("[createAlbum] failed", err);
     if (isMissingRelation(err as { code?: string | null })) {
@@ -157,7 +152,7 @@ export async function updateAlbum(formData: FormData) {
   throwIfMissingAlbums(error);
   if (error) throw error;
 
-  revalidateAlbumViews(parsed.id);
+  revalidateAlbumSurfaces(parsed.id);
 }
 
 export async function setActiveAlbum(id: string) {
@@ -182,7 +177,7 @@ export async function setActiveAlbum(id: string) {
   throwIfMissingAlbums(setErr);
   if (setErr) throw setErr;
 
-  revalidateAlbumViews(id);
+  revalidateAlbumSurfaces(id);
 }
 
 export async function deleteAlbum(id: string) {
@@ -227,7 +222,10 @@ export async function deleteAlbum(id: string) {
     }
   }
 
-  revalidateAlbumViews();
+  // Member tracks just lost their album, so the track listing (which shows
+  // membership) needs a refresh alongside the album surfaces.
+  revalidateAlbumSurfaces();
+  revalidatePath("/tracks");
 }
 
 const reorderSchema = z.object({
@@ -248,5 +246,5 @@ export async function reorderAlbums(ids: string[]) {
     ),
   );
 
-  revalidateAlbumViews();
+  revalidateAlbumSurfaces();
 }

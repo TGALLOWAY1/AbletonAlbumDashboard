@@ -16,6 +16,7 @@ import { RecentResourcesTable } from "./recent-resources-table";
 import { AddResourceDialog } from "./add-resource-dialog";
 import { ResourceViewerDialog } from "./resource-viewer-dialog";
 import { toggleResourceBookmark } from "@/app/actions/resources";
+import { useToast } from "@/components/toast";
 
 const CATEGORY_TITLES = new Map(
   RESOURCE_CATEGORIES.map((c) => [c.id, c.title.toLowerCase()]),
@@ -36,6 +37,7 @@ export function ResourcesPageClient({
     React.useState<ResourceCategoryId | null>(null);
   const [selected, setSelected] = React.useState<ResourceItem | null>(null);
   const [pendingBookmark, startBookmark] = React.useTransition();
+  const { toast } = useToast();
 
   const filteredRecent = React.useMemo(() => {
     const q = query.trim().toLowerCase();
@@ -68,6 +70,9 @@ export function ResourcesPageClient({
         await toggleResourceBookmark(id);
       } catch (e) {
         console.error(e);
+        toast(
+          (e as Error).message || "Could not update bookmark. Please try again.",
+        );
       }
     });
   };
