@@ -4,8 +4,15 @@ import { redirect } from "next/navigation";
 import { z } from "zod";
 import { getServerSupabase } from "@/lib/supabase/server";
 import { OWNER_ID } from "@/lib/owner";
-import { MAX_ACTIVE_TRACKS, TRACK_STATUSES } from "@/lib/types";
-import { revalidateTrackSurfaces } from "@/lib/revalidate-track";
+import {
+  assignTracksToAlbumSchema,
+  MAX_ACTIVE_TRACKS,
+  TRACK_STATUSES,
+} from "@/lib/types";
+import {
+  revalidateAlbumSurfaces,
+  revalidateTrackSurfaces,
+} from "@/lib/revalidate-track";
 
 const optionalTrimmed = z
   .string()
@@ -246,6 +253,58 @@ export async function deleteTrack(id: string) {
     .eq("id", id);
   if (error) throw error;
   revalidateTrackSurfaces(id, { albumIds: [previous?.album_id] });
+}
+
+// Bulk-assign tracks to an album (or unassign with albumId = null). Returns
+// the number of tracks actually updated so callers can toast "Added N tracks".
+export async function assignTracksToAlbum(
+  albumId: string | null,
+  trackIds: string[],
+): Promise<{ count: number }> {
+  const parsed = assignTracksToAlbumSchema.parse({ albumId, trackIds });
+  const supabase = getServerSupabase();
+
+  if (parsed.albumId !== null) {
+    const { data: album, error: albumError } = await supabase
+      .from("albums")
+      .select("id")
+      .eq("owner_id", OWNER_ID)
+      .eq("id", parsed.albumId)
+      .maybeSingle();
+    if (albumError) throw albumError;
+    if (!album) {
+      throw new Error("Album not found. It may have been deleted.");
+    }
+  }
+
+  // Read the current albums before updating so the old album detail pages
+  // refresh too when tracks move between albums.
+  const { data: previous, error: readError } = await supabase
+    .from("tracks")
+    .select("album_id")
+    .eq("owner_id", OWNER_ID)
+    .in("id", parsed.trackIds);
+  if (readError) throw readError;
+  const previousAlbumIds = [
+    ...new Set((previous ?? []).map((t) => t.album_id)),
+  ];
+
+  const { data: updated, error } = await supabase
+    .from("tracks")
+    .update({ album_id: parsed.albumId })
+    .eq("owner_id", OWNER_ID)
+    .in("id", parsed.trackIds)
+    .select("id");
+  if (error) throw error;
+
+  revalidateAlbumSurfaces(parsed.albumId ?? undefined);
+  for (const id of parsed.trackIds) {
+    revalidateTrackSurfaces(id, {
+      albumIds: [parsed.albumId, ...previousAlbumIds],
+    });
+  }
+
+  return { count: updated?.length ?? 0 };
 }
 
 export async function updateNotes(id: string, notes: string) {

@@ -13,8 +13,22 @@ async function attachDetails(tracks: TrackRow[]): Promise<TrackWithDetails[]> {
   if (tracks.length === 0) return [];
   const supabase = getServerSupabase();
   const ids = tracks.map((t) => t.id);
+  const albumIds = [
+    ...new Set(
+      tracks
+        .map((t) => t.album_id)
+        .filter((id): id is string => id != null),
+    ),
+  ];
 
-  const [stagesRes, bottleneckRes, actionRes, openActionsRes, completedActionsRes] =
+  const [
+    stagesRes,
+    bottleneckRes,
+    actionRes,
+    openActionsRes,
+    completedActionsRes,
+    albumsRes,
+  ] =
     await Promise.all([
       supabase.from("track_stages").select("*").in("track_id", ids),
       supabase
@@ -38,6 +52,7 @@ async function attachDetails(tracks: TrackRow[]): Promise<TrackWithDetails[]> {
         .select("track_id")
         .in("track_id", ids)
         .not("completed_at", "is", null),
+      supabase.from("albums").select("id, title").in("id", albumIds),
     ]);
 
   const stagesByTrack = new Map<string, StageRow[]>();
@@ -68,6 +83,8 @@ async function attachDetails(tracks: TrackRow[]): Promise<TrackWithDetails[]> {
       (completedCountByTrack.get(a.track_id) ?? 0) + 1,
     );
   });
+  const albumById = new Map<string, { id: string; title: string | null }>();
+  (albumsRes.data ?? []).forEach((a) => albumById.set(a.id, a));
 
   return tracks.map((t) => ({
     ...t,
@@ -77,6 +94,7 @@ async function attachDetails(tracks: TrackRow[]): Promise<TrackWithDetails[]> {
     openTaskCount: openCountByTrack.get(t.id) ?? 0,
     completedTaskCount: completedCountByTrack.get(t.id) ?? 0,
     estMinutesRemaining: estMinutesByTrack.get(t.id) ?? 0,
+    album: (t.album_id && albumById.get(t.album_id)) || null,
   }));
 }
 
