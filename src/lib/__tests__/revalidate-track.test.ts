@@ -14,7 +14,7 @@ const BASE_TRACK_PATHS = [
   "/focus/abc-123",
   "/",
   "/calendar",
-  "/sessions",
+  "/analytics",
   "/tracks",
   "/albums",
 ];

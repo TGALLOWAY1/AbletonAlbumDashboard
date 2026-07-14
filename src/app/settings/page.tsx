@@ -7,8 +7,6 @@ import {
 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { ComingSoon } from "@/components/coming-soon";
-import { Settings as SettingsIcon } from "lucide-react";
 import { listAlbums } from "@/lib/data/album";
 
 export const dynamic = "force-dynamic";
@@ -83,12 +81,6 @@ export default async function SettingsPage() {
           />
         </CardContent>
       </Card>
-
-      <ComingSoon
-        icon={SettingsIcon}
-        title="Preferences"
-        description="Default focus duration, recommendation weights, and display preferences. (Single-user app, no auth.)"
-      />
     </div>
   );
 }

@@ -11,14 +11,16 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
-type Tab = {
+export type MobileNavTab = {
   label: string;
   href: string;
   icon: LucideIcon;
   match: (pathname: string) => boolean;
 };
 
-const TABS: Tab[] = [
+// Exported so the nav-consistency test can assert every mobile tab has a
+// matching entry (href + label) in the sidebar's NAV_ITEMS.
+export const MOBILE_NAV_TABS: MobileNavTab[] = [
   {
     label: "Home",
     href: "/",
@@ -54,7 +56,7 @@ export function MobileBottomNav() {
       aria-label="Primary"
     >
       <ul className="grid grid-cols-4">
-        {TABS.map((tab) => {
+        {MOBILE_NAV_TABS.map((tab) => {
           const active = tab.match(pathname);
           const Icon = tab.icon;
           return (

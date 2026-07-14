@@ -2,15 +2,12 @@ import {
   AudioWaveform,
   Blocks,
   Cloud,
-  Download,
   Drum,
   Library as LibraryIcon,
   Mic2,
   Piano,
-  Plus,
   Sparkles,
 } from "lucide-react";
-import { Button } from "@/components/ui/button";
 import { LibraryPageClient } from "@/components/library/library-page-client";
 import { LibraryStatCard } from "@/components/library/library-stat-card";
 import { LIBRARY_ITEMS } from "@/lib/data/library-items";
@@ -45,23 +42,11 @@ export default async function LibraryPage() {
 
   return (
     <div className="flex flex-col gap-6">
-      <header className="flex flex-wrap items-start justify-between gap-4">
-        <div>
-          <h1 className="text-3xl font-semibold tracking-tight">Library</h1>
-          <p className="mt-1 text-muted-foreground">
-            Your saved ideas, samples, loops and audio from past projects.
-          </p>
-        </div>
-        <div className="flex items-center gap-2">
-          <Button>
-            <Plus className="h-4 w-4" />
-            Import Audio
-          </Button>
-          <Button variant="outline">
-            <Download className="h-4 w-4" />
-            Export Pack
-          </Button>
-        </div>
+      <header>
+        <h1 className="text-3xl font-semibold tracking-tight">Library</h1>
+        <p className="mt-1 text-muted-foreground">
+          Your saved ideas, samples, loops and audio from past projects.
+        </p>
       </header>
 
       <section className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-8">

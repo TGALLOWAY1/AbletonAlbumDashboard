@@ -6,7 +6,7 @@ import { getServerSupabase } from "@/lib/supabase/server";
 
 const REVALIDATE = () => {
   revalidatePath("/calendar");
-  revalidatePath("/sessions");
+  revalidatePath("/analytics");
 };
 
 const addSchema = z.object({

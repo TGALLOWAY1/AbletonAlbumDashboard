@@ -1,6 +1,13 @@
 import { getServerSupabase } from "@/lib/supabase/server";
 import { OWNER_ID } from "@/lib/owner";
 import { AnalyticsDashboard } from "@/components/analytics/analytics-dashboard";
+import { SessionHistory } from "@/components/sessions/session-history";
+import {
+  Tabs,
+  TabsList,
+  TabsTrigger,
+  TabsContent,
+} from "@/components/ui/tabs";
 import type {
   AnalyticsSession,
   AnalyticsTrack,
@@ -67,10 +74,32 @@ export default async function AnalyticsPage() {
   const { sessions, tracks, bottlenecks } = await fetchAnalyticsData();
 
   return (
-    <AnalyticsDashboard
-      sessions={sessions}
-      tracks={tracks}
-      bottlenecks={bottlenecks}
-    />
+    <div className="flex flex-col gap-6">
+      <header>
+        <h1 className="text-3xl font-semibold tracking-tight">Progress</h1>
+        <p className="mt-1 text-muted-foreground">
+          The patterns underneath the work.
+        </p>
+      </header>
+
+      <Tabs defaultValue="overview">
+        <TabsList>
+          <TabsTrigger value="overview">Overview</TabsTrigger>
+          <TabsTrigger value="history">History</TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="overview">
+          <AnalyticsDashboard
+            sessions={sessions}
+            tracks={tracks}
+            bottlenecks={bottlenecks}
+          />
+        </TabsContent>
+
+        <TabsContent value="history">
+          <SessionHistory />
+        </TabsContent>
+      </Tabs>
+    </div>
   );
 }
