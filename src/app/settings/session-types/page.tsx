@@ -1,6 +1,4 @@
-import Link from "next/link";
-import { ChevronLeft } from "lucide-react";
-import { Button } from "@/components/ui/button";
+import { BackLink } from "@/components/back-link";
 import { getAllSessionTypes } from "@/lib/data/session-types";
 import { SessionTypesEditor } from "./session-types-editor";
 
@@ -12,12 +10,7 @@ export default async function SessionTypesPage() {
     <div className="flex flex-col gap-5">
       <header className="flex items-center justify-between">
         <div>
-          <Button asChild variant="ghost" size="sm" className="-ml-2">
-            <Link href="/settings">
-              <ChevronLeft className="h-4 w-4" />
-              Back
-            </Link>
-          </Button>
+          <BackLink fallback="/settings" label="Back" className="-ml-2" />
           <h1 className="text-3xl font-semibold tracking-tight">
             Session types
           </h1>

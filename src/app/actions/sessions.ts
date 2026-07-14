@@ -15,7 +15,6 @@ type SessionUpdate = Database["public"]["Tables"]["sessions"]["Update"];
 const REVALIDATE = () => {
   revalidatePath("/");
   revalidatePath("/calendar");
-  revalidatePath("/sessions");
   revalidatePath("/analytics");
 };
 

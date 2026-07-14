@@ -3,7 +3,8 @@
 import { useEffect, useMemo, useState, useTransition } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { ArrowLeft, AudioLines, RotateCcw } from "lucide-react";
+import { AudioLines, RotateCcw } from "lucide-react";
+import { BackLink } from "@/components/back-link";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Textarea } from "@/components/ui/textarea";
@@ -218,7 +219,7 @@ export function SessionLogPage({
           Start a focus session, then stop it to log how you spent your time.
         </p>
         <Button asChild>
-          <Link href="/">Back to dashboard</Link>
+          <Link href="/">Back to Home</Link>
         </Button>
       </div>
     );
@@ -228,14 +229,12 @@ export function SessionLogPage({
     <div className="mx-auto flex w-full max-w-xl flex-col gap-4 pb-8">
       {/* Header */}
       <div className="flex items-center gap-2">
-        <Button asChild variant="ghost" size="icon">
-          <Link
-            href={track ? `/focus/${track.id}` : "/focus/new"}
-            aria-label="Back"
-          >
-            <ArrowLeft className="h-5 w-5" />
-          </Link>
-        </Button>
+        <BackLink
+          fallback={track ? `/focus/${track.id}` : "/focus/new"}
+          label="Back"
+          variant="icon"
+          className="h-9 w-9"
+        />
         <div className="flex flex-1 items-center justify-center gap-2">
           <span className="flex h-8 w-8 items-center justify-center rounded-full bg-primary/10 text-primary">
             <AudioLines className="h-4 w-4" aria-hidden />

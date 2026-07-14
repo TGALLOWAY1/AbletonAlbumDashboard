@@ -11,6 +11,7 @@ import {
 } from "lucide-react";
 import { TrackCard } from "@/components/track-card";
 import { NextUpCard } from "@/components/next-up-card";
+import { AssignTracksDialog } from "@/components/album/assign-tracks-dialog";
 import { UpcomingAlbumsGallery } from "@/components/album/upcoming-albums-gallery";
 import { LibraryStatCard } from "@/components/library/library-stat-card";
 import { Button } from "@/components/ui/button";
@@ -20,7 +21,7 @@ import {
   getTracksByStatus,
   getTracksWithoutAlbum,
 } from "@/lib/data/tracks";
-import { getActiveAlbum, listUpcomingAlbums } from "@/lib/data/album";
+import { getActiveAlbum, listAlbums, listUpcomingAlbums } from "@/lib/data/album";
 import {
   getSessionCountsByTrackSince,
   getSessionStatsByTrack,
@@ -91,8 +92,10 @@ export default async function DashboardPage() {
       )
     : await getTracksByStatus("active");
 
-  // Tracks without an album: surface them so they don't get lost.
+  // Tracks without an album: surface them so they don't get lost. The full
+  // album list is only needed as assignment destinations for that section.
   const orphanTracks = activeAlbum ? await getTracksWithoutAlbum() : [];
+  const allAlbums = orphanTracks.length > 0 ? await listAlbums() : [];
 
   // One recommended track up top; everything else triaged below it.
   const recommendation = recommendTrack(activeTracks, recentCounts);
@@ -290,16 +293,51 @@ export default async function DashboardPage() {
             <h2 className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
               Unassigned tracks · {orphanTracks.length}
             </h2>
-            <Button asChild variant="ghost" size="sm">
-              <Link href="/albums">Assign to album</Link>
-            </Button>
+            <AssignTracksDialog
+              album={null}
+              albums={allAlbums.map((a) => ({ id: a.id, title: a.title }))}
+              candidates={orphanTracks.map((t) => ({
+                id: t.id,
+                name: t.name,
+                albumId: null,
+                albumTitle: null,
+              }))}
+              trigger={
+                <Button variant="outline" size="sm">
+                  Assign to album…
+                </Button>
+              }
+            />
           </div>
           <Card>
-            <CardContent className="p-4 text-sm text-muted-foreground">
-              {orphanTracks.length}{" "}
-              {orphanTracks.length === 1 ? "track is" : "tracks are"} not yet
-              assigned to an album. Open a track to set its album, or use the
-              albums page to bulk-assign.
+            <CardContent className="flex flex-col gap-2 p-4 text-sm">
+              <p className="text-muted-foreground">
+                {orphanTracks.length}{" "}
+                {orphanTracks.length === 1 ? "track is" : "tracks are"} not in
+                any album, so {orphanTracks.length === 1 ? "it" : "they"}{" "}
+                won&apos;t show up in an album&apos;s plan:
+              </p>
+              <ul className="flex flex-wrap gap-x-3 gap-y-1">
+                {orphanTracks.slice(0, 5).map((t) => (
+                  <li key={t.id} className="min-w-0">
+                    <Link
+                      href={`/tracks/${t.id}`}
+                      className="block max-w-56 truncate font-medium hover:underline"
+                    >
+                      {t.name}
+                    </Link>
+                  </li>
+                ))}
+                {orphanTracks.length > 5 && (
+                  <li className="text-muted-foreground">
+                    and {orphanTracks.length - 5} more
+                  </li>
+                )}
+              </ul>
+              <p className="text-muted-foreground">
+                Use &ldquo;Assign to album…&rdquo; above to move them in bulk,
+                or open a track&apos;s metadata editor to set its album.
+              </p>
             </CardContent>
           </Card>
         </section>

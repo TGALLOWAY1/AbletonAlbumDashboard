@@ -1,13 +1,3 @@
-import {
-  AudioWaveform,
-  Brain,
-  FolderOpen,
-  Gauge,
-  type LucideIcon,
-  Sliders,
-  Waves,
-} from "lucide-react";
-
 export type ResourceColor = "green" | "purple" | "blue" | "orange";
 
 export type ResourceType =
@@ -27,11 +17,14 @@ export type ResourceCategoryId =
   | "tools-plugins"
   | "file-organization";
 
+// NOTE: keep this interface fully serializable (no functions/components).
+// `ResourceCategory` values cross the server -> client component boundary as
+// props on /resources; icons are resolved client-side from `id` (see
+// RESOURCE_CATEGORY_ICONS in src/components/resources/resource-category-card.tsx).
 export interface ResourceCategory {
   id: ResourceCategoryId;
   title: string;
   description: string;
-  icon: LucideIcon;
   color: ResourceColor;
   articleCount: number;
 }
@@ -80,7 +73,6 @@ export const RESOURCE_CATEGORIES: ResourceCategory[] = [
     id: "production-guides",
     title: "Production Guides",
     description: "Step-by-step guides for music production workflows.",
-    icon: AudioWaveform,
     color: "green",
     articleCount: 0,
   },
@@ -88,7 +80,6 @@ export const RESOURCE_CATEGORIES: ResourceCategory[] = [
     id: "sound-design",
     title: "Sound Design",
     description: "Learn synthesis, sampling, and sound creation.",
-    icon: Waves,
     color: "purple",
     articleCount: 0,
   },
@@ -96,7 +87,6 @@ export const RESOURCE_CATEGORIES: ResourceCategory[] = [
     id: "mixing-mastering",
     title: "Mixing & Mastering",
     description: "Tips and techniques for pro-level sound.",
-    icon: Sliders,
     color: "blue",
     articleCount: 0,
   },
@@ -104,7 +94,6 @@ export const RESOURCE_CATEGORIES: ResourceCategory[] = [
     id: "workflow-mindset",
     title: "Workflow & Mindset",
     description: "Boost productivity and stay in the creative flow.",
-    icon: Brain,
     color: "green",
     articleCount: 0,
   },
@@ -112,7 +101,6 @@ export const RESOURCE_CATEGORIES: ResourceCategory[] = [
     id: "tools-plugins",
     title: "Tools & Plugins",
     description: "Reviews, tutorials and recommendations.",
-    icon: Gauge,
     color: "orange",
     articleCount: 0,
   },
@@ -120,7 +108,6 @@ export const RESOURCE_CATEGORIES: ResourceCategory[] = [
     id: "file-organization",
     title: "File Organization",
     description: "Keep your projects and samples organized.",
-    icon: FolderOpen,
     color: "blue",
     articleCount: 0,
   },

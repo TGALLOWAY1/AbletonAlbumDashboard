@@ -200,7 +200,7 @@ export function SessionPlanDialog({
         <DialogHeader>
           <DialogTitle>{isEdit ? "Edit session" : "Plan a session"}</DialogTitle>
           <DialogDescription>
-            Block off time, pick a type, sketch out your todos and notes.
+            Block off time, pick a type, sketch out your tasks and notes.
           </DialogDescription>
         </DialogHeader>
 
@@ -269,7 +269,7 @@ export function SessionPlanDialog({
           </div>
 
           <div className="grid gap-2">
-            <Label>Todos for this session</Label>
+            <Label>Tasks for this session</Label>
             <SessionTodoChecklist
               items={todos}
               onChange={setTodos}

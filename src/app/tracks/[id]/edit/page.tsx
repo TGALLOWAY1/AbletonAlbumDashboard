@@ -1,9 +1,9 @@
-import Link from "next/link";
 import { notFound } from "next/navigation";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
+import { BackLink } from "@/components/back-link";
 import { CoverImageUpload } from "@/components/cover-image-upload";
 import { updateTrack } from "@/app/actions/tracks";
 import { getTrack } from "@/lib/data/tracks";
@@ -24,9 +24,7 @@ export default async function EditTrackPage({
     <div className="mx-auto max-w-xl">
       <div className="mb-6 flex items-center justify-between">
         <h1 className="text-2xl font-semibold tracking-tight">Edit track</h1>
-        <Button asChild variant="ghost" size="sm">
-          <Link href={`/tracks/${track.id}`}>Cancel</Link>
-        </Button>
+        <BackLink fallback={`/tracks/${track.id}`} label="Cancel" />
       </div>
 
       <Card>
@@ -129,10 +127,8 @@ export default async function EditTrackPage({
               </p>
             </div>
 
-            <div className="flex justify-end gap-2 pt-2">
-              <Button asChild variant="ghost">
-                <Link href={`/tracks/${track.id}`}>Cancel</Link>
-              </Button>
+            <div className="flex items-center justify-end gap-2 pt-2">
+              <BackLink fallback={`/tracks/${track.id}`} label="Cancel" />
               <Button type="submit">Save changes</Button>
             </div>
           </form>

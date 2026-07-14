@@ -1,10 +1,8 @@
 "use client";
 
 import * as React from "react";
-import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { ChevronLeft } from "lucide-react";
-import { Button } from "@/components/ui/button";
+import { BackLink } from "@/components/back-link";
 import { useToast } from "@/components/toast";
 import {
   type AudioPreview,
@@ -59,12 +57,7 @@ function TemplatePageInner({ initial }: { initial: TemplateItem }) {
   return (
     <div className="mx-auto flex max-w-3xl flex-col gap-4">
       <div className="flex items-center justify-between">
-        <Button asChild variant="ghost" size="sm">
-          <Link href="/templates">
-            <ChevronLeft className="h-4 w-4" />
-            All templates
-          </Link>
-        </Button>
+        <BackLink fallback="/templates" label="All templates" />
       </div>
 
       <TemplateDetailPanel

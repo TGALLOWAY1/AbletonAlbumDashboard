@@ -7,8 +7,6 @@ import {
 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { ComingSoon } from "@/components/coming-soon";
-import { Settings as SettingsIcon } from "lucide-react";
 import { listAlbums } from "@/lib/data/album";
 
 export const dynamic = "force-dynamic";
@@ -22,7 +20,7 @@ export default async function SettingsPage() {
       <header>
         <h1 className="text-3xl font-semibold tracking-tight">Settings</h1>
         <p className="mt-1 text-muted-foreground">
-          Albums and dashboard preferences.
+          Albums and home preferences.
         </p>
       </header>
 
@@ -73,7 +71,7 @@ export default async function SettingsPage() {
             href="/settings/session-templates"
             icon={LayoutTemplate}
             title="Session templates"
-            description="Reusable session shapes with default duration and todo lists."
+            description="Reusable session shapes with default duration and task lists."
           />
           <SettingsTile
             href="/settings/recurring-blocks"
@@ -83,12 +81,6 @@ export default async function SettingsPage() {
           />
         </CardContent>
       </Card>
-
-      <ComingSoon
-        icon={SettingsIcon}
-        title="Preferences"
-        description="Default focus duration, recommendation weights, and display preferences. (Single-user app, no auth.)"
-      />
     </div>
   );
 }

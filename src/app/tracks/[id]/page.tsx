@@ -2,7 +2,13 @@ import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { format } from "date-fns";
 import { isMobileUserAgent } from "@/lib/user-agent";
-import { ArrowLeft, CalendarDays, Clock3, Pencil, Play } from "lucide-react";
+import {
+  CalendarDays,
+  Clock3,
+  Disc3,
+  Pencil,
+  Play,
+} from "lucide-react";
 import {
   Tabs,
   TabsContent,
@@ -11,6 +17,7 @@ import {
 } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { BackLink } from "@/components/back-link";
 import { StagesChecklist } from "@/components/stages-checklist";
 import { BottleneckEditor } from "@/components/bottleneck-editor";
 import { NextActionEditor } from "@/components/next-action-editor";
@@ -60,12 +67,7 @@ export default async function TrackDetailPage({
 
   return (
     <div className="flex flex-col gap-6">
-      <Button asChild variant="ghost" size="sm" className="self-start">
-        <Link href="/">
-          <ArrowLeft className="h-4 w-4" />
-          Back to Dashboard
-        </Link>
-      </Button>
+      <BackLink fallback="/tracks" label="Back" className="self-start" />
 
       <div className="flex flex-col gap-4 md:flex-row md:flex-wrap md:items-start md:justify-between md:gap-6">
         <div className="flex flex-col items-start gap-4 sm:flex-row sm:gap-5">
@@ -97,6 +99,21 @@ export default async function TrackDetailPage({
             <div className="flex flex-wrap items-center gap-2">
               {genre && <Badge variant="primary">{genre}</Badge>}
               <Badge variant="default">{track.status}</Badge>
+              {track.album ? (
+                <Link href={`/albums/${track.album.id}`}>
+                  <Badge className="gap-1 hover:bg-surface-2/80 hover:text-foreground">
+                    <Disc3 className="h-3 w-3 shrink-0" />
+                    {track.album.title?.trim() || "Untitled album"}
+                  </Badge>
+                </Link>
+              ) : (
+                <Link
+                  href={`/tracks/${track.id}/edit`}
+                  className="text-xs font-medium text-muted-foreground hover:text-foreground hover:underline"
+                >
+                  No album · Assign
+                </Link>
+              )}
             </div>
             {meta.length > 0 && (
               <p className="text-sm font-medium text-foreground/85 tabular-nums">

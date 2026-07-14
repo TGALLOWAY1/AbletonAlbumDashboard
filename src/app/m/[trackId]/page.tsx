@@ -1,6 +1,7 @@
 import Link from "next/link";
-import { notFound } from "next/navigation";
-import { ArrowLeft, Pencil, Play } from "lucide-react";
+import { notFound, redirect } from "next/navigation";
+import { Disc3, Pencil, Play } from "lucide-react";
+import { isMobileUserAgent } from "@/lib/user-agent";
 import {
   getCompletedActionsForTrack,
   getOpenActionsForTrack,
@@ -12,6 +13,7 @@ import { getSessionsForTrack } from "@/lib/data/sessions";
 import { TrackSessionHistory } from "@/components/track-session-history";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { BackLink } from "@/components/back-link";
 import { TrackTodoList } from "@/components/mobile/track-todo-list";
 import { TrackTodoHistory } from "@/components/mobile/track-todo-history";
 import { StagesChecklist } from "@/components/stages-checklist";
@@ -38,6 +40,9 @@ export default async function MobileTrackPage({
   params: Promise<{ trackId: string }>;
 }) {
   const { trackId } = await params;
+  if (!(await isMobileUserAgent())) {
+    redirect(`/tracks/${trackId}`);
+  }
   const [track, versions, todos, completedTodos, sessionTypes, sessions] =
     await Promise.all([
       getTrack(trackId),
@@ -59,13 +64,12 @@ export default async function MobileTrackPage({
   return (
     <div className="mx-auto flex max-w-md flex-col gap-5 pb-4">
       <div className="flex items-center justify-between">
-        <Link
-          href="/"
-          className="-ml-2 inline-flex h-11 w-11 items-center justify-center text-muted-foreground"
-          aria-label="Back to dashboard"
-        >
-          <ArrowLeft className="h-5 w-5" />
-        </Link>
+        <BackLink
+          fallback="/"
+          label="Back to Home"
+          variant="icon"
+          className="-ml-2"
+        />
         <Button asChild variant="ghost" size="sm" className="-mr-2">
           <Link
             href={`/tracks/${track.id}/edit`}
@@ -92,11 +96,31 @@ export default async function MobileTrackPage({
           <h1 className="truncate text-xl font-semibold leading-tight">
             {track.name}
           </h1>
-          {genre && (
-            <div className="mt-1.5">
-              <Badge variant="primary">{genre}</Badge>
-            </div>
-          )}
+          <div className="mt-1.5 flex flex-wrap items-center gap-x-1.5">
+            {genre && <Badge variant="primary">{genre}</Badge>}
+            {/* py-3/-my-3 pads the tap target to ~44px without adding
+                visual height to the header. */}
+            {track.album ? (
+              <Link
+                href={`/albums/${track.album.id}`}
+                className="-my-3 inline-flex max-w-full items-center py-3"
+              >
+                <Badge className="max-w-full gap-1">
+                  <Disc3 className="h-3 w-3 shrink-0" />
+                  <span className="truncate">
+                    {track.album.title?.trim() || "Untitled album"}
+                  </span>
+                </Badge>
+              </Link>
+            ) : (
+              <Link
+                href={`/tracks/${track.id}/edit`}
+                className="-my-3 inline-flex items-center py-3 text-xs font-medium text-muted-foreground"
+              >
+                No album · Assign
+              </Link>
+            )}
+          </div>
           {meta.length > 0 && (
             <p className="mt-1.5 text-xs font-medium tabular-nums text-foreground/80">
               {meta.join(" · ")}

@@ -181,7 +181,7 @@ export function TrackTodoList({
     <div className="flex flex-col gap-3">
       <div className="flex items-baseline justify-between">
         <h2 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
-          To-do
+          Tasks
         </h2>
         <span className="text-xs text-muted-foreground">
           {openCount} open

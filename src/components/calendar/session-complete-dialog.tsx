@@ -242,7 +242,7 @@ export function SessionCompleteDialog({
 
           {todoState.length > 0 && (
             <div className="grid gap-2">
-              <Label>Todos</Label>
+              <Label>Tasks</Label>
               <ul className="flex flex-col gap-1">
                 {todoState.map((t, i) => (
                   <li
@@ -274,7 +274,7 @@ export function SessionCompleteDialog({
                     checked={carryUnchecked}
                     onCheckedChange={(v) => setCarryUnchecked(v === true)}
                   />
-                  Carry unchecked todos into a new planned session next week
+                  Carry unchecked tasks into a new planned session next week
                 </label>
               )}
             </div>

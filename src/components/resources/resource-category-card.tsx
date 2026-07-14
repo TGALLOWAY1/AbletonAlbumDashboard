@@ -1,6 +1,31 @@
+import {
+  AudioWaveform,
+  Brain,
+  FolderOpen,
+  Gauge,
+  type LucideIcon,
+  Sliders,
+  Waves,
+} from "lucide-react";
 import { cn } from "@/lib/utils";
-import type { ResourceCategory } from "@/lib/data/resources";
+import type {
+  ResourceCategory,
+  ResourceCategoryId,
+} from "@/lib/data/resources";
 import { RESOURCE_COLOR_CLASSES } from "./resource-colors";
+
+// Icons are resolved here (client side) from the serializable category id.
+// Do not add icon components to the data in src/lib/data/resources.ts — that
+// data crosses the server -> client component boundary as props, and React
+// cannot serialize functions/components across it.
+const RESOURCE_CATEGORY_ICONS: Record<ResourceCategoryId, LucideIcon> = {
+  "production-guides": AudioWaveform,
+  "sound-design": Waves,
+  "mixing-mastering": Sliders,
+  "workflow-mindset": Brain,
+  "tools-plugins": Gauge,
+  "file-organization": FolderOpen,
+};
 
 export function ResourceCategoryCard({
   category,
@@ -11,7 +36,7 @@ export function ResourceCategoryCard({
   active?: boolean;
   onSelect?: (category: ResourceCategory) => void;
 }) {
-  const Icon = category.icon;
+  const Icon = RESOURCE_CATEGORY_ICONS[category.id];
   const tile = RESOURCE_COLOR_CLASSES[category.color].tile;
 
   return (

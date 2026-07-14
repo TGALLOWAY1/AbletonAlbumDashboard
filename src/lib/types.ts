@@ -1,3 +1,4 @@
+import { z } from "zod";
 import type { Database } from "@/lib/database.types";
 
 export type TrackRow = Database["public"]["Tables"]["tracks"]["Row"];
@@ -31,6 +32,21 @@ export type AlbumRow = Database["public"]["Tables"]["albums"]["Row"];
 export type AlbumWithTrackCount = AlbumRow & {
   trackCount: number;
 };
+
+// Input validation for the bulk album-assignment server action
+// (`assignTracksToAlbum` in src/app/actions/tracks.ts). It lives here rather
+// than next to the action because "use server" modules may only export async
+// functions, and unit tests need to import the schema directly.
+export const assignTracksToAlbumSchema = z.object({
+  // null unassigns the tracks from whatever album they are on.
+  albumId: z.string().uuid("Invalid album id").nullable(),
+  trackIds: z
+    .array(z.string().uuid("Invalid track id"))
+    .min(1, "Select at least one track"),
+});
+export type AssignTracksToAlbumInput = z.infer<
+  typeof assignTracksToAlbumSchema
+>;
 
 export const SESSION_STATUSES = [
   "planned",
@@ -108,6 +124,7 @@ export type TrackWithDetails = TrackRow & {
   openTaskCount: number;
   completedTaskCount: number;
   estMinutesRemaining: number;
+  album: { id: string; title: string | null } | null;
 };
 
 export function progressFromStages(stages: StageRow[]): number {

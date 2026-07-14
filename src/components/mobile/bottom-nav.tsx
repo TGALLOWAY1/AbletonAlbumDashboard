@@ -5,24 +5,26 @@ import { usePathname } from "next/navigation";
 import {
   Activity,
   Calendar as CalendarIcon,
-  CheckSquare,
+  Home,
   Settings as SettingsIcon,
   type LucideIcon,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
-type Tab = {
+export type MobileNavTab = {
   label: string;
   href: string;
   icon: LucideIcon;
   match: (pathname: string) => boolean;
 };
 
-const TABS: Tab[] = [
+// Exported so the nav-consistency test can assert every mobile tab has a
+// matching entry (href + label) in the sidebar's NAV_ITEMS.
+export const MOBILE_NAV_TABS: MobileNavTab[] = [
   {
-    label: "Tracks",
+    label: "Home",
     href: "/",
-    icon: CheckSquare,
+    icon: Home,
     match: (p) => p === "/" || p.startsWith("/tracks") || p.startsWith("/m/"),
   },
   {
@@ -54,7 +56,7 @@ export function MobileBottomNav() {
       aria-label="Primary"
     >
       <ul className="grid grid-cols-4">
-        {TABS.map((tab) => {
+        {MOBILE_NAV_TABS.map((tab) => {
           const active = tab.match(pathname);
           const Icon = tab.icon;
           return (
@@ -70,7 +72,7 @@ export function MobileBottomNav() {
                 <Icon
                   className="h-5 w-5"
                   strokeWidth={active ? 2.5 : 2}
-                  fill={active && tab.label === "Tracks" ? "currentColor" : "none"}
+                  fill={active && tab.label === "Home" ? "currentColor" : "none"}
                 />
                 <span>{tab.label}</span>
               </Link>
