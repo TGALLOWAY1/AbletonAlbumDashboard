@@ -169,7 +169,7 @@ export function TrackCard({
         <div className="flex flex-col gap-3 p-4">
           <div className="flex items-start gap-4">
             <Link
-              href={`/m/${track.id}`}
+              href={`/tracks/${track.id}`}
               aria-label={`Open ${track.name}`}
               className="relative h-24 w-24 shrink-0 overflow-hidden rounded-2xl bg-gradient-to-br from-primary/20 via-surface-2 to-accent/15"
             >
@@ -187,7 +187,7 @@ export function TrackCard({
               )}
             </Link>
 
-            <Link href={`/m/${track.id}`} className="min-w-0 flex-1">
+            <Link href={`/tracks/${track.id}`} className="min-w-0 flex-1">
               <h3 className="text-xl font-semibold leading-tight line-clamp-2">
                 {track.name}
               </h3>
@@ -231,7 +231,7 @@ export function TrackCard({
             <span>Focus</span>
           </Link>
           <Link
-            href={`/m/${track.id}`}
+            href={`/tracks/${track.id}`}
             className="flex flex-1 items-center justify-center gap-1.5 border-l border-border px-2 py-3 text-sm font-medium text-foreground"
           >
             <CheckCircle2 className="h-4 w-4" />
@@ -267,7 +267,7 @@ export function TrackCard({
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">
               <DropdownMenuItem asChild>
-                <Link href={`/m/${track.id}`}>Open detail</Link>
+                <Link href={`/tracks/${track.id}`}>Open detail</Link>
               </DropdownMenuItem>
               <DropdownMenuItem asChild>
                 <Link href={`/tracks/${track.id}/edit`}>Edit metadata</Link>

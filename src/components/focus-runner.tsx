@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect } from "react";
 import { ArrowLeft, Pause, Play, Square } from "lucide-react";
+import { BackLink } from "@/components/back-link";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
@@ -119,19 +120,16 @@ export function FocusRunner({
   return (
     <div className="flex min-h-[70vh] flex-col items-center justify-center gap-10 text-center">
       <div className="flex w-full justify-start">
-        <Button asChild variant="ghost" size="sm">
-          {track ? (
+        {track ? (
+          <Button asChild variant="ghost" size="sm">
             <Link href={`/tracks/${track.id}`}>
               <ArrowLeft className="h-4 w-4" />
               Back to track
             </Link>
-          ) : (
-            <Link href="/">
-              <ArrowLeft className="h-4 w-4" />
-              Back to Home
-            </Link>
-          )}
-        </Button>
+          </Button>
+        ) : (
+          <BackLink fallback="/" label="Back to Home" />
+        )}
       </div>
 
       <div className="flex flex-col gap-3">

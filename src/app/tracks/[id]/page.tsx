@@ -3,7 +3,6 @@ import { notFound, redirect } from "next/navigation";
 import { format } from "date-fns";
 import { isMobileUserAgent } from "@/lib/user-agent";
 import {
-  ArrowLeft,
   CalendarDays,
   Clock3,
   Disc3,
@@ -18,6 +17,7 @@ import {
 } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { BackLink } from "@/components/back-link";
 import { StagesChecklist } from "@/components/stages-checklist";
 import { BottleneckEditor } from "@/components/bottleneck-editor";
 import { NextActionEditor } from "@/components/next-action-editor";
@@ -67,12 +67,7 @@ export default async function TrackDetailPage({
 
   return (
     <div className="flex flex-col gap-6">
-      <Button asChild variant="ghost" size="sm" className="self-start">
-        <Link href="/">
-          <ArrowLeft className="h-4 w-4" />
-          Back to Home
-        </Link>
-      </Button>
+      <BackLink fallback="/tracks" label="Back" className="self-start" />
 
       <div className="flex flex-col gap-4 md:flex-row md:flex-wrap md:items-start md:justify-between md:gap-6">
         <div className="flex flex-col items-start gap-4 sm:flex-row sm:gap-5">

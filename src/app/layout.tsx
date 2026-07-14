@@ -6,6 +6,7 @@ import { MobileBottomNav } from "@/components/mobile/bottom-nav";
 import { MobileHeader } from "@/components/mobile/mobile-header";
 import { FocusSessionProvider } from "@/components/focus-session-provider";
 import { FloatingFocusBar } from "@/components/floating-focus-bar";
+import { NavigationTracker } from "@/components/navigation-tracker";
 import { ToastProvider } from "@/components/toast";
 
 const geistSans = Geist({
@@ -70,6 +71,7 @@ export default function RootLayout({
             </div>
             <MobileBottomNav />
             <FloatingFocusBar />
+            <NavigationTracker />
           </FocusSessionProvider>
         </ToastProvider>
       </body>
