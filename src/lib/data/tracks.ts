@@ -141,6 +141,51 @@ export async function getTracksWithoutAlbum(): Promise<TrackWithDetails[]> {
   return attachDetails(data ?? []);
 }
 
+export type AssignableTrack = {
+  id: string;
+  name: string;
+  albumId: string | null;
+  albumTitle: string | null;
+};
+
+/** All non-archived owner tracks that are NOT in the given album — lean rows
+ * for the assign-tracks dialog (unassigned tracks + tracks in other albums). */
+export async function getAssignableTracks(
+  albumId: string,
+): Promise<AssignableTrack[]> {
+  const supabase = getServerSupabase();
+  const { data, error } = await supabase
+    .from("tracks")
+    .select("id, name, album_id")
+    .eq("owner_id", OWNER_ID)
+    .neq("status", "archived")
+    .order("name", { ascending: true });
+  if (error) throw error;
+
+  const rows = (data ?? []).filter((t) => t.album_id !== albumId);
+  const albumIds = [
+    ...new Set(
+      rows.map((t) => t.album_id).filter((id): id is string => id != null),
+    ),
+  ];
+  const titleByAlbumId = new Map<string, string | null>();
+  if (albumIds.length > 0) {
+    const { data: albums, error: albumsError } = await supabase
+      .from("albums")
+      .select("id, title")
+      .in("id", albumIds);
+    if (albumsError) throw albumsError;
+    (albums ?? []).forEach((a) => titleByAlbumId.set(a.id, a.title));
+  }
+
+  return rows.map((t) => ({
+    id: t.id,
+    name: t.name,
+    albumId: t.album_id,
+    albumTitle: t.album_id ? (titleByAlbumId.get(t.album_id) ?? null) : null,
+  }));
+}
+
 export async function getAllTracks(): Promise<TrackWithDetails[]> {
   const supabase = getServerSupabase();
   const { data, error } = await supabase

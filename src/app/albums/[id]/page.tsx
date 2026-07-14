@@ -1,20 +1,20 @@
 import Link from "next/link";
-import { notFound, redirect } from "next/navigation";
+import { notFound } from "next/navigation";
 import { format, parseISO } from "date-fns";
-import { Disc3, Star, Trash2 } from "lucide-react";
+import { Disc3, Plus, Star } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
+import { SubmitButton } from "@/components/submit-button";
 import { CoverImageUpload } from "@/components/cover-image-upload";
 import { TrackCard } from "@/components/track-card";
-import {
-  deleteAlbum,
-  setActiveAlbum,
-  updateAlbum,
-} from "@/app/actions/album";
+import { AssignTracksDialog } from "@/components/album/assign-tracks-dialog";
+import { RemoveFromAlbumButton } from "@/components/album/remove-from-album-button";
+import { AlbumDangerZone } from "@/components/album/album-danger-zone";
+import { setActiveAlbum, updateAlbum } from "@/app/actions/album";
 import { getAlbum } from "@/lib/data/album";
-import { getTracksByAlbum } from "@/lib/data/tracks";
+import { getAssignableTracks, getTracksByAlbum } from "@/lib/data/tracks";
 import { OWNER_ID } from "@/lib/owner";
 
 export const dynamic = "force-dynamic";
@@ -28,7 +28,10 @@ export default async function AlbumDetailPage({
   const album = await getAlbum(id);
   if (!album) notFound();
 
-  const tracks = await getTracksByAlbum(album.id);
+  const [tracks, assignable] = await Promise.all([
+    getTracksByAlbum(album.id),
+    getAssignableTracks(album.id),
+  ]);
   const startLabel = album.start_date
     ? format(parseISO(album.start_date), "MMMM d, yyyy")
     : null;
@@ -79,10 +82,10 @@ export default async function AlbumDetailPage({
                 await setActiveAlbum(album.id);
               }}
             >
-              <Button type="submit" size="sm">
+              <SubmitButton size="sm" pendingText="Setting…">
                 <Star className="h-4 w-4" />
                 Set active
-              </Button>
+              </SubmitButton>
             </form>
           )}
         </div>
@@ -127,7 +130,7 @@ export default async function AlbumDetailPage({
             </div>
 
             <div className="flex justify-end">
-              <Button type="submit">Save</Button>
+              <SubmitButton pendingText="Saving…">Save</SubmitButton>
             </div>
           </form>
         </CardContent>
@@ -138,52 +141,67 @@ export default async function AlbumDetailPage({
           <h2 className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
             Tracks
           </h2>
-          <Button asChild size="sm" variant="outline">
-            <Link href="/tracks/new">Add track</Link>
-          </Button>
+          <div className="flex items-center gap-2">
+            <Button asChild size="sm" variant="outline">
+              <Link href="/tracks/new">New track</Link>
+            </Button>
+            <AssignTracksDialog
+              album={{ id: album.id, title: album.title }}
+              candidates={assignable}
+              trigger={
+                <Button size="sm">
+                  <Plus className="h-4 w-4" />
+                  Add tracks
+                </Button>
+              }
+            />
+          </div>
         </div>
         {tracks.length === 0 ? (
           <Card>
-            <CardContent className="p-6 text-sm text-muted-foreground">
-              No tracks in this album yet. Open any track and assign it to{" "}
-              <span className="font-medium">
-                {album.title?.trim() || "this album"}
-              </span>
-              , or create a new one.
+            <CardContent className="flex flex-col items-start gap-3 p-6">
+              <p className="text-sm text-muted-foreground">
+                No tracks in this album yet. Add existing tracks from your
+                library, or{" "}
+                <Link
+                  href="/tracks/new"
+                  className="font-medium text-foreground underline underline-offset-2"
+                >
+                  create a new one
+                </Link>
+                .
+              </p>
+              <AssignTracksDialog
+                album={{ id: album.id, title: album.title }}
+                candidates={assignable}
+                trigger={
+                  <Button size="sm" variant="outline">
+                    <Plus className="h-4 w-4" />
+                    Add tracks
+                  </Button>
+                }
+              />
             </CardContent>
           </Card>
         ) : (
           <div className="flex flex-col gap-3">
             {tracks.map((track) => (
-              <TrackCard key={track.id} track={track} />
+              <div key={track.id} className="flex items-start gap-2">
+                <div className="min-w-0 flex-1">
+                  <TrackCard track={track} />
+                </div>
+                <RemoveFromAlbumButton
+                  trackId={track.id}
+                  trackName={track.name}
+                  albumId={album.id}
+                />
+              </div>
             ))}
           </div>
         )}
       </section>
 
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-base">Danger zone</CardTitle>
-        </CardHeader>
-        <CardContent className="flex items-center justify-between gap-3">
-          <p className="text-sm text-muted-foreground">
-            Delete this album. Tracks in it stay in your library but become
-            unassigned.
-          </p>
-          <form
-            action={async () => {
-              "use server";
-              await deleteAlbum(album.id);
-              redirect("/albums");
-            }}
-          >
-            <Button type="submit" variant="outline" size="sm">
-              <Trash2 className="h-4 w-4" />
-              Delete album
-            </Button>
-          </form>
-        </CardContent>
-      </Card>
+      <AlbumDangerZone albumId={album.id} albumTitle={album.title} />
     </div>
   );
 }
