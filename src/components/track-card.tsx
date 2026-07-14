@@ -5,6 +5,7 @@ import {
   CalendarDays,
   CheckCircle2,
   Clock,
+  Disc3,
   Hourglass,
   MessageSquare,
   MoreHorizontal,
@@ -87,6 +88,23 @@ function MetaRow({
         />
       )}
     </div>
+  );
+}
+
+function AlbumChip({
+  album,
+}: {
+  album: { id: string; title: string | null };
+}) {
+  return (
+    // Rendered as a sibling of the card's other links (never nested inside
+    // one), so a plain link is safe — no propagation gymnastics needed.
+    <Link href={`/albums/${album.id}`} className="max-w-full">
+      <Badge className="max-w-full gap-1 hover:bg-surface-2/80 hover:text-foreground">
+        <Disc3 className="h-3 w-3 shrink-0" />
+        <span className="truncate">{album.title?.trim() || "Untitled album"}</span>
+      </Badge>
+    </Link>
   );
 }
 
@@ -179,10 +197,11 @@ export function TrackCard({
           </div>
 
           <div className="flex flex-col gap-2">
-            {genre && (
-              <Badge variant="primary" className="self-start">
-                {genre}
-              </Badge>
+            {(genre || track.album) && (
+              <div className="flex flex-wrap items-center gap-1.5">
+                {genre && <Badge variant="primary">{genre}</Badge>}
+                {track.album && <AlbumChip album={track.album} />}
+              </div>
             )}
 
             <MetaRow
@@ -286,9 +305,10 @@ export function TrackCard({
           >
             {track.name}
           </Link>
-          {genre && (
+          {(genre || track.album) && (
             <div className="mt-1.5 flex flex-wrap items-center gap-1.5">
-              <Badge variant="primary">{genre}</Badge>
+              {genre && <Badge variant="primary">{genre}</Badge>}
+              {track.album && <AlbumChip album={track.album} />}
             </div>
           )}
           {meta.length > 0 && (

@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useTransition } from "react";
 import { setTrackStatus } from "@/app/actions/tracks";
 import { DropdownMenuItem } from "@/components/ui/dropdown-menu";
@@ -27,6 +28,11 @@ export function TrackCardActions({
 
   return (
     <>
+      {/* Album lives in the metadata editor — link there instead of
+          duplicating the album select in the dropdown. */}
+      <DropdownMenuItem asChild>
+        <Link href={`/tracks/${trackId}/edit`}>Change album…</Link>
+      </DropdownMenuItem>
       {status !== "completed" && (
         <DropdownMenuItem
           disabled={pending}

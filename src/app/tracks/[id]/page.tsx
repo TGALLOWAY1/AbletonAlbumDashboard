@@ -2,7 +2,14 @@ import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { format } from "date-fns";
 import { isMobileUserAgent } from "@/lib/user-agent";
-import { ArrowLeft, CalendarDays, Clock3, Pencil, Play } from "lucide-react";
+import {
+  ArrowLeft,
+  CalendarDays,
+  Clock3,
+  Disc3,
+  Pencil,
+  Play,
+} from "lucide-react";
 import {
   Tabs,
   TabsContent,
@@ -97,6 +104,21 @@ export default async function TrackDetailPage({
             <div className="flex flex-wrap items-center gap-2">
               {genre && <Badge variant="primary">{genre}</Badge>}
               <Badge variant="default">{track.status}</Badge>
+              {track.album ? (
+                <Link href={`/albums/${track.album.id}`}>
+                  <Badge className="gap-1 hover:bg-surface-2/80 hover:text-foreground">
+                    <Disc3 className="h-3 w-3 shrink-0" />
+                    {track.album.title?.trim() || "Untitled album"}
+                  </Badge>
+                </Link>
+              ) : (
+                <Link
+                  href={`/tracks/${track.id}/edit`}
+                  className="text-xs font-medium text-muted-foreground hover:text-foreground hover:underline"
+                >
+                  No album · Assign
+                </Link>
+              )}
             </div>
             {meta.length > 0 && (
               <p className="text-sm font-medium text-foreground/85 tabular-nums">

@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { ArrowLeft, Pencil, Play } from "lucide-react";
+import { ArrowLeft, Disc3, Pencil, Play } from "lucide-react";
 import {
   getCompletedActionsForTrack,
   getOpenActionsForTrack,
@@ -92,11 +92,31 @@ export default async function MobileTrackPage({
           <h1 className="truncate text-xl font-semibold leading-tight">
             {track.name}
           </h1>
-          {genre && (
-            <div className="mt-1.5">
-              <Badge variant="primary">{genre}</Badge>
-            </div>
-          )}
+          <div className="mt-1.5 flex flex-wrap items-center gap-x-1.5">
+            {genre && <Badge variant="primary">{genre}</Badge>}
+            {/* py-3/-my-3 pads the tap target to ~44px without adding
+                visual height to the header. */}
+            {track.album ? (
+              <Link
+                href={`/albums/${track.album.id}`}
+                className="-my-3 inline-flex max-w-full items-center py-3"
+              >
+                <Badge className="max-w-full gap-1">
+                  <Disc3 className="h-3 w-3 shrink-0" />
+                  <span className="truncate">
+                    {track.album.title?.trim() || "Untitled album"}
+                  </span>
+                </Badge>
+              </Link>
+            ) : (
+              <Link
+                href={`/tracks/${track.id}/edit`}
+                className="-my-3 inline-flex items-center py-3 text-xs font-medium text-muted-foreground"
+              >
+                No album · Assign
+              </Link>
+            )}
+          </div>
           {meta.length > 0 && (
             <p className="mt-1.5 text-xs font-medium tabular-nums text-foreground/80">
               {meta.join(" · ")}
