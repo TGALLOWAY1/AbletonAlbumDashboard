@@ -4,9 +4,19 @@ import { Play } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 import type { LibraryItem } from "@/lib/data/library-items";
-import { libraryItemBadgeLabel } from "@/lib/data/library-items";
 import { MiniWaveform } from "./mini-waveform";
-import { StarRating } from "./star-rating";
+
+const CATEGORY_BADGE_VARIANT: Record<string, "default" | "primary" | "accent"> = {
+  drums: "primary",
+  instruments_presets: "accent",
+  fx_racks: "default",
+};
+
+const CATEGORY_LABELS: Record<string, string> = {
+  drums: "Drums",
+  instruments_presets: "Instrument / Preset",
+  fx_racks: "FX Rack",
+};
 
 export function LibraryGrid({
   items,
@@ -45,10 +55,12 @@ export function LibraryGrid({
               <div className="min-w-0">
                 <div className="truncate text-sm font-medium">{item.name}</div>
                 <div className="text-[11px] text-muted-foreground">
-                  {item.sourceProject}
+                  {item.source}
                 </div>
               </div>
-              <Badge variant="primary">{libraryItemBadgeLabel(item)}</Badge>
+              <Badge variant={CATEGORY_BADGE_VARIANT[item.category] || "default"}>
+                {CATEGORY_LABELS[item.category] || item.category}
+              </Badge>
             </div>
 
             <div className="flex items-center gap-3">
@@ -67,13 +79,6 @@ export function LibraryGrid({
               <div className="min-w-0 flex-1">
                 <MiniWaveform id={item.id} bars={48} height={28} />
               </div>
-            </div>
-
-            <div className="flex items-center justify-between text-[11px] text-muted-foreground">
-              <span className="tabular-nums">
-                {item.bpm ?? "—"} BPM · {item.key ?? "—"}
-              </span>
-              <StarRating value={item.rating} />
             </div>
           </button>
         );

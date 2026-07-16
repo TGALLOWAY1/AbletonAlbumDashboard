@@ -1,30 +1,21 @@
 "use client";
 
-import { Folder, FolderOpen, Package, Play, Star } from "lucide-react";
-import { Button } from "@/components/ui/button";
-import { cn } from "@/lib/utils";
+import { Play } from "lucide-react";
 import type { LibraryItem } from "@/lib/data/library-items";
-import { libraryItemBadgeLabel } from "@/lib/data/library-items";
 import { MiniWaveform } from "./mini-waveform";
-import { StarRating } from "./star-rating";
 
-function formatDuration(sec: number) {
-  if (!sec) return "—";
-  const m = Math.floor(sec / 60);
-  const s = sec % 60;
-  return `${m}:${String(s).padStart(2, "0")}`;
-}
+const CATEGORY_LABELS: Record<string, string> = {
+  drums: "Drums",
+  instruments_presets: "Instrument / Preset",
+  fx_racks: "FX Rack",
+};
 
 export function LibraryInspector({
   item,
-  onToggleFavorite,
-  onRatingChange,
   onAction,
   onPlay,
 }: {
   item: LibraryItem | null;
-  onToggleFavorite: (id: string) => void;
-  onRatingChange: (id: string, rating: number) => void;
   onAction: (action: string, item: LibraryItem) => void;
   onPlay: (item: LibraryItem) => void;
 }) {
@@ -45,20 +36,6 @@ export function LibraryInspector({
         <h3 className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
           Preview
         </h3>
-        <button
-          type="button"
-          aria-label={item.favorite ? "Unfavorite" : "Favorite"}
-          onClick={() => onToggleFavorite(item.id)}
-        >
-          <Star
-            className={cn(
-              "h-4 w-4 transition-colors",
-              item.favorite
-                ? "fill-primary text-primary"
-                : "fill-transparent text-muted-foreground hover:text-foreground",
-            )}
-          />
-        </button>
       </div>
 
       <div>
@@ -78,86 +55,24 @@ export function LibraryInspector({
         </button>
         <div className="min-w-0 flex-1">
           <MiniWaveform id={item.id} bars={120} height={36} />
-          <div className="mt-1 flex justify-between text-[10px] tabular-nums text-muted-foreground">
-            <span>0:00</span>
-            <span>{formatDuration(item.durationSec)}</span>
-          </div>
         </div>
       </div>
 
       <div className="grid grid-cols-2 gap-x-4 gap-y-3 text-sm">
-        <Meta label="Type" value={libraryItemBadgeLabel(item)} />
-        <Meta label="BPM" value={item.bpm ?? "—"} />
-        <Meta label="Key" value={item.key ?? "—"} />
-        <Meta label="Source" value={item.sourceProject} />
+        <Meta label="Category" value={CATEGORY_LABELS[item.category] || item.category} />
+        <Meta label="Source" value={item.source} />
       </div>
-
-      <div className="flex flex-col gap-2">
-        <div className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
-          Rating
-        </div>
-        <StarRating
-          value={item.rating}
-          size={16}
-          onChange={(v) => onRatingChange(item.id, v)}
-        />
-      </div>
-
-      {item.tags.length > 0 && (
-        <div className="flex flex-col gap-2">
-          <div className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
-            Tags
-          </div>
-          <div className="flex flex-wrap gap-1.5">
-            {item.tags.map((tag) => (
-              <span
-                key={tag}
-                className="rounded-full border border-border bg-surface-2 px-2.5 py-0.5 text-xs font-medium text-muted-foreground"
-              >
-                {tag}
-              </span>
-            ))}
-          </div>
-        </div>
-      )}
 
       {item.notes && (
         <div className="flex flex-col gap-1.5">
           <div className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
             Notes
           </div>
-          <p className="text-sm leading-relaxed text-foreground">
+          <p className="text-sm leading-relaxed text-foreground whitespace-pre-wrap">
             {item.notes}
           </p>
         </div>
       )}
-
-      <div className="flex flex-col gap-2">
-        <Button
-          variant="default"
-          className="w-full justify-start"
-          onClick={() => onAction("Open in Finder", item)}
-        >
-          <FolderOpen className="h-4 w-4" />
-          Open in Finder
-        </Button>
-        <Button
-          variant="outline"
-          className="w-full justify-start"
-          onClick={() => onAction("Reveal in Project", item)}
-        >
-          <Folder className="h-4 w-4" />
-          Reveal in Project
-        </Button>
-        <Button
-          variant="outline"
-          className="w-full justify-start"
-          onClick={() => onAction("Add to Pack", item)}
-        >
-          <Package className="h-4 w-4" />
-          Add to Pack
-        </Button>
-      </div>
     </div>
   );
 }

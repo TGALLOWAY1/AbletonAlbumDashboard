@@ -27,5 +27,4 @@ alter table session_todos         enable row level security;
 alter table weekly_reviews        enable row level security;
 alter table resources             enable row level security;
 alter table instruments           enable row level security;
-alter table samples               enable row level security;
 alter table session_activities    enable row level security;

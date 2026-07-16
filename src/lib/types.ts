@@ -7,7 +7,7 @@ export type BottleneckRow = Database["public"]["Tables"]["bottlenecks"]["Row"];
 export type ActionRow = Database["public"]["Tables"]["actions"]["Row"];
 export type SessionRow = Database["public"]["Tables"]["sessions"]["Row"];
 export type VersionRow = Database["public"]["Tables"]["track_versions"]["Row"];
-export type SampleRow = Database["public"]["Tables"]["samples"]["Row"];
+
 
 export type ReviewStatus =
   | "not_reviewed"

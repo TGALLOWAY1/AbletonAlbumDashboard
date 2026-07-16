@@ -107,7 +107,7 @@ export const RESOURCE_CATEGORIES: ResourceCategory[] = [
   {
     id: "file-organization",
     title: "File Organization",
-    description: "Keep your projects and samples organized.",
+    description: "Keep your projects organized.",
     color: "blue",
     articleCount: 0,
   },
