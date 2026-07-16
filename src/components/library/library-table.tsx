@@ -1,6 +1,6 @@
 "use client";
 
-import { MoreHorizontal, Play } from "lucide-react";
+import { MoreHorizontal, NotebookPen } from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -9,33 +9,88 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
-import type { LibraryItem } from "@/lib/data/library-items";
-import { MiniWaveform } from "./mini-waveform";
+import {
+  categoryBadgeVariant,
+  categoryLabel,
+  type LibraryItem,
+} from "@/lib/data/library-items";
 
-const CATEGORY_BADGE_VARIANT: Record<string, "default" | "primary" | "accent"> = {
-  drums: "primary",
-  instruments_presets: "accent",
-  fx_racks: "default",
-};
+function NotesLink({
+  item,
+  onNotes,
+  className,
+}: {
+  item: LibraryItem;
+  onNotes: (item: LibraryItem) => void;
+  className?: string;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={(e) => {
+        e.stopPropagation();
+        onNotes(item);
+      }}
+      className={cn(
+        "inline-flex items-center gap-1.5 text-sm text-primary underline-offset-2 hover:underline",
+        className,
+      )}
+    >
+      <NotebookPen className="h-3.5 w-3.5" />
+      {item.notes ? "Notes" : "Add notes"}
+    </button>
+  );
+}
 
-const CATEGORY_LABELS: Record<string, string> = {
-  drums: "Drums",
-  instruments_presets: "Instrument / Preset",
-  fx_racks: "FX Rack",
-};
+function RowActions({
+  item,
+  onEdit,
+  onDelete,
+  buttonClassName,
+}: {
+  item: LibraryItem;
+  onEdit: (item: LibraryItem) => void;
+  onDelete: (item: LibraryItem) => void;
+  buttonClassName?: string;
+}) {
+  return (
+    <DropdownMenu>
+      <DropdownMenuTrigger asChild>
+        <button
+          type="button"
+          aria-label="Actions"
+          className={cn(
+            "flex items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-surface-2 hover:text-foreground",
+            buttonClassName,
+          )}
+        >
+          <MoreHorizontal className="h-4 w-4" />
+        </button>
+      </DropdownMenuTrigger>
+      <DropdownMenuContent align="end">
+        <DropdownMenuItem onSelect={() => onEdit(item)}>Edit</DropdownMenuItem>
+        <DropdownMenuItem onSelect={() => onDelete(item)}>
+          Delete
+        </DropdownMenuItem>
+      </DropdownMenuContent>
+    </DropdownMenu>
+  );
+}
 
 export function LibraryTable({
   items,
   selectedId,
   onSelect,
-  onPlay,
-  onAction,
+  onEdit,
+  onDelete,
+  onNotes,
 }: {
   items: LibraryItem[];
   selectedId: string | null;
   onSelect: (id: string) => void;
-  onPlay: (item: LibraryItem) => void;
-  onAction: (action: string, item: LibraryItem) => void;
+  onEdit: (item: LibraryItem) => void;
+  onDelete: (item: LibraryItem) => void;
+  onNotes: (item: LibraryItem) => void;
 }) {
   if (items.length === 0) {
     return (
@@ -61,17 +116,6 @@ export function LibraryTable({
               )}
             >
               <div className="flex items-start gap-3">
-                <button
-                  type="button"
-                  aria-label="Play"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    onPlay(item);
-                  }}
-                  className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-primary text-primary-foreground shadow-sm"
-                >
-                  <Play className="h-4 w-4 translate-x-px" fill="currentColor" />
-                </button>
                 <div className="flex min-w-0 flex-1 flex-col">
                   <span className="truncate text-sm font-medium text-foreground">
                     {item.name}
@@ -81,30 +125,19 @@ export function LibraryTable({
                   </span>
                 </div>
                 <div onClick={(e) => e.stopPropagation()}>
-                  <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                      <button
-                        type="button"
-                        aria-label="Actions"
-                        className="flex h-10 w-10 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-surface-2 hover:text-foreground"
-                      >
-                        <MoreHorizontal className="h-5 w-5" />
-                      </button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent align="end">
-                      <DropdownMenuItem
-                        onSelect={() => onAction("Delete", item)}
-                      >
-                        Delete
-                      </DropdownMenuItem>
-                    </DropdownMenuContent>
-                  </DropdownMenu>
+                  <RowActions
+                    item={item}
+                    onEdit={onEdit}
+                    onDelete={onDelete}
+                    buttonClassName="h-10 w-10"
+                  />
                 </div>
               </div>
-              <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
-                <Badge variant={CATEGORY_BADGE_VARIANT[item.category] || "default"}>
-                  {CATEGORY_LABELS[item.category] || item.category}
+              <div className="flex flex-wrap items-center gap-3">
+                <Badge variant={categoryBadgeVariant(item.category)}>
+                  {categoryLabel(item.category)}
                 </Badge>
+                <NotesLink item={item} onNotes={onNotes} />
               </div>
             </li>
           );
@@ -112,10 +145,11 @@ export function LibraryTable({
       </ul>
 
       {/* Desktop grid table (md+) */}
-      <div className="hidden grid-cols-[minmax(240px,2.2fr)_minmax(120px,1fr)_minmax(120px,1fr)_44px] items-center gap-3 border-b border-border bg-surface-2/60 px-4 py-2.5 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground md:grid">
+      <div className="hidden grid-cols-[minmax(200px,2fr)_minmax(120px,1fr)_minmax(120px,1fr)_minmax(100px,0.8fr)_44px] items-center gap-3 border-b border-border bg-surface-2/60 px-4 py-2.5 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground md:grid">
         <div>Name</div>
         <div>Category</div>
         <div>Source</div>
+        <div>Notes</div>
         <div />
       </div>
 
@@ -127,35 +161,19 @@ export function LibraryTable({
               key={item.id}
               onClick={() => onSelect(item.id)}
               className={cn(
-                "grid cursor-pointer grid-cols-[minmax(240px,2.2fr)_minmax(120px,1fr)_minmax(120px,1fr)_44px] items-center gap-3 border-b border-border px-4 py-3 transition-colors last:border-b-0 hover:bg-surface-2/60",
+                "grid cursor-pointer grid-cols-[minmax(200px,2fr)_minmax(120px,1fr)_minmax(120px,1fr)_minmax(100px,0.8fr)_44px] items-center gap-3 border-b border-border px-4 py-3 transition-colors last:border-b-0 hover:bg-surface-2/60",
                 selected && "bg-primary/5",
               )}
             >
-              <div className="flex min-w-0 items-center gap-3">
-                <button
-                  type="button"
-                  aria-label="Play"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    onPlay(item);
-                  }}
-                  className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-primary text-primary-foreground shadow-sm transition-transform hover:scale-105"
-                >
-                  <Play className="h-3.5 w-3.5 translate-x-px" fill="currentColor" />
-                </button>
-                <div className="hidden h-7 w-24 shrink-0 items-center sm:flex">
-                  <MiniWaveform id={item.id} bars={36} height={24} />
-                </div>
-                <div className="flex min-w-0 flex-col">
-                  <span className="truncate text-sm font-medium text-foreground">
-                    {item.name}
-                  </span>
-                </div>
+              <div className="min-w-0">
+                <span className="block truncate text-sm font-medium text-foreground">
+                  {item.name}
+                </span>
               </div>
 
               <div>
-                <Badge variant={CATEGORY_BADGE_VARIANT[item.category] || "default"}>
-                  {CATEGORY_LABELS[item.category] || item.category}
+                <Badge variant={categoryBadgeVariant(item.category)}>
+                  {categoryLabel(item.category)}
                 </Badge>
               </div>
 
@@ -163,25 +181,17 @@ export function LibraryTable({
                 {item.source}
               </div>
 
+              <div>
+                <NotesLink item={item} onNotes={onNotes} />
+              </div>
+
               <div onClick={(e) => e.stopPropagation()}>
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
-                    <button
-                      type="button"
-                      aria-label="Actions"
-                      className="flex h-8 w-8 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-surface-2 hover:text-foreground"
-                    >
-                      <MoreHorizontal className="h-4 w-4" />
-                    </button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent align="end">
-                    <DropdownMenuItem
-                      onSelect={() => onAction("Delete", item)}
-                    >
-                      Delete
-                    </DropdownMenuItem>
-                  </DropdownMenuContent>
-                </DropdownMenu>
+                <RowActions
+                  item={item}
+                  onEdit={onEdit}
+                  onDelete={onDelete}
+                  buttonClassName="h-8 w-8"
+                />
               </div>
             </li>
           );

@@ -1,13 +1,17 @@
 "use client";
 
 import * as React from "react";
+import { Plus } from "lucide-react";
+import { Button } from "@/components/ui/button";
 import type {
   LibraryCategory,
   LibraryItem,
 } from "@/lib/data/library-items";
-import { AddInstrumentDialog } from "./add-instrument-dialog";
+import { LibraryDeleteDialog } from "./library-delete-dialog";
 import { LibraryGrid } from "./library-grid";
 import { LibraryInspector } from "./library-inspector";
+import { LibraryItemDialog } from "./library-item-dialog";
+import { LibraryNotesDialog } from "./library-notes-dialog";
 import { LibraryPagination } from "./library-pagination";
 import { LibraryTable } from "./library-table";
 import {
@@ -42,6 +46,13 @@ function LibraryPageInner({ items: initialItems }: { items: LibraryItem[] }) {
     initialItems[0]?.id ?? null,
   );
 
+  // Dialogs. editorOpen is separate from editorItem so "add" (item null) has
+  // an explicit open state.
+  const [editorOpen, setEditorOpen] = React.useState(false);
+  const [editorItem, setEditorItem] = React.useState<LibraryItem | null>(null);
+  const [notesItem, setNotesItem] = React.useState<LibraryItem | null>(null);
+  const [deleteItem, setDeleteItem] = React.useState<LibraryItem | null>(null);
+
   const filtered = React.useMemo(() => {
     const q = search.trim().toLowerCase();
     return items
@@ -71,26 +82,32 @@ function LibraryPageInner({ items: initialItems }: { items: LibraryItem[] }) {
 
   const selected = items.find((i) => i.id === selectedId) ?? null;
 
-  const updateItem = (id: string, patch: Partial<LibraryItem>) => {
+  const openAdd = () => {
+    setEditorItem(null);
+    setEditorOpen(true);
+  };
+
+  const openEdit = (item: LibraryItem) => {
+    setEditorItem(item);
+    setEditorOpen(true);
+  };
+
+  const handleSaved = (saved: LibraryItem) => {
+    const exists = items.some((it) => it.id === saved.id);
     setItems((prev) =>
-      prev.map((it) => (it.id === id ? { ...it, ...patch } : it)),
+      exists
+        ? prev.map((it) => (it.id === saved.id ? saved : it))
+        : [saved, ...prev],
     );
+    setSelectedId(saved.id);
+    toast(exists ? `Saved “${saved.name}”` : `Added “${saved.name}”`);
   };
 
-  const handleInstrumentAdded = (item: LibraryItem) => {
-    setItems((prev) => [...prev, item]);
-    setSelectedId(item.id);
-    setPage(1);
-    toast(`Added “${item.name}”`);
-  };
-
-  const handleAction = (action: string, item: LibraryItem) => {
-    toast(action);
-  };
-
-  const handlePlay = (item: LibraryItem) => {
-    setSelectedId(item.id);
-    toast(`Playing preview: ${item.name}`);
+  const handleDeleted = (id: string) => {
+    const deleted = items.find((it) => it.id === id);
+    setItems((prev) => prev.filter((it) => it.id !== id));
+    if (selectedId === id) setSelectedId(null);
+    toast(deleted ? `Deleted “${deleted.name}”` : "Item deleted");
   };
 
   return (
@@ -107,29 +124,35 @@ function LibraryPageInner({ items: initialItems }: { items: LibraryItem[] }) {
           onViewChange={setView}
         />
 
-        {tab === "instruments_presets" && (
-          <div className="flex items-center justify-between gap-3">
-            <p className="text-sm text-muted-foreground">
-              Your saved Instruments and Presets.
-            </p>
-            <AddInstrumentDialog onAdded={handleInstrumentAdded} />
-          </div>
-        )}
+        <div className="flex items-center justify-between gap-3">
+          <p className="text-sm text-muted-foreground">
+            {items.length === 0
+              ? "Your library is empty — add your first item."
+              : "Your saved drums, instruments, presets, and FX racks."}
+          </p>
+          <Button onClick={openAdd}>
+            <Plus className="h-4 w-4" />
+            Add Item
+          </Button>
+        </div>
 
         {view === "list" ? (
           <LibraryTable
             items={paged}
             selectedId={selectedId}
             onSelect={setSelectedId}
-            onPlay={handlePlay}
-            onAction={handleAction}
+            onEdit={openEdit}
+            onDelete={setDeleteItem}
+            onNotes={setNotesItem}
           />
         ) : (
           <LibraryGrid
             items={paged}
             selectedId={selectedId}
             onSelect={setSelectedId}
-            onPlay={handlePlay}
+            onEdit={openEdit}
+            onDelete={setDeleteItem}
+            onNotes={setNotesItem}
           />
         )}
 
@@ -145,10 +168,37 @@ function LibraryPageInner({ items: initialItems }: { items: LibraryItem[] }) {
       <aside className="hidden w-full flex-col gap-5 lg:flex xl:w-[340px] xl:shrink-0">
         <LibraryInspector
           item={selected}
-          onAction={handleAction}
-          onPlay={handlePlay}
+          onEdit={openEdit}
+          onDelete={setDeleteItem}
+          onNotes={setNotesItem}
         />
       </aside>
+
+      <LibraryItemDialog
+        open={editorOpen}
+        onOpenChange={setEditorOpen}
+        item={editorItem}
+        defaultCategory={tab === "all" ? "instruments_presets" : tab}
+        onSaved={handleSaved}
+      />
+
+      <LibraryNotesDialog
+        open={notesItem !== null}
+        onOpenChange={(open) => {
+          if (!open) setNotesItem(null);
+        }}
+        item={notesItem}
+        onSaved={handleSaved}
+      />
+
+      <LibraryDeleteDialog
+        open={deleteItem !== null}
+        onOpenChange={(open) => {
+          if (!open) setDeleteItem(null);
+        }}
+        item={deleteItem}
+        onDeleted={handleDeleted}
+      />
     </div>
   );
 }
