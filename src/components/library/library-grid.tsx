@@ -1,33 +1,34 @@
 "use client";
 
-import { Play } from "lucide-react";
+import { MoreHorizontal, NotebookPen } from "lucide-react";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
-import type { LibraryItem } from "@/lib/data/library-items";
-import { MiniWaveform } from "./mini-waveform";
-
-const CATEGORY_BADGE_VARIANT: Record<string, "default" | "primary" | "accent"> = {
-  drums: "primary",
-  instruments_presets: "accent",
-  fx_racks: "default",
-};
-
-const CATEGORY_LABELS: Record<string, string> = {
-  drums: "Drums",
-  instruments_presets: "Instrument / Preset",
-  fx_racks: "FX Rack",
-};
+import {
+  categoryBadgeVariant,
+  categoryLabel,
+  type LibraryItem,
+} from "@/lib/data/library-items";
 
 export function LibraryGrid({
   items,
   selectedId,
   onSelect,
-  onPlay,
+  onEdit,
+  onDelete,
+  onNotes,
 }: {
   items: LibraryItem[];
   selectedId: string | null;
   onSelect: (id: string) => void;
-  onPlay: (item: LibraryItem) => void;
+  onEdit: (item: LibraryItem) => void;
+  onDelete: (item: LibraryItem) => void;
+  onNotes: (item: LibraryItem) => void;
 }) {
   if (items.length === 0) {
     return (
@@ -42,12 +43,19 @@ export function LibraryGrid({
       {items.map((item) => {
         const selected = item.id === selectedId;
         return (
-          <button
+          <div
             key={item.id}
-            type="button"
+            role="button"
+            tabIndex={0}
             onClick={() => onSelect(item.id)}
+            onKeyDown={(e) => {
+              if (e.key === "Enter" || e.key === " ") {
+                e.preventDefault();
+                onSelect(item.id);
+              }
+            }}
             className={cn(
-              "flex flex-col gap-3 rounded-lg border border-border bg-surface p-4 text-left shadow-sm transition-colors hover:bg-surface-2/40",
+              "flex cursor-pointer flex-col gap-3 rounded-lg border border-border bg-surface p-4 text-left shadow-sm transition-colors hover:bg-surface-2/40",
               selected && "border-primary/40 bg-primary/5",
             )}
           >
@@ -58,29 +66,46 @@ export function LibraryGrid({
                   {item.source}
                 </div>
               </div>
-              <Badge variant={CATEGORY_BADGE_VARIANT[item.category] || "default"}>
-                {CATEGORY_LABELS[item.category] || item.category}
-              </Badge>
-            </div>
-
-            <div className="flex items-center gap-3">
-              <span
-                role="button"
-                tabIndex={0}
-                aria-label="Play"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  onPlay(item);
-                }}
-                className="flex h-8 w-8 shrink-0 cursor-pointer items-center justify-center rounded-full bg-primary text-primary-foreground shadow-sm"
-              >
-                <Play className="h-3.5 w-3.5 translate-x-px" fill="currentColor" />
-              </span>
-              <div className="min-w-0 flex-1">
-                <MiniWaveform id={item.id} bars={48} height={28} />
+              <div onClick={(e) => e.stopPropagation()}>
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <button
+                      type="button"
+                      aria-label="Actions"
+                      className="flex h-8 w-8 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-surface-2 hover:text-foreground"
+                    >
+                      <MoreHorizontal className="h-4 w-4" />
+                    </button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end">
+                    <DropdownMenuItem onSelect={() => onEdit(item)}>
+                      Edit
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onSelect={() => onDelete(item)}>
+                      Delete
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
               </div>
             </div>
-          </button>
+
+            <div className="flex items-center justify-between gap-3">
+              <Badge variant={categoryBadgeVariant(item.category)}>
+                {categoryLabel(item.category)}
+              </Badge>
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onNotes(item);
+                }}
+                className="inline-flex items-center gap-1.5 text-sm text-primary underline-offset-2 hover:underline"
+              >
+                <NotebookPen className="h-3.5 w-3.5" />
+                {item.notes ? "Notes" : "Add notes"}
+              </button>
+            </div>
+          </div>
         );
       })}
     </div>

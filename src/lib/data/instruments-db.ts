@@ -1,29 +1,30 @@
 import "server-only";
 import { getServerSupabase } from "@/lib/supabase/server";
 import { OWNER_ID } from "@/lib/owner";
-import type { LibraryItem, InstrumentSource } from "@/lib/data/library-items";
+import type { LibraryCategory, LibraryItem } from "@/lib/data/library-items";
 
 type InstrumentRow = {
   id: string;
   name: string;
+  category: string;
+  source: string;
+  // Legacy column, superseded by `source` (backfilled in 0018).
   instrument_type: string | null;
   notes: string;
   created_at: string;
-  category?: string;
-  source?: string;
 };
 
 function rowToItem(row: InstrumentRow): LibraryItem {
   return {
     id: row.id,
     name: row.name,
-    category: (row.category as any) || "instruments_presets",
+    category: (row.category as LibraryCategory) || "instruments_presets",
     source: row.source || row.instrument_type || "Ableton",
-    notes: row.notes || undefined,
+    notes: row.notes ?? "",
   };
 }
 
-export async function fetchInstruments(): Promise<LibraryItem[]> {
+export async function fetchLibraryItems(): Promise<LibraryItem[]> {
   const supabase = getServerSupabase();
   const { data, error } = await supabase
     .from("instruments")
@@ -33,7 +34,7 @@ export async function fetchInstruments(): Promise<LibraryItem[]> {
   if (error) {
     // The instruments table may not exist yet (migration not applied). Don't
     // crash the Library page — just show none.
-    console.error("[instruments] fetch failed", error);
+    console.error("[library] fetch failed", error);
     return [];
   }
   return (data ?? []).map((row) => rowToItem(row as InstrumentRow));

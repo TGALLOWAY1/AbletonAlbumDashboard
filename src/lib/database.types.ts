@@ -439,30 +439,36 @@ export type Database = {
       };
       instruments: {
         Row: {
+          category: string;
           created_at: string;
           id: string;
           instrument_type: string | null;
           name: string;
           notes: string;
           owner_id: string;
+          source: string;
           updated_at: string;
         };
         Insert: {
+          category?: string;
           created_at?: string;
           id?: string;
           instrument_type?: string | null;
           name: string;
           notes?: string;
           owner_id: string;
+          source?: string;
           updated_at?: string;
         };
         Update: {
+          category?: string;
           created_at?: string;
           id?: string;
           instrument_type?: string | null;
           name?: string;
           notes?: string;
           owner_id?: string;
+          source?: string;
           updated_at?: string;
         };
         Relationships: [];

@@ -6,14 +6,12 @@ import {
 } from "lucide-react";
 import { LibraryPageClient } from "@/components/library/library-page-client";
 import { LibraryStatCard } from "@/components/library/library-stat-card";
-import { LIBRARY_ITEMS } from "@/lib/data/library-items";
-import { fetchInstruments } from "@/lib/data/instruments-db";
+import { fetchLibraryItems } from "@/lib/data/instruments-db";
 
 export const dynamic = "force-dynamic";
 
 export default async function LibraryPage() {
-  const instruments = await fetchInstruments();
-  const items = [...LIBRARY_ITEMS, ...instruments];
+  const items = await fetchLibraryItems();
   const total = items.length;
   const drum = items.filter((i) => i.category === "drums").length;
   const instrument = items.filter((i) => i.category === "instruments_presets").length;
