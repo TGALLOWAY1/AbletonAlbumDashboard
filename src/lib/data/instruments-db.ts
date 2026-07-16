@@ -1,7 +1,7 @@
 import "server-only";
 import { getServerSupabase } from "@/lib/supabase/server";
 import { OWNER_ID } from "@/lib/owner";
-import type { LibraryItem } from "@/lib/data/library-items";
+import type { LibraryItem, InstrumentSource } from "@/lib/data/library-items";
 
 type InstrumentRow = {
   id: string;
@@ -9,23 +9,16 @@ type InstrumentRow = {
   instrument_type: string | null;
   notes: string;
   created_at: string;
+  category?: string;
+  source?: string;
 };
 
 function rowToItem(row: InstrumentRow): LibraryItem {
   return {
     id: row.id,
     name: row.name,
-    category: "instrument",
-    type: "instrument",
-    instrumentType: row.instrument_type ?? undefined,
-    key: null,
-    bpm: null,
-    durationSec: 0,
-    sourceProject: "Instruments",
-    addedAt: row.created_at,
-    rating: 0,
-    favorite: false,
-    tags: [],
+    category: (row.category as any) || "instruments_presets",
+    source: row.source || row.instrument_type || "Ableton",
     notes: row.notes || undefined,
   };
 }

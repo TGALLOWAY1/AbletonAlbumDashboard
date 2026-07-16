@@ -1,37 +1,27 @@
 "use client";
 
-import { format, parseISO } from "date-fns";
 import { MoreHorizontal, Play } from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
-  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
-import type {
-  LibraryItem,
-  LibraryType,
-} from "@/lib/data/library-items";
-import { libraryItemBadgeLabel } from "@/lib/data/library-items";
+import type { LibraryItem } from "@/lib/data/library-items";
 import { MiniWaveform } from "./mini-waveform";
-import { StarRating } from "./star-rating";
 
-const TYPE_BADGE_VARIANT: Record<
-  LibraryType,
-  "default" | "primary" | "accent" | "warning" | "danger"
-> = {
-  drum: "primary",
-  bass: "accent",
-  lead: "primary",
-  atmos: "default",
-  vocal: "warning",
-  fx: "danger",
-  chord: "primary",
-  midi: "default",
-  instrument: "accent",
+const CATEGORY_BADGE_VARIANT: Record<string, "default" | "primary" | "accent"> = {
+  drums: "primary",
+  instruments_presets: "accent",
+  fx_racks: "default",
+};
+
+const CATEGORY_LABELS: Record<string, string> = {
+  drums: "Drums",
+  instruments_presets: "Instrument / Preset",
+  fx_racks: "FX Rack",
 };
 
 export function LibraryTable({
@@ -40,14 +30,12 @@ export function LibraryTable({
   onSelect,
   onPlay,
   onAction,
-  onRatingChange,
 }: {
   items: LibraryItem[];
   selectedId: string | null;
   onSelect: (id: string) => void;
   onPlay: (item: LibraryItem) => void;
   onAction: (action: string, item: LibraryItem) => void;
-  onRatingChange: (id: string, rating: number) => void;
 }) {
   if (items.length === 0) {
     return (
@@ -89,7 +77,7 @@ export function LibraryTable({
                     {item.name}
                   </span>
                   <span className="truncate text-xs text-muted-foreground">
-                    {item.sourceProject}
+                    {item.source}
                   </span>
                 </div>
                 <div onClick={(e) => e.stopPropagation()}>
@@ -105,51 +93,18 @@ export function LibraryTable({
                     </DropdownMenuTrigger>
                     <DropdownMenuContent align="end">
                       <DropdownMenuItem
-                        onSelect={() => onAction("Open in Finder", item)}
+                        onSelect={() => onAction("Delete", item)}
                       >
-                        Open in Finder
-                      </DropdownMenuItem>
-                      <DropdownMenuItem
-                        onSelect={() => onAction("Reveal in Project", item)}
-                      >
-                        Reveal in Project
-                      </DropdownMenuItem>
-                      <DropdownMenuItem
-                        onSelect={() => onAction("Add to Pack", item)}
-                      >
-                        Add to Pack
-                      </DropdownMenuItem>
-                      <DropdownMenuSeparator />
-                      <DropdownMenuItem
-                        onSelect={() => onAction("Toggle favorite", item)}
-                      >
-                        {item.favorite
-                          ? "Remove favorite"
-                          : "Mark as favorite"}
+                        Delete
                       </DropdownMenuItem>
                     </DropdownMenuContent>
                   </DropdownMenu>
                 </div>
               </div>
               <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
-                <Badge variant={TYPE_BADGE_VARIANT[item.type]}>
-                  {libraryItemBadgeLabel(item)}
+                <Badge variant={CATEGORY_BADGE_VARIANT[item.category] || "default"}>
+                  {CATEGORY_LABELS[item.category] || item.category}
                 </Badge>
-                {item.key && (
-                  <span className="tabular-nums">{item.key}</span>
-                )}
-                {item.bpm != null && (
-                  <span className="tabular-nums">{item.bpm} BPM</span>
-                )}
-                <span className="ml-auto">
-                  {format(parseISO(item.addedAt), "MMM d")}
-                </span>
-              </div>
-              <div onClick={(e) => e.stopPropagation()}>
-                <StarRating
-                  value={item.rating}
-                  onChange={(v) => onRatingChange(item.id, v)}
-                />
               </div>
             </li>
           );
@@ -157,14 +112,10 @@ export function LibraryTable({
       </ul>
 
       {/* Desktop grid table (md+) */}
-      <div className="hidden grid-cols-[minmax(240px,2.2fr)_minmax(96px,0.9fr)_minmax(70px,0.6fr)_minmax(60px,0.5fr)_minmax(120px,1fr)_minmax(110px,0.9fr)_minmax(120px,0.9fr)_44px] items-center gap-3 border-b border-border bg-surface-2/60 px-4 py-2.5 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground md:grid">
+      <div className="hidden grid-cols-[minmax(240px,2.2fr)_minmax(120px,1fr)_minmax(120px,1fr)_44px] items-center gap-3 border-b border-border bg-surface-2/60 px-4 py-2.5 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground md:grid">
         <div>Name</div>
-        <div>Type</div>
-        <div>Key</div>
-        <div>BPM</div>
-        <div>Source Project</div>
-        <div>Added</div>
-        <div>Rating</div>
+        <div>Category</div>
+        <div>Source</div>
         <div />
       </div>
 
@@ -176,7 +127,7 @@ export function LibraryTable({
               key={item.id}
               onClick={() => onSelect(item.id)}
               className={cn(
-                "grid cursor-pointer grid-cols-[minmax(240px,2.2fr)_minmax(96px,0.9fr)_minmax(70px,0.6fr)_minmax(60px,0.5fr)_minmax(120px,1fr)_minmax(110px,0.9fr)_minmax(120px,0.9fr)_44px] items-center gap-3 border-b border-border px-4 py-3 transition-colors last:border-b-0 hover:bg-surface-2/60",
+                "grid cursor-pointer grid-cols-[minmax(240px,2.2fr)_minmax(120px,1fr)_minmax(120px,1fr)_44px] items-center gap-3 border-b border-border px-4 py-3 transition-colors last:border-b-0 hover:bg-surface-2/60",
                 selected && "bg-primary/5",
               )}
             >
@@ -199,39 +150,17 @@ export function LibraryTable({
                   <span className="truncate text-sm font-medium text-foreground">
                     {item.name}
                   </span>
-                  <span className="truncate text-[11px] text-muted-foreground">
-                    {libraryItemBadgeLabel(item)}
-                  </span>
                 </div>
               </div>
 
               <div>
-                <Badge variant={TYPE_BADGE_VARIANT[item.type]}>
-                  {libraryItemBadgeLabel(item)}
+                <Badge variant={CATEGORY_BADGE_VARIANT[item.category] || "default"}>
+                  {CATEGORY_LABELS[item.category] || item.category}
                 </Badge>
               </div>
 
-              <div className="text-sm text-muted-foreground">
-                {item.key ?? "—"}
-              </div>
-
-              <div className="text-sm tabular-nums text-muted-foreground">
-                {item.bpm ?? "—"}
-              </div>
-
               <div className="truncate text-sm text-muted-foreground">
-                {item.sourceProject}
-              </div>
-
-              <div className="text-sm text-muted-foreground">
-                {format(parseISO(item.addedAt), "MMM d, yyyy")}
-              </div>
-
-              <div onClick={(e) => e.stopPropagation()}>
-                <StarRating
-                  value={item.rating}
-                  onChange={(v) => onRatingChange(item.id, v)}
-                />
+                {item.source}
               </div>
 
               <div onClick={(e) => e.stopPropagation()}>
@@ -247,25 +176,9 @@ export function LibraryTable({
                   </DropdownMenuTrigger>
                   <DropdownMenuContent align="end">
                     <DropdownMenuItem
-                      onSelect={() => onAction("Open in Finder", item)}
+                      onSelect={() => onAction("Delete", item)}
                     >
-                      Open in Finder
-                    </DropdownMenuItem>
-                    <DropdownMenuItem
-                      onSelect={() => onAction("Reveal in Project", item)}
-                    >
-                      Reveal in Project
-                    </DropdownMenuItem>
-                    <DropdownMenuItem
-                      onSelect={() => onAction("Add to Pack", item)}
-                    >
-                      Add to Pack
-                    </DropdownMenuItem>
-                    <DropdownMenuSeparator />
-                    <DropdownMenuItem
-                      onSelect={() => onAction("Toggle favorite", item)}
-                    >
-                      {item.favorite ? "Remove favorite" : "Mark as favorite"}
+                      Delete
                     </DropdownMenuItem>
                   </DropdownMenuContent>
                 </DropdownMenu>

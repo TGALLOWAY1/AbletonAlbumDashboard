@@ -23,12 +23,12 @@ import {
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import {
-  INSTRUMENT_DEVICE_TYPES,
+  INSTRUMENT_SOURCES,
   type LibraryItem,
+  type LibraryCategory,
 } from "@/lib/data/library-items";
 import { createInstrument } from "@/app/actions/instruments";
 
-const NONE = "__none__";
 const CUSTOM = "__custom__";
 
 export function AddInstrumentDialog({
@@ -38,16 +38,18 @@ export function AddInstrumentDialog({
 }) {
   const [open, setOpen] = React.useState(false);
   const [name, setName] = React.useState("");
-  const [device, setDevice] = React.useState<string>(NONE);
-  const [customDevice, setCustomDevice] = React.useState("");
+  const [category, setCategory] = React.useState<LibraryCategory>("instruments_presets");
+  const [source, setSource] = React.useState<string>("Ableton");
+  const [customSource, setCustomSource] = React.useState("");
   const [notes, setNotes] = React.useState("");
   const [error, setError] = React.useState<string | null>(null);
   const [submitting, setSubmitting] = React.useState(false);
 
   function reset() {
     setName("");
-    setDevice(NONE);
-    setCustomDevice("");
+    setCategory("instruments_presets");
+    setSource("Ableton");
+    setCustomSource("");
     setNotes("");
     setError(null);
     setSubmitting(false);
@@ -58,13 +60,11 @@ export function AddInstrumentDialog({
     if (!next) reset();
   }
 
-  function resolveInstrumentType(): string | undefined {
-    if (device === NONE) return undefined;
-    if (device === CUSTOM) {
-      const trimmed = customDevice.trim();
-      return trimmed || undefined;
+  function resolveSource(): string {
+    if (source === CUSTOM) {
+      return customSource.trim() || "Other";
     }
-    return device;
+    return source;
   }
 
   async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
@@ -76,27 +76,20 @@ export function AddInstrumentDialog({
     }
     setSubmitting(true);
     try {
-      const instrumentType = resolveInstrumentType();
+      const resolvedSource = resolveSource();
       const formData = new FormData();
       formData.set("name", name.trim());
-      if (instrumentType) formData.set("instrument_type", instrumentType);
+      formData.set("category", category);
+      formData.set("source", resolvedSource);
       formData.set("notes", notes.trim());
 
+      // assuming createInstrument API might be modified or flexible
       const { id } = await createInstrument(formData);
       onAdded({
         id,
         name: name.trim(),
-        category: "instrument",
-        type: "instrument",
-        instrumentType,
-        key: null,
-        bpm: null,
-        durationSec: 0,
-        sourceProject: "Instruments",
-        addedAt: new Date().toISOString(),
-        rating: 0,
-        favorite: false,
-        tags: [],
+        category: category,
+        source: resolvedSource,
         notes: notes.trim() || undefined,
       });
       handleOpenChange(false);
@@ -111,72 +104,79 @@ export function AddInstrumentDialog({
       <DialogTrigger asChild>
         <Button>
           <Plus className="h-4 w-4" />
-          Add Instrument
+          Add Item
         </Button>
       </DialogTrigger>
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>Add an instrument</DialogTitle>
+          <DialogTitle>Add a library item</DialogTitle>
           <DialogDescription>
-            Catalog an Ableton device or rack — give it a name, an optional
-            device type, and any notes.
+            Add an instrument, preset, drum, or FX rack to your library.
           </DialogDescription>
         </DialogHeader>
 
         <form onSubmit={handleSubmit} className="grid gap-4">
           <div className="grid gap-2">
-            <Label htmlFor="instrument-name">Name</Label>
+            <Label htmlFor="item-name">Name</Label>
             <Input
-              id="instrument-name"
+              id="item-name"
               value={name}
               onChange={(e) => setName(e.target.value)}
-              placeholder="808 → Growl Rack"
+              placeholder="e.g. 808 → Growl Rack"
               required
               maxLength={200}
             />
           </div>
 
           <div className="grid gap-2">
-            <Label>
-              Type{" "}
-              <span className="text-xs font-normal text-muted-foreground">
-                (optional)
-              </span>
-            </Label>
-            <Select value={device} onValueChange={setDevice}>
+            <Label>Category</Label>
+            <Select value={category} onValueChange={(v) => setCategory(v as LibraryCategory)}>
               <SelectTrigger>
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value={NONE}>None</SelectItem>
-                {INSTRUMENT_DEVICE_TYPES.map((d) => (
-                  <SelectItem key={d} value={d}>
-                    {d}
+                <SelectItem value="drums">Drums</SelectItem>
+                <SelectItem value="instruments_presets">Instrument / Preset</SelectItem>
+                <SelectItem value="fx_racks">FX Rack</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+
+          <div className="grid gap-2">
+            <Label>Source</Label>
+            <Select value={source} onValueChange={setSource}>
+              <SelectTrigger>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {INSTRUMENT_SOURCES.map((s) => (
+                  <SelectItem key={s} value={s}>
+                    {s}
                   </SelectItem>
                 ))}
                 <SelectItem value={CUSTOM}>Custom…</SelectItem>
               </SelectContent>
             </Select>
-            {device === CUSTOM && (
+            {source === CUSTOM && (
               <Input
-                value={customDevice}
-                onChange={(e) => setCustomDevice(e.target.value)}
-                placeholder="e.g. Instrument Rack — 808 to growl"
+                value={customSource}
+                onChange={(e) => setCustomSource(e.target.value)}
+                placeholder="e.g. Diva, Omnisphere"
                 maxLength={100}
-                aria-label="Custom device type"
+                aria-label="Custom source"
               />
             )}
           </div>
 
           <div className="grid gap-2">
-            <Label htmlFor="instrument-notes">
+            <Label htmlFor="item-notes">
               Notes{" "}
               <span className="text-xs font-normal text-muted-foreground">
                 (optional)
               </span>
             </Label>
             <Textarea
-              id="instrument-notes"
+              id="item-notes"
               value={notes}
               onChange={(e) => setNotes(e.target.value)}
               rows={3}
@@ -201,7 +201,7 @@ export function AddInstrumentDialog({
               Cancel
             </Button>
             <Button type="submit" disabled={submitting}>
-              {submitting ? "Saving…" : "Save instrument"}
+              {submitting ? "Saving…" : "Save item"}
             </Button>
           </DialogFooter>
         </form>

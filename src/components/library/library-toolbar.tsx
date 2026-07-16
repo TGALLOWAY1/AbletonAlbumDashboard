@@ -13,54 +13,17 @@ import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { cn } from "@/lib/utils";
 import type { LibraryCategory } from "@/lib/data/library-items";
 
-export type SortKey = "recent" | "rating" | "name-asc" | "name-desc";
+export type SortKey = "name-asc" | "name-desc";
 export type ViewMode = "list" | "grid";
 
 const TABS: { value: LibraryCategory | "all"; label: string }[] = [
   { value: "all", label: "All Items" },
-  { value: "audio", label: "Audio" },
-  { value: "midi", label: "MIDI" },
-  { value: "preset", label: "Presets" },
-  { value: "instrument", label: "Instruments" },
-];
-
-const TYPE_OPTIONS = [
-  { value: "all", label: "All Types" },
-  { value: "drum", label: "Drums" },
-  { value: "bass", label: "Bass" },
-  { value: "lead", label: "Lead" },
-  { value: "atmos", label: "Atmosphere" },
-  { value: "vocal", label: "Vocal" },
-  { value: "fx", label: "FX" },
-  { value: "chord", label: "Chord Loop" },
-  { value: "midi", label: "MIDI" },
-];
-
-const KEY_OPTIONS = [
-  { value: "all", label: "All Keys" },
-  { value: "C maj", label: "C maj" },
-  { value: "C# min", label: "C# min" },
-  { value: "D min", label: "D min" },
-  { value: "E min", label: "E min" },
-  { value: "F min", label: "F min" },
-  { value: "F# min", label: "F# min" },
-  { value: "G maj", label: "G maj" },
-  { value: "G min", label: "G min" },
-  { value: "A min", label: "A min" },
-];
-
-const BPM_OPTIONS = [
-  { value: "all", label: "All BPM" },
-  { value: "0-90", label: "Under 90" },
-  { value: "90-110", label: "90 – 110" },
-  { value: "110-130", label: "110 – 130" },
-  { value: "130-150", label: "130 – 150" },
-  { value: "150-300", label: "150+" },
+  { value: "drums", label: "My Drums" },
+  { value: "instruments_presets", label: "My Instruments/Presets" },
+  { value: "fx_racks", label: "My FX Racks" },
 ];
 
 const SORT_OPTIONS: { value: SortKey; label: string }[] = [
-  { value: "recent", label: "Sort: Recently Added" },
-  { value: "rating", label: "Sort: Rating" },
   { value: "name-asc", label: "Sort: Name A→Z" },
   { value: "name-desc", label: "Sort: Name Z→A" },
 ];
@@ -70,12 +33,6 @@ export function LibraryToolbar({
   onTabChange,
   search,
   onSearchChange,
-  type,
-  onTypeChange,
-  musicKey,
-  onKeyChange,
-  bpm,
-  onBpmChange,
   sort,
   onSortChange,
   view,
@@ -85,12 +42,6 @@ export function LibraryToolbar({
   onTabChange: (value: LibraryCategory | "all") => void;
   search: string;
   onSearchChange: (value: string) => void;
-  type: string;
-  onTypeChange: (value: string) => void;
-  musicKey: string;
-  onKeyChange: (value: string) => void;
-  bpm: string;
-  onBpmChange: (value: string) => void;
   sort: SortKey;
   onSortChange: (value: SortKey) => void;
   view: ViewMode;
@@ -124,53 +75,6 @@ export function LibraryToolbar({
             placeholder="Search library..."
             className="pl-9"
           />
-        </div>
-
-        <div className="grid grid-cols-3 gap-2 sm:flex sm:gap-3">
-          <div className="sm:w-36">
-            <Select value={type} onValueChange={onTypeChange}>
-              <SelectTrigger>
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                {TYPE_OPTIONS.map((o) => (
-                  <SelectItem key={o.value} value={o.value}>
-                    {o.label}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-
-          <div className="sm:w-32">
-            <Select value={musicKey} onValueChange={onKeyChange}>
-              <SelectTrigger>
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                {KEY_OPTIONS.map((o) => (
-                  <SelectItem key={o.value} value={o.value}>
-                    {o.label}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-
-          <div className="sm:w-36">
-            <Select value={bpm} onValueChange={onBpmChange}>
-              <SelectTrigger>
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                {BPM_OPTIONS.map((o) => (
-                  <SelectItem key={o.value} value={o.value}>
-                    {o.label}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
         </div>
 
         <div className="flex items-center gap-3 sm:ml-auto">
