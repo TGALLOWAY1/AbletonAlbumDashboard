@@ -27,13 +27,13 @@ export const metadata: Metadata = {
   openGraph: {
     title: "Finish Five",
     description: "Five tracks. One focus. Finish them.",
-    images: [{ url: "/icon.svg", width: 512, height: 512, alt: "Finish Five" }],
+    images: [{ url: "/icon.png", width: 512, height: 512, alt: "Finish Five" }],
   },
   twitter: {
     card: "summary",
     title: "Finish Five",
     description: "Five tracks. One focus. Finish them.",
-    images: ["/icon.svg"],
+    images: ["/icon.png"],
   },
 };
 
