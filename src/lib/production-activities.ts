@@ -1,5 +1,6 @@
 import {
   AudioWaveform,
+  Bot,
   FolderOpen,
   Grid2x2,
   Headphones,
@@ -20,6 +21,7 @@ export type ProductionActivityKey =
   | "automation"
   | "reference_listening"
   | "fx_design"
+  | "suno_ideation"
   | "other";
 
 export type ProductionActivity = {
@@ -31,10 +33,10 @@ export type ProductionActivity = {
 };
 
 /**
- * Single source of truth for the nine production activities, in the display
+ * Single source of truth for the production activities, in the display
  * order shown on the session-logging mockup. Keep this in sync with the
- * `activity_key` check constraint in
- * supabase/migrations/0015_session_activities.sql.
+ * `activity_key` check constraint, last updated in
+ * supabase/migrations/0019_suno_round_trip.sql (originally 0015).
  */
 export const PRODUCTION_ACTIVITIES: ProductionActivity[] = [
   {
@@ -84,6 +86,12 @@ export const PRODUCTION_ACTIVITIES: ProductionActivity[] = [
     label: "FX Design",
     icon: Wand2,
     iconClassName: "bg-violet-500/15 text-violet-600",
+  },
+  {
+    key: "suno_ideation",
+    label: "Suno Ideation",
+    icon: Bot,
+    iconClassName: "bg-fuchsia-500/15 text-fuchsia-600",
   },
   {
     key: "other",

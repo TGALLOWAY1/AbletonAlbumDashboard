@@ -113,4 +113,63 @@ describe("recommendTrack", () => {
       "Quick win — no active bottleneck",
     ]).toContain(rec?.reason);
   });
+
+  it("boosts a track with unreviewed Suno variations and says so", () => {
+    const rec = recommendTrack([
+      track("plain", { stages: stagesAt(50) }),
+      track("suno", {
+        stages: stagesAt(50),
+        sunoExperiment: {
+          id: "e1",
+          status: "reviewing",
+          goal: "darker drop",
+          unreviewedCount: 3,
+        },
+      }),
+    ]);
+    expect(rec?.track.id).toBe("suno");
+    expect(rec?.reason).toBe("3 Suno variations waiting for review");
+  });
+
+  it("uses the singular form for one waiting variation", () => {
+    const rec = recommendTrack([
+      track("suno", {
+        stages: stagesAt(50),
+        sunoExperiment: {
+          id: "e1",
+          status: "reviewing",
+          goal: "darker drop",
+          unreviewedCount: 1,
+        },
+      }),
+    ]);
+    expect(rec?.reason).toBe("1 Suno variation waiting for review");
+  });
+
+  it("surfaces a selected keeper as ready to integrate", () => {
+    const rec = recommendTrack([
+      track("plain", { stages: stagesAt(50) }),
+      track("suno", {
+        stages: stagesAt(50),
+        sunoExperiment: {
+          id: "e1",
+          status: "selected",
+          goal: "darker drop",
+          unreviewedCount: 0,
+        },
+      }),
+    ]);
+    expect(rec?.track.id).toBe("suno");
+    expect(rec?.reason).toBe("Selected Suno idea ready to integrate");
+  });
+
+  it("Suno reasons only appear for tracks with pending Suno work", () => {
+    // The suno terms must be inert when the field is absent — the reason for
+    // a plain winner comes from the classic contributor list.
+    const rec = recommendTrack([
+      track("a", { stages: stagesAt(80) }),
+      track("b", { stages: stagesAt(20) }),
+    ]);
+    expect(rec?.reason).toBe("Closest to done");
+  });
 });

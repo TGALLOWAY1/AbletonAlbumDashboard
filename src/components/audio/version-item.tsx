@@ -1,82 +1,38 @@
 "use client";
 
-import { useEffect, useRef, useState, useTransition } from "react";
+import { useTransition } from "react";
 import { Pause, Play, Trash2 } from "lucide-react";
-import WaveSurfer from "wavesurfer.js";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { deleteVersion, getSignedUrl } from "@/app/actions/versions";
+import { deleteVersion } from "@/app/actions/versions";
+import {
+  formatDuration,
+  useWaveform,
+} from "@/components/audio/use-waveform";
 import { useToast } from "@/components/toast";
 import type { VersionRow } from "@/lib/types";
-
-function formatDuration(seconds: number | null): string {
-  if (seconds == null) return "—:—";
-  const m = Math.floor(seconds / 60);
-  const s = Math.floor(seconds % 60);
-  return `${m}:${s.toString().padStart(2, "0")}`;
-}
 
 export function VersionItem({
   version,
   trackId,
   showDelete = true,
+  parentLabel,
+  sunoAction,
 }: {
   version: VersionRow;
   trackId: string;
   showDelete?: boolean;
+  /** Label of the version this one is a Suno variation of. */
+  parentLabel?: string;
+  /** Optional per-row affordance (e.g. "Get Suno variations"). */
+  sunoAction?: React.ReactNode;
 }) {
-  const containerRef = useRef<HTMLDivElement | null>(null);
-  const wsRef = useRef<WaveSurfer | null>(null);
-  const [ready, setReady] = useState(false);
-  const [playing, setPlaying] = useState(false);
-  const [duration, setDuration] = useState<number | null>(
+  const { containerRef, ready, playing, duration, toggle } = useWaveform(
+    version.storage_path,
     version.duration_seconds,
   );
   const [pending, start] = useTransition();
   const { toast } = useToast();
-
-  useEffect(() => {
-    let cancelled = false;
-    let ws: WaveSurfer | null = null;
-    (async () => {
-      try {
-        const url = await getSignedUrl(version.storage_path);
-        if (cancelled || !containerRef.current) return;
-        ws = WaveSurfer.create({
-          container: containerRef.current,
-          waveColor: "#4a5568",
-          progressColor: "#4ade80",
-          cursorColor: "#fbbf24",
-          barWidth: 2,
-          barRadius: 2,
-          height: 56,
-          normalize: true,
-        });
-        wsRef.current = ws;
-        ws.on("ready", () => {
-          setReady(true);
-          setDuration(ws?.getDuration() ?? null);
-        });
-        ws.on("play", () => setPlaying(true));
-        ws.on("pause", () => setPlaying(false));
-        ws.on("finish", () => setPlaying(false));
-        ws.load(url);
-      } catch (e) {
-        console.error(e);
-      }
-    })();
-    return () => {
-      cancelled = true;
-      ws?.destroy();
-      wsRef.current = null;
-    };
-  }, [version.storage_path]);
-
-  const toggle = () => {
-    const ws = wsRef.current;
-    if (!ws || !ready) return;
-    if (playing) ws.pause();
-    else ws.play();
-  };
 
   const remove = () => {
     if (!confirm(`Delete version "${version.label}"?`)) return;
@@ -102,13 +58,24 @@ export function VersionItem({
       </Button>
       <div className="min-w-0 flex-1">
         <div className="flex items-center justify-between gap-2">
-          <div className="truncate text-sm font-medium">{version.label}</div>
+          <div className="flex min-w-0 flex-wrap items-center gap-1.5">
+            <div className="truncate text-sm font-medium">{version.label}</div>
+            {version.source === "suno" && (
+              <Badge variant="accent">Suno</Badge>
+            )}
+            {version.review_status === "keeper" && (
+              <Badge variant="primary">Keeper</Badge>
+            )}
+            {version.review_status === "mined" && <Badge>Mined</Badge>}
+            {parentLabel && <Badge>Variation of {parentLabel}</Badge>}
+          </div>
           <div className="text-xs text-muted-foreground">
             {formatDuration(duration)}
           </div>
         </div>
         <div ref={containerRef} className="mt-1 w-full" />
       </div>
+      {sunoAction}
       {showDelete && (
         <Button
           variant="ghost"

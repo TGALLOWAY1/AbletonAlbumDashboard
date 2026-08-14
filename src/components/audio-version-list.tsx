@@ -1,27 +1,42 @@
 "use client";
 
-import { useState } from "react";
-import { Upload } from "lucide-react";
+import { useMemo, useState } from "react";
+import { Sparkles, Upload } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { getBrowserSupabase } from "@/lib/supabase/browser";
 import { addVersionRecord } from "@/app/actions/versions";
+import { readAudioDuration } from "@/components/audio/read-audio-duration";
 import { VersionItem } from "@/components/audio/version-item";
+import {
+  SunoExperimentDialog,
+  type SunoTrackMeta,
+} from "@/components/suno/suno-experiment-dialog";
 import { useToast } from "@/components/toast";
 import type { VersionRow } from "@/lib/types";
 
 export function AudioVersionList({
   trackId,
   versions,
+  suno,
 }: {
   trackId: string;
   versions: VersionRow[];
+  /** Enables the per-version "Get Suno variations" affordance. `open` means
+   * the track already has an open experiment (one per track). */
+  suno?: { meta: SunoTrackMeta; open: boolean };
 }) {
   const [label, setLabel] = useState("");
   const [file, setFile] = useState<File | null>(null);
   const [uploading, setUploading] = useState(false);
+  const [sunoSourceId, setSunoSourceId] = useState<string | null>(null);
   const { toast } = useToast();
+
+  const labelById = useMemo(
+    () => new Map(versions.map((v) => [v.id, v.label])),
+    [versions],
+  );
 
   const upload = async () => {
     if (!file) return;
@@ -36,7 +51,7 @@ export function AudioVersionList({
         .upload(key, file, { contentType: file.type });
       if (error) throw error;
 
-      const duration = await readAudioDuration(file).catch(() => null);
+      const duration = await readAudioDuration(file);
       await addVersionRecord({
         trackId,
         label: finalLabel,
@@ -50,6 +65,15 @@ export function AudioVersionList({
     } finally {
       setUploading(false);
     }
+  };
+
+  const requestVariations = (versionId: string) => {
+    if (!suno) return;
+    if (suno.open) {
+      toast("Close the current Suno experiment first.");
+      return;
+    }
+    setSunoSourceId(versionId);
   };
 
   return (
@@ -99,29 +123,47 @@ export function AudioVersionList({
           <ul className="flex flex-col gap-2">
             {versions.map((v) => (
               <li key={v.id}>
-                <VersionItem version={v} trackId={trackId} />
+                <VersionItem
+                  version={v}
+                  trackId={trackId}
+                  parentLabel={
+                    (v.parent_version_id &&
+                      labelById.get(v.parent_version_id)) ||
+                    undefined
+                  }
+                  sunoAction={
+                    suno && v.source !== "suno" ? (
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={() => requestVariations(v.id)}
+                        aria-label="Get Suno variations"
+                        title="Get Suno variations"
+                      >
+                        <Sparkles className="h-4 w-4" />
+                      </Button>
+                    ) : undefined
+                  }
+                />
               </li>
             ))}
           </ul>
         )}
+
+        {suno && (
+          <SunoExperimentDialog
+            // Remount per picked source so the default lands in dialog state.
+            key={sunoSourceId ?? "none"}
+            meta={suno.meta}
+            versions={versions}
+            defaultSourceVersionId={sunoSourceId ?? undefined}
+            open={sunoSourceId !== null}
+            onOpenChange={(open) => {
+              if (!open) setSunoSourceId(null);
+            }}
+          />
+        )}
       </CardContent>
     </Card>
   );
-}
-
-function readAudioDuration(file: File): Promise<number | null> {
-  return new Promise((resolve) => {
-    const url = URL.createObjectURL(file);
-    const audio = new Audio();
-    audio.preload = "metadata";
-    audio.onloadedmetadata = () => {
-      URL.revokeObjectURL(url);
-      resolve(Number.isFinite(audio.duration) ? audio.duration : null);
-    };
-    audio.onerror = () => {
-      URL.revokeObjectURL(url);
-      resolve(null);
-    };
-    audio.src = url;
-  });
 }

@@ -11,6 +11,7 @@ import {
 } from "lucide-react";
 import { TrackCard } from "@/components/track-card";
 import { NextUpCard } from "@/components/next-up-card";
+import { SunoWorkStrip } from "@/components/suno/suno-work-strip";
 import { AssignTracksDialog } from "@/components/album/assign-tracks-dialog";
 import { UpcomingAlbumsGallery } from "@/components/album/upcoming-albums-gallery";
 import { LibraryStatCard } from "@/components/library/library-stat-card";
@@ -26,6 +27,7 @@ import {
   getSessionCountsByTrackSince,
   getSessionStatsByTrack,
 } from "@/lib/data/sessions";
+import { getSunoWorkSummary } from "@/lib/data/suno";
 import { getWeeklyDelta } from "@/lib/data/weekly-delta";
 import { getWeeklyReview } from "@/lib/data/weekly-reviews";
 import { startOfWeekMonday } from "@/lib/dates";
@@ -74,6 +76,7 @@ export default async function DashboardPage() {
     recentCounts,
     weeklyDelta,
     weeklyReview,
+    sunoSummary,
   ] = await Promise.all([
     getActiveAlbum(),
     listUpcomingAlbums(4),
@@ -81,6 +84,7 @@ export default async function DashboardPage() {
     getSessionCountsByTrackSince(7),
     getWeeklyDelta(weekStart.toISOString()),
     getWeeklyReview(weekStart),
+    getSunoWorkSummary(),
   ]);
 
   // Active tracks live in the active album. If no album is set up yet (fresh
@@ -219,6 +223,9 @@ export default async function DashboardPage() {
           />
         </div>
       )}
+
+      <SunoWorkStrip summary={sunoSummary} />
+
 
       {activeTracks.length === 0 ? (
         <section>
