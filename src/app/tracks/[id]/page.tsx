@@ -27,6 +27,7 @@ import { CopyPathButton } from "@/components/copy-path-button";
 import { TrackTodoHistory } from "@/components/mobile/track-todo-history";
 import { TrackTodoList } from "@/components/mobile/track-todo-list";
 import { ManualSessionEntry } from "@/components/manual-session-dialog";
+import { SunoPanel } from "@/components/suno/suno-panel";
 import {
   getCompletedActionsForTrack,
   getOpenActionsForTrack,
@@ -35,29 +36,48 @@ import {
 import { getVersionsForTrack } from "@/lib/data/versions";
 import { getSessionTypes } from "@/lib/data/session-types";
 import { getSessionsForTrack } from "@/lib/data/sessions";
+import { getOpenExperimentWithCandidates } from "@/lib/data/suno";
 import { TrackSessionHistory } from "@/components/track-session-history";
 
 export const dynamic = "force-dynamic";
 
 export default async function TrackDetailPage({
   params,
+  searchParams,
 }: {
   params: Promise<{ id: string }>;
+  searchParams: Promise<{ tab?: string }>;
 }) {
-  const { id } = await params;
+  const [{ id }, { tab }] = await Promise.all([params, searchParams]);
   if (await isMobileUserAgent()) {
     redirect(`/m/${id}`);
   }
-  const [track, versions, completedTodos, openTodos, sessionTypes, sessions] =
-    await Promise.all([
-      getTrack(id),
-      getVersionsForTrack(id),
-      getCompletedActionsForTrack(id),
-      getOpenActionsForTrack(id),
-      getSessionTypes(),
-      getSessionsForTrack(id),
-    ]);
+  const [
+    track,
+    versions,
+    completedTodos,
+    openTodos,
+    sessionTypes,
+    sessions,
+    sunoExperiment,
+  ] = await Promise.all([
+    getTrack(id),
+    getVersionsForTrack(id),
+    getCompletedActionsForTrack(id),
+    getOpenActionsForTrack(id),
+    getSessionTypes(),
+    getSessionsForTrack(id),
+    getOpenExperimentWithCandidates(id),
+  ]);
   if (!track) notFound();
+
+  const sunoMeta = {
+    trackId: track.id,
+    trackName: track.name,
+    genre: track.tags[0] ?? null,
+    bpm: track.bpm,
+    songKey: track.song_key,
+  };
 
   const [genre, ...descriptors] = track.tags;
   const meta = [
@@ -177,11 +197,12 @@ export default async function TrackDetailPage({
         </div>
       )}
 
-      <Tabs defaultValue="overview">
+      <Tabs defaultValue={tab === "suno" ? "suno" : "overview"}>
         <TabsList className="flex flex-wrap">
           <TabsTrigger value="overview">Overview</TabsTrigger>
           <TabsTrigger value="notes">Notes</TabsTrigger>
           <TabsTrigger value="versions">Versions</TabsTrigger>
+          <TabsTrigger value="suno">Suno</TabsTrigger>
           <TabsTrigger value="history">History</TabsTrigger>
         </TabsList>
 
@@ -213,7 +234,20 @@ export default async function TrackDetailPage({
         </TabsContent>
 
         <TabsContent value="versions">
-          <AudioVersionList trackId={track.id} versions={versions} />
+          <AudioVersionList
+            trackId={track.id}
+            versions={versions}
+            suno={{ meta: sunoMeta, open: sunoExperiment !== null }}
+          />
+        </TabsContent>
+
+        <TabsContent value="suno">
+          <SunoPanel
+            meta={sunoMeta}
+            variant="desktop"
+            experiment={sunoExperiment}
+            versions={versions}
+          />
         </TabsContent>
 
         <TabsContent value="history">

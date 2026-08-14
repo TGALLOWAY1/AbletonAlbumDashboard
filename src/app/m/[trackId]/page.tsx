@@ -10,7 +10,9 @@ import {
 import { getVersionsForTrack } from "@/lib/data/versions";
 import { getSessionTypes } from "@/lib/data/session-types";
 import { getSessionsForTrack } from "@/lib/data/sessions";
+import { getOpenExperimentWithCandidates } from "@/lib/data/suno";
 import { TrackSessionHistory } from "@/components/track-session-history";
+import { SunoPanel } from "@/components/suno/suno-panel";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { BackLink } from "@/components/back-link";
@@ -43,15 +45,23 @@ export default async function MobileTrackPage({
   if (!(await isMobileUserAgent())) {
     redirect(`/tracks/${trackId}`);
   }
-  const [track, versions, todos, completedTodos, sessionTypes, sessions] =
-    await Promise.all([
-      getTrack(trackId),
-      getVersionsForTrack(trackId),
-      getOpenActionsForTrack(trackId),
-      getCompletedActionsForTrack(trackId),
-      getSessionTypes(),
-      getSessionsForTrack(trackId),
-    ]);
+  const [
+    track,
+    versions,
+    todos,
+    completedTodos,
+    sessionTypes,
+    sessions,
+    sunoExperiment,
+  ] = await Promise.all([
+    getTrack(trackId),
+    getVersionsForTrack(trackId),
+    getOpenActionsForTrack(trackId),
+    getCompletedActionsForTrack(trackId),
+    getSessionTypes(),
+    getSessionsForTrack(trackId),
+    getOpenExperimentWithCandidates(trackId),
+  ]);
 
   if (!track) notFound();
 
@@ -60,6 +70,13 @@ export default async function MobileTrackPage({
     track.song_key ? track.song_key : null,
     track.bpm ? `${track.bpm} BPM` : null,
   ].filter(Boolean) as string[];
+  const sunoMeta = {
+    trackId: track.id,
+    trackName: track.name,
+    genre: track.tags[0] ?? null,
+    bpm: track.bpm,
+    songKey: track.song_key,
+  };
 
   return (
     <div className="mx-auto flex max-w-md flex-col gap-5 pb-4">
@@ -170,8 +187,22 @@ export default async function MobileTrackPage({
       </section>
 
       <section className="flex flex-col gap-2">
+        <SectionHeading>Suno</SectionHeading>
+        <SunoPanel
+          meta={sunoMeta}
+          variant="mobile"
+          experiment={sunoExperiment}
+          versions={versions}
+        />
+      </section>
+
+      <section className="flex flex-col gap-2">
         <SectionHeading>Versions</SectionHeading>
-        <AudioVersionList trackId={track.id} versions={versions} />
+        <AudioVersionList
+          trackId={track.id}
+          versions={versions}
+          suno={{ meta: sunoMeta, open: sunoExperiment !== null }}
+        />
       </section>
 
       <section className="flex flex-col gap-2">

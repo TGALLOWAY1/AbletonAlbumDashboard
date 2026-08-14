@@ -1,11 +1,13 @@
 import { getServerSupabase } from "@/lib/supabase/server";
 import { OWNER_ID } from "@/lib/owner";
+import type { SunoExperimentStatus } from "@/lib/suno";
 import type {
   ActionRow,
   BottleneckRow,
   StageRow,
   TrackRow,
   TrackStatus,
+  TrackSunoSummary,
   TrackWithDetails,
 } from "@/lib/types";
 
@@ -28,6 +30,7 @@ async function attachDetails(tracks: TrackRow[]): Promise<TrackWithDetails[]> {
     openActionsRes,
     completedActionsRes,
     albumsRes,
+    sunoRes,
   ] =
     await Promise.all([
       supabase.from("track_stages").select("*").in("track_id", ids),
@@ -53,6 +56,13 @@ async function attachDetails(tracks: TrackRow[]): Promise<TrackWithDetails[]> {
         .in("track_id", ids)
         .not("completed_at", "is", null),
       supabase.from("albums").select("id, title").in("id", albumIds),
+      // At most one non-terminal Suno experiment per track (partial unique
+      // index); embedded candidate decisions give the unreviewed count.
+      supabase
+        .from("suno_experiments")
+        .select("id, track_id, status, goal, suno_candidates(decision)")
+        .in("track_id", ids)
+        .not("status", "in", "(integrated,discarded)"),
     ]);
 
   const stagesByTrack = new Map<string, StageRow[]>();
@@ -85,6 +95,17 @@ async function attachDetails(tracks: TrackRow[]): Promise<TrackWithDetails[]> {
   });
   const albumById = new Map<string, { id: string; title: string | null }>();
   (albumsRes.data ?? []).forEach((a) => albumById.set(a.id, a));
+  const sunoByTrack = new Map<string, TrackSunoSummary>();
+  (sunoRes.data ?? []).forEach((e) => {
+    sunoByTrack.set(e.track_id, {
+      id: e.id,
+      status: e.status as SunoExperimentStatus,
+      goal: e.goal,
+      unreviewedCount: (e.suno_candidates ?? []).filter(
+        (c) => c.decision === "unreviewed",
+      ).length,
+    });
+  });
 
   return tracks.map((t) => ({
     ...t,
@@ -95,6 +116,7 @@ async function attachDetails(tracks: TrackRow[]): Promise<TrackWithDetails[]> {
     completedTaskCount: completedCountByTrack.get(t.id) ?? 0,
     estMinutesRemaining: estMinutesByTrack.get(t.id) ?? 0,
     album: (t.album_id && albumById.get(t.album_id)) || null,
+    sunoExperiment: sunoByTrack.get(t.id) ?? null,
   }));
 }
 

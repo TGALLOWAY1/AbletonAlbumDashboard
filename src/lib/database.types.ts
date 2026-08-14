@@ -531,32 +531,182 @@ export type Database = {
         };
         Relationships: [];
       };
+      suno_candidates: {
+        Row: {
+          created_at: string;
+          decision: string;
+          decision_note: string | null;
+          experiment_id: string;
+          id: string;
+          mine_timestamp_end: number | null;
+          mine_timestamp_start: number | null;
+          version_id: string | null;
+        };
+        Insert: {
+          created_at?: string;
+          decision?: string;
+          decision_note?: string | null;
+          experiment_id: string;
+          id?: string;
+          mine_timestamp_end?: number | null;
+          mine_timestamp_start?: number | null;
+          version_id?: string | null;
+        };
+        Update: {
+          created_at?: string;
+          decision?: string;
+          decision_note?: string | null;
+          experiment_id?: string;
+          id?: string;
+          mine_timestamp_end?: number | null;
+          mine_timestamp_start?: number | null;
+          version_id?: string | null;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "suno_candidates_experiment_id_fkey";
+            columns: ["experiment_id"];
+            isOneToOne: false;
+            referencedRelation: "suno_experiments";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "suno_candidates_version_id_fkey";
+            columns: ["version_id"];
+            isOneToOne: false;
+            referencedRelation: "track_versions";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
+      suno_experiments: {
+        Row: {
+          action_id: string | null;
+          closed_at: string | null;
+          created_at: string;
+          external_job_id: string | null;
+          goal: string;
+          id: string;
+          outcome_note: string | null;
+          owner_id: string;
+          prompt: string | null;
+          source_version_id: string | null;
+          status: string;
+          track_id: string;
+        };
+        Insert: {
+          action_id?: string | null;
+          closed_at?: string | null;
+          created_at?: string;
+          external_job_id?: string | null;
+          goal: string;
+          id?: string;
+          outcome_note?: string | null;
+          owner_id: string;
+          prompt?: string | null;
+          source_version_id?: string | null;
+          status?: string;
+          track_id: string;
+        };
+        Update: {
+          action_id?: string | null;
+          closed_at?: string | null;
+          created_at?: string;
+          external_job_id?: string | null;
+          goal?: string;
+          id?: string;
+          outcome_note?: string | null;
+          owner_id?: string;
+          prompt?: string | null;
+          source_version_id?: string | null;
+          status?: string;
+          track_id?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "suno_experiments_action_id_fkey";
+            columns: ["action_id"];
+            isOneToOne: false;
+            referencedRelation: "actions";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "suno_experiments_source_version_id_fkey";
+            columns: ["source_version_id"];
+            isOneToOne: false;
+            referencedRelation: "track_versions";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "suno_experiments_track_id_fkey";
+            columns: ["track_id"];
+            isOneToOne: false;
+            referencedRelation: "tracks";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
       track_versions: {
         Row: {
           created_at: string;
           duration_seconds: number | null;
+          experiment_id: string | null;
           id: string;
+          kind: string;
           label: string;
+          notes: string | null;
+          parent_version_id: string | null;
+          review_status: string;
+          source: string;
           storage_path: string;
+          suno_url: string | null;
           track_id: string;
         };
         Insert: {
           created_at?: string;
           duration_seconds?: number | null;
+          experiment_id?: string | null;
           id?: string;
+          kind?: string;
           label: string;
+          notes?: string | null;
+          parent_version_id?: string | null;
+          review_status?: string;
+          source?: string;
           storage_path: string;
+          suno_url?: string | null;
           track_id: string;
         };
         Update: {
           created_at?: string;
           duration_seconds?: number | null;
+          experiment_id?: string | null;
           id?: string;
+          kind?: string;
           label?: string;
+          notes?: string | null;
+          parent_version_id?: string | null;
+          review_status?: string;
+          source?: string;
           storage_path?: string;
+          suno_url?: string | null;
           track_id?: string;
         };
         Relationships: [
+          {
+            foreignKeyName: "track_versions_experiment_id_fkey";
+            columns: ["experiment_id"];
+            isOneToOne: false;
+            referencedRelation: "suno_experiments";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "track_versions_parent_version_id_fkey";
+            columns: ["parent_version_id"];
+            isOneToOne: false;
+            referencedRelation: "track_versions";
+            referencedColumns: ["id"];
+          },
           {
             foreignKeyName: "track_versions_track_id_fkey";
             columns: ["track_id"];

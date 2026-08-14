@@ -28,6 +28,7 @@ import { TrackCardActions } from "@/components/track-card-actions";
 import { DeleteTrackMenuItem } from "@/components/delete-track-menu-item";
 import { AddNoteDialog } from "@/components/add-note-dialog";
 import { CopyPathButton } from "@/components/copy-path-button";
+import { sunoBadgeLabel } from "@/lib/suno";
 import { progressFromStages, type TrackWithDetails } from "@/lib/types";
 import { cn, formatDuration, formatMinutes } from "@/lib/utils";
 
@@ -105,6 +106,18 @@ function AlbumChip({
         <span className="truncate">{album.title?.trim() || "Untitled album"}</span>
       </Badge>
     </Link>
+  );
+}
+
+// Lightweight signal only — the Suno controls live on the track detail page.
+function SunoChip({ suno }: { suno: TrackWithDetails["sunoExperiment"] }) {
+  if (!suno) return null;
+  const label = sunoBadgeLabel(suno);
+  if (!label) return null;
+  return (
+    <Badge variant={suno.unreviewedCount > 0 ? "warning" : "accent"}>
+      {label}
+    </Badge>
   );
 }
 
@@ -197,10 +210,11 @@ export function TrackCard({
           </div>
 
           <div className="flex flex-col gap-2">
-            {(genre || track.album) && (
+            {(genre || track.album || track.sunoExperiment) && (
               <div className="flex flex-wrap items-center gap-1.5">
                 {genre && <Badge variant="primary">{genre}</Badge>}
                 {track.album && <AlbumChip album={track.album} />}
+                <SunoChip suno={track.sunoExperiment} />
               </div>
             )}
 
@@ -305,10 +319,11 @@ export function TrackCard({
           >
             {track.name}
           </Link>
-          {(genre || track.album) && (
+          {(genre || track.album || track.sunoExperiment) && (
             <div className="mt-1.5 flex flex-wrap items-center gap-1.5">
               {genre && <Badge variant="primary">{genre}</Badge>}
               {track.album && <AlbumChip album={track.album} />}
+              <SunoChip suno={track.sunoExperiment} />
             </div>
           )}
           {meta.length > 0 && (

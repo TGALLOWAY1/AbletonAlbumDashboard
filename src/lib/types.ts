@@ -1,5 +1,6 @@
 import { z } from "zod";
 import type { Database } from "@/lib/database.types";
+import type { SunoExperimentStatus } from "@/lib/suno";
 
 export type TrackRow = Database["public"]["Tables"]["tracks"]["Row"];
 export type StageRow = Database["public"]["Tables"]["track_stages"]["Row"];
@@ -7,6 +8,10 @@ export type BottleneckRow = Database["public"]["Tables"]["bottlenecks"]["Row"];
 export type ActionRow = Database["public"]["Tables"]["actions"]["Row"];
 export type SessionRow = Database["public"]["Tables"]["sessions"]["Row"];
 export type VersionRow = Database["public"]["Tables"]["track_versions"]["Row"];
+export type SunoExperimentRow =
+  Database["public"]["Tables"]["suno_experiments"]["Row"];
+export type SunoCandidateRow =
+  Database["public"]["Tables"]["suno_candidates"]["Row"];
 
 
 export type ReviewStatus =
@@ -116,6 +121,15 @@ export const MAX_ACTIVE_TRACKS = 5;
 // flagged on the dashboard ("Needs attention") and on track cards.
 export const STALE_AFTER_DAYS = 7;
 
+// Compact summary of a track's open (non-terminal) Suno experiment, computed
+// by attachDetails for badges, the dashboard strip, and the recommendation.
+export type TrackSunoSummary = {
+  id: string;
+  status: SunoExperimentStatus;
+  goal: string;
+  unreviewedCount: number;
+};
+
 // Aggregate shape used by dashboard + detail views.
 export type TrackWithDetails = TrackRow & {
   stages: StageRow[];
@@ -125,6 +139,7 @@ export type TrackWithDetails = TrackRow & {
   completedTaskCount: number;
   estMinutesRemaining: number;
   album: { id: string; title: string | null } | null;
+  sunoExperiment: TrackSunoSummary | null;
 };
 
 export function progressFromStages(stages: StageRow[]): number {
