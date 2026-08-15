@@ -2,6 +2,14 @@ import { getServerSupabase } from "@/lib/supabase/server";
 import { OWNER_ID } from "@/lib/owner";
 import type { SunoCandidateRow, SunoExperimentRow, VersionRow } from "@/lib/types";
 
+// Deploys land before manual migrations in this repo (Vercel deploys on merge;
+// SQL is applied by hand), so the read paths must tolerate the Suno tables not
+// existing yet — the app renders with Suno features empty instead of crashing
+// the dashboard. Writes still fail loudly. 42P01 = undefined_table.
+function isMissingSunoTables(error: unknown): boolean {
+  return (error as { code?: string } | null)?.code === "42P01";
+}
+
 export type SunoCandidateWithVersion = SunoCandidateRow & {
   version: VersionRow | null;
 };
@@ -23,7 +31,10 @@ export async function getOpenExperimentWithCandidates(
     .eq("track_id", trackId)
     .not("status", "in", "(integrated,discarded)")
     .maybeSingle();
-  if (error) throw error;
+  if (error) {
+    if (isMissingSunoTables(error)) return null;
+    throw error;
+  }
   if (!experiment) return null;
 
   const [sourceRes, candidatesRes] = await Promise.all([
@@ -93,7 +104,6 @@ export async function getSunoWorkSummary(): Promise<SunoWorkSummary> {
     .eq("owner_id", OWNER_ID)
     .not("status", "in", "(integrated,discarded)")
     .order("created_at", { ascending: true });
-  if (error) throw error;
 
   const summary: SunoWorkSummary = {
     readyToSend: [],
@@ -101,6 +111,10 @@ export async function getSunoWorkSummary(): Promise<SunoWorkSummary> {
     needsReview: [],
     readyToIntegrate: [],
   };
+  if (error) {
+    if (isMissingSunoTables(error)) return summary;
+    throw error;
+  }
   for (const exp of data ?? []) {
     const item: SunoWorkItem = {
       trackId: exp.track_id,
