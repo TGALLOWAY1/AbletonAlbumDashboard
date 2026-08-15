@@ -5,9 +5,13 @@ import type { SunoCandidateRow, SunoExperimentRow, VersionRow } from "@/lib/type
 // Deploys land before manual migrations in this repo (Vercel deploys on merge;
 // SQL is applied by hand), so the read paths must tolerate the Suno tables not
 // existing yet — the app renders with Suno features empty instead of crashing
-// the dashboard. Writes still fail loudly. 42P01 = undefined_table.
+// the dashboard. Writes still fail loudly. PostgREST reports a missing table
+// as PGRST205 (absent from its schema cache — the code supabase-js actually
+// surfaces; see isMissingRelation in src/lib/data/album.ts); 42P01 is
+// Postgres' own undefined_table, kept for raw-SQL paths.
 function isMissingSunoTables(error: unknown): boolean {
-  return (error as { code?: string } | null)?.code === "42P01";
+  const code = (error as { code?: string } | null)?.code;
+  return code === "PGRST205" || code === "42P01";
 }
 
 export type SunoCandidateWithVersion = SunoCandidateRow & {
