@@ -1,7 +1,9 @@
 import Link from "next/link";
 import { Plus } from "lucide-react";
-import { TrackCard } from "@/components/track-card";
 import { TrackFilterPanel } from "@/components/track-filter-panel";
+import { TrackGalleryView } from "@/components/track-gallery-view";
+import { TrackListView } from "@/components/track-list-view";
+import { ViewModeToggle } from "@/components/view-mode-toggle";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -10,9 +12,16 @@ import {
   collectFilterOptions,
   filterTracks,
   parseTrackFilters,
+  serializeTrackFilters,
   STATUS_LABELS,
   type TrackFilterSearchParams,
 } from "@/lib/track-filters";
+import {
+  DEFAULT_TRACK_VIEW,
+  parseViewPreference,
+  serializeViewPreference,
+  type ViewSearchParams,
+} from "@/lib/view-mode";
 import { TRACK_STATUSES, type TrackWithDetails } from "@/lib/types";
 
 export const dynamic = "force-dynamic";
@@ -20,12 +29,13 @@ export const dynamic = "force-dynamic";
 export default async function AllTracksPage({
   searchParams,
 }: {
-  searchParams: Promise<TrackFilterSearchParams>;
+  searchParams: Promise<TrackFilterSearchParams & ViewSearchParams>;
 }) {
   const params = await searchParams;
   const tracks = await getAllTracks();
 
   const filters = parseTrackFilters(params);
+  const view = parseViewPreference(params, DEFAULT_TRACK_VIEW);
   const options = collectFilterOptions(tracks);
   const filtered = filterTracks(tracks, filters);
 
@@ -53,11 +63,25 @@ export default async function AllTracksPage({
         </Button>
       </header>
 
-      <TrackFilterPanel
-        filters={filters}
-        options={options}
-        resultCount={filtered.length}
-      />
+      {/* The filter panel and the view toggle each own their own query params
+          and hand the other's through, so neither drops the other. */}
+      <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
+        <div className="min-w-0 flex-1">
+          <TrackFilterPanel
+            filters={filters}
+            options={options}
+            resultCount={filtered.length}
+            preserveQuery={serializeViewPreference(view, DEFAULT_TRACK_VIEW)}
+          />
+        </div>
+        <ViewModeToggle
+          basePath="/tracks"
+          value={view}
+          defaults={DEFAULT_TRACK_VIEW}
+          preserveQuery={serializeTrackFilters(filters)}
+          className="md:shrink-0"
+        />
+      </div>
 
       {filtered.length === 0 ? (
         <Card>
@@ -73,11 +97,14 @@ export default async function AllTracksPage({
                 {STATUS_LABELS[s]}
                 <Badge variant="default">{grouped.get(s)?.length ?? 0}</Badge>
               </h2>
-              <div className="flex flex-col gap-3">
-                {grouped.get(s)?.map((t) => (
-                  <TrackCard key={t.id} track={t} />
-                ))}
-              </div>
+              {view.layout === "gallery" ? (
+                <TrackGalleryView
+                  tracks={grouped.get(s) ?? []}
+                  size={view.size}
+                />
+              ) : (
+                <TrackListView tracks={grouped.get(s) ?? []} size={view.size} />
+              )}
             </section>
           ))}
         </div>

@@ -61,3 +61,8 @@ useful on desktop (documented exception).
 - User-facing errors in client components go through `useToast()` (`src/components/toast.tsx`, provider mounted in the root layout) — never `window.alert()`.
 - Optimistic UI uses React 19's `useOptimistic` (see `TrackTodoList`).
 - Styling: Tailwind utility classes, no CSS modules. Use `cn()` / `tailwind-merge` for conditional classes.
+- Collection pages (`/tracks`, `/albums`) keep their gallery/list + large/medium/small
+  view preference in the URL (`src/lib/view-mode.ts`), so the pages stay server
+  components and the choice is linkable. Controls that own their own query params
+  take a `preserveQuery` prop and merge with `mergeQuery()` rather than
+  overwriting the whole query string.
