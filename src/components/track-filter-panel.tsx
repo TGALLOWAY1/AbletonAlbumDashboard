@@ -53,24 +53,32 @@ export function TrackFilterPanel({
   const [tagQuery, setTagQuery] = React.useState("");
   const [pending, startTransition] = React.useTransition();
 
-  const applied = activeFilterCount(filters);
-  const chips = describeFilters(filters, options);
+  // `filters` only catches up once the server navigation commits, so removing
+  // two chips in quick succession would otherwise have the second removal
+  // derive from pre-first-removal state and put the first chip back. Every
+  // read below goes through the optimistic copy, which React resets to
+  // `filters` as each transition settles.
+  const [live, setLive] = React.useOptimistic(filters);
+
+  const applied = activeFilterCount(live);
+  const chips = describeFilters(live, options);
 
   const navigate = React.useCallback(
     (next: TrackFilters) => {
       const qs = serializeTrackFilters(next);
       startTransition(() => {
+        setLive(next);
         router.push(qs ? `${pathname}?${qs}` : pathname, { scroll: false });
       });
     },
-    [pathname, router],
+    [pathname, router, setLive],
   );
 
   // Opening the sheet always starts from what's actually applied, so an
   // abandoned draft never leaks into the next session.
   const handleOpenChange = (next: boolean) => {
     if (next) {
-      setDraft(filters);
+      setDraft(live);
       setTagQuery("");
     }
     setOpen(next);
@@ -255,7 +263,7 @@ export function TrackFilterPanel({
             key={`${chip.facet}:${chip.value}`}
             type="button"
             onClick={() =>
-              navigate(removeFilterValue(filters, chip.facet, chip.value))
+              navigate(removeFilterValue(live, chip.facet, chip.value))
             }
             className="inline-flex items-center gap-1 rounded-full border border-primary/40 bg-primary/15 py-1 pl-3 pr-2 text-xs text-primary transition-colors hover:bg-primary/25"
             aria-label={`Remove ${FACET_LABELS[chip.facet as FacetId]} filter ${chip.label}`}
@@ -277,7 +285,16 @@ export function TrackFilterPanel({
       </div>
 
       {applied > 0 && (
-        <p className="text-xs text-muted-foreground">
+        // The count comes from the server, so it trails the chips by one
+        // navigation — dim it while that's in flight rather than showing a
+        // stale number as if it were current.
+        <p
+          aria-busy={pending}
+          className={cn(
+            "text-xs text-muted-foreground transition-opacity",
+            pending && "opacity-50",
+          )}
+        >
           {resultCount} {resultCount === 1 ? "track" : "tracks"} match
         </p>
       )}
