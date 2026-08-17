@@ -437,41 +437,195 @@ export type Database = {
           },
         ];
       };
-      instruments: {
+      library_loop_stacks: {
         Row: {
-          category: string;
+          artwork_url: string | null;
+          bars: number | null;
+          bpm: number | null;
+          components: Json;
           created_at: string;
+          favorite: boolean;
           id: string;
-          instrument_type: string | null;
+          music_key: string | null;
           name: string;
           notes: string;
           owner_id: string;
-          source: string;
+          preview_path: string | null;
+          source_path: string | null;
+          source_project: string | null;
           updated_at: string;
         };
         Insert: {
-          category?: string;
+          artwork_url?: string | null;
+          bars?: number | null;
+          bpm?: number | null;
+          components?: Json;
           created_at?: string;
+          favorite?: boolean;
           id?: string;
-          instrument_type?: string | null;
+          music_key?: string | null;
           name: string;
           notes?: string;
           owner_id: string;
-          source?: string;
+          preview_path?: string | null;
+          source_path?: string | null;
+          source_project?: string | null;
           updated_at?: string;
         };
         Update: {
-          category?: string;
+          artwork_url?: string | null;
+          bars?: number | null;
+          bpm?: number | null;
+          components?: Json;
           created_at?: string;
+          favorite?: boolean;
           id?: string;
-          instrument_type?: string | null;
+          music_key?: string | null;
           name?: string;
           notes?: string;
           owner_id?: string;
-          source?: string;
+          preview_path?: string | null;
+          source_path?: string | null;
+          source_project?: string | null;
           updated_at?: string;
         };
         Relationships: [];
+      };
+
+      library_presets: {
+        Row: {
+          artwork_url: string | null;
+          category: string;
+          core: boolean;
+          created_at: string;
+          favorite: boolean;
+          id: string;
+          name: string;
+          notes: string;
+          owner_id: string;
+          plugin: string | null;
+          preset_path: string | null;
+          preview_path: string | null;
+          source_project: string | null;
+          updated_at: string;
+        };
+        Insert: {
+          artwork_url?: string | null;
+          category?: string;
+          core?: boolean;
+          created_at?: string;
+          favorite?: boolean;
+          id?: string;
+          name: string;
+          notes?: string;
+          owner_id: string;
+          plugin?: string | null;
+          preset_path?: string | null;
+          preview_path?: string | null;
+          source_project?: string | null;
+          updated_at?: string;
+        };
+        Update: {
+          artwork_url?: string | null;
+          category?: string;
+          core?: boolean;
+          created_at?: string;
+          favorite?: boolean;
+          id?: string;
+          name?: string;
+          notes?: string;
+          owner_id?: string;
+          plugin?: string | null;
+          preset_path?: string | null;
+          preview_path?: string | null;
+          source_project?: string | null;
+          updated_at?: string;
+        };
+        Relationships: [];
+      };
+
+      library_collections: {
+        Row: {
+          artwork_url: string | null;
+          created_at: string;
+          description: string | null;
+          id: string;
+          name: string;
+          owner_id: string;
+          position: number;
+          updated_at: string;
+        };
+        Insert: {
+          artwork_url?: string | null;
+          created_at?: string;
+          description?: string | null;
+          id?: string;
+          name: string;
+          owner_id: string;
+          position?: number;
+          updated_at?: string;
+        };
+        Update: {
+          artwork_url?: string | null;
+          created_at?: string;
+          description?: string | null;
+          id?: string;
+          name?: string;
+          owner_id?: string;
+          position?: number;
+          updated_at?: string;
+        };
+        Relationships: [];
+      };
+
+      library_collection_items: {
+        Row: {
+          collection_id: string;
+          created_at: string;
+          id: string;
+          loop_stack_id: string | null;
+          position: number;
+          preset_id: string | null;
+        };
+        Insert: {
+          collection_id: string;
+          created_at?: string;
+          id?: string;
+          loop_stack_id?: string | null;
+          position?: number;
+          preset_id?: string | null;
+        };
+        Update: {
+          collection_id?: string;
+          created_at?: string;
+          id?: string;
+          loop_stack_id?: string | null;
+          position?: number;
+          preset_id?: string | null;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "library_collection_items_collection_id_fkey";
+            columns: ["collection_id"];
+            isOneToOne: false;
+            referencedRelation: "library_collections";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "library_collection_items_loop_stack_id_fkey";
+            columns: ["loop_stack_id"];
+            isOneToOne: false;
+            referencedRelation: "library_loop_stacks";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "library_collection_items_preset_id_fkey";
+            columns: ["preset_id"];
+            isOneToOne: false;
+            referencedRelation: "library_presets";
+            referencedColumns: ["id"];
+          },
+        ];
       };
 
       resources: {
