@@ -5,7 +5,6 @@ import {
   Clock,
   ListMusic,
   Plus,
-  Sparkles,
   Sun,
   TrendingUp,
 } from "lucide-react";
@@ -29,7 +28,6 @@ import {
 } from "@/lib/data/sessions";
 import { getSunoWorkSummary } from "@/lib/data/suno";
 import { getWeeklyDelta } from "@/lib/data/weekly-delta";
-import { getWeeklyReview } from "@/lib/data/weekly-reviews";
 import { startOfWeekMonday } from "@/lib/dates";
 import { recommendTrack } from "@/lib/recommend";
 import { formatDuration } from "@/lib/utils";
@@ -71,7 +69,6 @@ export default async function DashboardPage() {
     sessionStats,
     recentCounts,
     weeklyDelta,
-    weeklyReview,
     sunoSummary,
   ] = await Promise.all([
     getActiveAlbum(),
@@ -79,7 +76,6 @@ export default async function DashboardPage() {
     getSessionStatsByTrack(),
     getSessionCountsByTrackSince(7),
     getWeeklyDelta(weekStart.toISOString()),
-    getWeeklyReview(weekStart),
     getSunoWorkSummary(),
   ]);
 
@@ -110,11 +106,6 @@ export default async function DashboardPage() {
   const dateLabel = format(now, "MMMM d, yyyy");
 
   const albumTitle = activeAlbum?.title?.trim() || null;
-
-  const intention = weeklyReview?.intention?.trim() || null;
-  // From Friday on, nudge toward the weekly reflection if it's still empty.
-  const promptReflection =
-    [5, 6, 0].includes(now.getDay()) && !weeklyReview?.reflection?.trim();
 
   return (
     <div className="flex flex-col gap-6">
@@ -158,30 +149,6 @@ export default async function DashboardPage() {
           </Button>
         </div>
       </header>
-
-      {/* Weekly intention / reflection — bookends from the calendar's weekly
-          review, surfaced where the week actually happens. */}
-      <div className="flex items-center gap-2 rounded-md border border-border bg-surface px-3 py-2 text-sm">
-        <Sparkles className="h-4 w-4 shrink-0 text-primary" />
-        {intention ? (
-          <span className="min-w-0 truncate">
-            <span className="font-medium">This week:</span>{" "}
-            <span className="text-muted-foreground">{intention}</span>
-          </span>
-        ) : (
-          <Link href="/calendar" className="text-primary hover:underline">
-            Set your intention for this week →
-          </Link>
-        )}
-        {promptReflection && (
-          <Link
-            href="/calendar"
-            className="ml-auto shrink-0 text-primary hover:underline"
-          >
-            Reflect on your week →
-          </Link>
-        )}
-      </div>
 
       <NextUpCard rec={recommendation} />
 

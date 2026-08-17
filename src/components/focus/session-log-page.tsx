@@ -170,7 +170,6 @@ export function SessionLogPage({
     startTx(async () => {
       try {
         await completeSession({
-          sessionId: ctx.plannedSessionId ?? null,
           trackId: ctx.trackId,
           sessionTypeId: ctx.sessionTypeId,
           startedAt: timeWindow.startedAt.toISOString(),

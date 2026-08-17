@@ -18,8 +18,8 @@ import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { RatingPicker } from "@/components/ui/rating-picker";
-import { TrackPicker } from "@/components/calendar/track-picker";
-import { SessionTypePicker } from "@/components/calendar/session-type-picker";
+import { TrackPicker } from "@/components/track-picker";
+import { SessionTypePicker } from "@/components/session-type-picker";
 import { completeSession } from "@/app/actions/sessions";
 import { useToast } from "@/components/toast";
 import {
@@ -131,7 +131,6 @@ function ManualSessionDialog({
     startTx(async () => {
       try {
         await completeSession({
-          sessionId: null,
           trackId,
           sessionTypeId,
           startedAt,

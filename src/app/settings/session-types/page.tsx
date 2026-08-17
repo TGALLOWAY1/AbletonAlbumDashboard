@@ -15,7 +15,7 @@ export default async function SessionTypesPage() {
             Session types
           </h1>
           <p className="mt-1 text-muted-foreground">
-            Categories that appear on the calendar.
+            Categories for focus and logged sessions.
           </p>
         </div>
       </header>

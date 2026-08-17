@@ -13,7 +13,6 @@ export function revalidateTrackSurfaces(
   revalidatePath(`/tracks/${trackId}`);
   revalidatePath(`/focus/${trackId}`);
   revalidatePath("/");
-  revalidatePath("/calendar");
   revalidatePath("/analytics");
   revalidatePath("/tracks");
   revalidatePath("/albums");
