@@ -1,16 +1,25 @@
 import Link from "next/link";
-import { format, parseISO } from "date-fns";
-import { Disc3, Plus, Star } from "lucide-react";
+import { Plus } from "lucide-react";
+import { AlbumCollectionView } from "@/components/album/album-collection-view";
+import { ViewModeToggle } from "@/components/view-mode-toggle";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { listAlbums } from "@/lib/data/album";
-import { setActiveAlbum } from "@/app/actions/album";
-import { cn } from "@/lib/utils";
+import {
+  DEFAULT_ALBUM_VIEW,
+  parseViewPreference,
+  type ViewSearchParams,
+} from "@/lib/view-mode";
 
 export const dynamic = "force-dynamic";
 
-export default async function AlbumsPage() {
-  const albums = await listAlbums();
+export default async function AlbumsPage({
+  searchParams,
+}: {
+  searchParams: Promise<ViewSearchParams>;
+}) {
+  const [albums, params] = await Promise.all([listAlbums(), searchParams]);
+  const view = parseViewPreference(params, DEFAULT_ALBUM_VIEW);
 
   return (
     <div className="flex flex-col gap-6">
@@ -48,73 +57,16 @@ export default async function AlbumsPage() {
           </CardContent>
         </Card>
       ) : (
-        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
-          {albums.map((album) => {
-            const title = album.title?.trim() || "Untitled album";
-            const startLabel = album.start_date
-              ? format(parseISO(album.start_date), "MMM d, yyyy")
-              : null;
-            return (
-              <Card
-                key={album.id}
-                className={cn(
-                  "overflow-hidden",
-                  album.is_active && "ring-1 ring-primary/40",
-                )}
-              >
-                <Link
-                  href={`/albums/${album.id}`}
-                  className="block"
-                  aria-label={`Open ${title}`}
-                >
-                  <div className="relative aspect-square w-full overflow-hidden bg-gradient-to-br from-primary/20 via-surface-2 to-accent/15">
-                    {album.cover_image_url ? (
-                      // eslint-disable-next-line @next/next/no-img-element
-                      <img
-                        src={album.cover_image_url}
-                        alt=""
-                        className="h-full w-full object-cover"
-                      />
-                    ) : (
-                      <div className="flex h-full w-full items-center justify-center text-foreground/25">
-                        <Disc3 className="h-10 w-10" />
-                      </div>
-                    )}
-                    {album.is_active && (
-                      <span className="absolute right-2 top-2 inline-flex items-center gap-1 rounded-full bg-primary px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider text-primary-foreground">
-                        <Star className="h-3 w-3" /> Active
-                      </span>
-                    )}
-                  </div>
-                </Link>
-                <div className="flex items-start justify-between gap-2 p-3">
-                  <div className="min-w-0">
-                    <h3 className="truncate text-sm font-semibold leading-tight">
-                      {title}
-                    </h3>
-                    <p className="text-xs text-muted-foreground">
-                      {album.trackCount}{" "}
-                      {album.trackCount === 1 ? "track" : "tracks"}
-                      {startLabel ? ` · starts ${startLabel}` : ""}
-                    </p>
-                  </div>
-                  {!album.is_active && (
-                    <form
-                      action={async () => {
-                        "use server";
-                        await setActiveAlbum(album.id);
-                      }}
-                    >
-                      <Button type="submit" variant="outline" size="sm">
-                        Set active
-                      </Button>
-                    </form>
-                  )}
-                </div>
-              </Card>
-            );
-          })}
-        </div>
+        <>
+          <div className="flex justify-end">
+            <ViewModeToggle
+              basePath="/albums"
+              value={view}
+              defaults={DEFAULT_ALBUM_VIEW}
+            />
+          </div>
+          <AlbumCollectionView albums={albums} view={view} />
+        </>
       )}
     </div>
   );

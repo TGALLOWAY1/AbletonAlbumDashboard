@@ -1,157 +1,29 @@
 import Link from "next/link";
 import { format } from "date-fns";
 import {
-  AudioLines,
-  CalendarDays,
   CheckCircle2,
-  Clock,
-  Disc3,
-  Hourglass,
   MessageSquare,
   MoreHorizontal,
   MoreVertical,
   Play,
-  type LucideIcon,
 } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { ProgressRing } from "@/components/ui/progress-ring";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
-import { TrackCardActions } from "@/components/track-card-actions";
-import { DeleteTrackMenuItem } from "@/components/delete-track-menu-item";
 import { AddNoteDialog } from "@/components/add-note-dialog";
 import { CopyPathButton } from "@/components/copy-path-button";
-import { sunoBadgeLabel } from "@/lib/suno";
+import {
+  AlbumChip,
+  MetaRow,
+  NextAction,
+  SunoChip,
+  TaskBar,
+  TrackActionsMenu,
+  TrackCover,
+  type SessionStats,
+} from "@/components/track-card-parts";
 import { progressFromStages, type TrackWithDetails } from "@/lib/types";
-import { cn, formatDuration, formatMinutes } from "@/lib/utils";
-
-type SessionStats = { seconds: number; count: number };
-
-function MetaStat({
-  icon: Icon,
-  value,
-  emphasis = false,
-  warn = false,
-}: {
-  icon: LucideIcon;
-  value: string;
-  emphasis?: boolean;
-  warn?: boolean;
-}) {
-  return (
-    <span
-      className={cn(
-        "flex items-center gap-1.5",
-        warn
-          ? "text-warning"
-          : emphasis
-            ? "text-foreground"
-            : "text-muted-foreground",
-      )}
-    >
-      <Icon className="h-3.5 w-3.5 shrink-0" />
-      <span className="font-medium tabular-nums">{value}</span>
-    </span>
-  );
-}
-
-function MetaRow({
-  stats,
-  lastWorked,
-  stale,
-  estMinutes,
-}: {
-  stats: SessionStats;
-  lastWorked: string;
-  stale: boolean;
-  estMinutes: number;
-}) {
-  return (
-    <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs">
-      <MetaStat icon={Clock} value={formatDuration(stats.seconds)} />
-      <MetaStat
-        icon={AudioLines}
-        value={`${stats.count} ${stats.count === 1 ? "session" : "sessions"}`}
-      />
-      <MetaStat icon={CalendarDays} value={lastWorked} warn={stale} />
-      {estMinutes > 0 && (
-        <MetaStat
-          icon={Hourglass}
-          value={`${formatMinutes(estMinutes)} left`}
-          emphasis
-        />
-      )}
-    </div>
-  );
-}
-
-function AlbumChip({
-  album,
-}: {
-  album: { id: string; title: string | null };
-}) {
-  return (
-    // Rendered as a sibling of the card's other links (never nested inside
-    // one), so a plain link is safe — no propagation gymnastics needed.
-    <Link href={`/albums/${album.id}`} className="max-w-full">
-      <Badge className="max-w-full gap-1 hover:bg-surface-2/80 hover:text-foreground">
-        <Disc3 className="h-3 w-3 shrink-0" />
-        <span className="truncate">{album.title?.trim() || "Untitled album"}</span>
-      </Badge>
-    </Link>
-  );
-}
-
-// Lightweight signal only — the Suno controls live on the track detail page.
-function SunoChip({ suno }: { suno: TrackWithDetails["sunoExperiment"] }) {
-  if (!suno) return null;
-  const label = sunoBadgeLabel(suno);
-  if (!label) return null;
-  return (
-    <Badge variant={suno.unreviewedCount > 0 ? "warning" : "accent"}>
-      {label}
-    </Badge>
-  );
-}
-
-function TaskBar({ completed, total }: { completed: number; total: number }) {
-  if (total === 0) return null;
-  const pct = Math.round((completed / total) * 100);
-  return (
-    <div className="flex items-center gap-2">
-      <div className="h-1.5 flex-1 overflow-hidden rounded-full bg-surface-2">
-        <div className="h-full bg-primary" style={{ width: `${pct}%` }} />
-      </div>
-      <span className="shrink-0 text-xs font-medium tabular-nums text-muted-foreground">
-        {completed} of {total}
-      </span>
-    </div>
-  );
-}
-
-function NextAction({ description }: { description?: string }) {
-  return (
-    <div>
-      <div className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
-        Next Action
-      </div>
-      {description ? (
-        <p className="mt-1 text-sm font-medium leading-snug line-clamp-2">
-          {description}
-        </p>
-      ) : (
-        <p className="mt-1 text-sm text-muted-foreground">No next action set</p>
-      )}
-    </div>
-  );
-}
 
 export function TrackCard({
   track,
@@ -165,7 +37,6 @@ export function TrackCard({
 }) {
   const progress = progressFromStages(track.stages);
   const [genre] = track.tags;
-  const stats = sessionStats ?? { seconds: 0, count: 0 };
   const lastWorked = track.last_worked_at
     ? format(new Date(track.last_worked_at), "MMM d, yyyy")
     : "Never";
@@ -184,20 +55,13 @@ export function TrackCard({
             <Link
               href={`/tracks/${track.id}`}
               aria-label={`Open ${track.name}`}
-              className="relative h-24 w-24 shrink-0 overflow-hidden rounded-2xl bg-gradient-to-br from-primary/20 via-surface-2 to-accent/15"
+              className="h-24 w-24 shrink-0"
             >
-              {track.cover_image_url ? (
-                // eslint-disable-next-line @next/next/no-img-element
-                <img
-                  src={track.cover_image_url}
-                  alt=""
-                  className="h-full w-full object-cover"
-                />
-              ) : (
-                <div className="flex h-full items-center justify-center text-2xl font-bold text-foreground/30">
-                  {track.name.slice(0, 2).toUpperCase()}
-                </div>
-              )}
+              <TrackCover
+                track={track}
+                className="h-full w-full rounded-2xl"
+                textClassName="text-2xl"
+              />
             </Link>
 
             <Link href={`/tracks/${track.id}`} className="min-w-0 flex-1">
@@ -219,7 +83,7 @@ export function TrackCard({
             )}
 
             <MetaRow
-              stats={stats}
+              stats={sessionStats}
               lastWorked={lastWorked}
               stale={stale}
               estMinutes={track.estMinutesRemaining}
@@ -269,48 +133,25 @@ export function TrackCard({
             </button>
           </AddNoteDialog>
 
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <button
-                type="button"
-                className="flex w-12 shrink-0 items-center justify-center border-l border-border text-muted-foreground"
-                aria-label="Track actions"
-              >
-                <MoreHorizontal className="h-5 w-5" />
-              </button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end">
-              <DropdownMenuItem asChild>
-                <Link href={`/tracks/${track.id}`}>Open detail</Link>
-              </DropdownMenuItem>
-              <DropdownMenuItem asChild>
-                <Link href={`/tracks/${track.id}/edit`}>Edit metadata</Link>
-              </DropdownMenuItem>
-              <DropdownMenuSeparator />
-              <TrackCardActions trackId={track.id} status={track.status} />
-              <DropdownMenuSeparator />
-              <DeleteTrackMenuItem trackId={track.id} trackName={track.name} />
-            </DropdownMenuContent>
-          </DropdownMenu>
+          <TrackActionsMenu track={track}>
+            <button
+              type="button"
+              className="flex w-12 shrink-0 items-center justify-center border-l border-border text-muted-foreground"
+              aria-label="Track actions"
+            >
+              <MoreHorizontal className="h-5 w-5" />
+            </button>
+          </TrackActionsMenu>
         </div>
       </div>
 
       {/* Desktop layout (>=md) */}
       <div className="hidden md:grid md:grid-cols-[88px_minmax(0,2fr)_auto_minmax(0,1.4fr)] md:items-start md:gap-5 md:p-4">
-        <div className="relative h-20 w-20 overflow-hidden rounded-md bg-gradient-to-br from-primary/20 via-surface-2 to-accent/15">
-          {track.cover_image_url ? (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img
-              src={track.cover_image_url}
-              alt=""
-              className="h-full w-full object-cover"
-            />
-          ) : (
-            <div className="flex h-full items-center justify-center text-xl font-bold text-foreground/30">
-              {track.name.slice(0, 2).toUpperCase()}
-            </div>
-          )}
-        </div>
+        <TrackCover
+          track={track}
+          className="h-20 w-20 rounded-md"
+          textClassName="text-xl"
+        />
 
         <div className="min-w-0">
           <Link
@@ -333,7 +174,7 @@ export function TrackCard({
           )}
           <div className="mt-2">
             <MetaRow
-              stats={stats}
+              stats={sessionStats}
               lastWorked={lastWorked}
               stale={stale}
               estMinutes={track.estMinutesRemaining}
@@ -366,30 +207,16 @@ export function TrackCard({
               )}
             </div>
           </div>
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button
-                variant="ghost"
-                size="icon"
-                className="h-8 w-8 shrink-0"
-                aria-label="Track actions"
-              >
-                <MoreVertical className="h-4 w-4" />
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end">
-              <DropdownMenuItem asChild>
-                <Link href={`/tracks/${track.id}`}>Open detail</Link>
-              </DropdownMenuItem>
-              <DropdownMenuItem asChild>
-                <Link href={`/tracks/${track.id}/edit`}>Edit metadata</Link>
-              </DropdownMenuItem>
-              <DropdownMenuSeparator />
-              <TrackCardActions trackId={track.id} status={track.status} />
-              <DropdownMenuSeparator />
-              <DeleteTrackMenuItem trackId={track.id} trackName={track.name} />
-            </DropdownMenuContent>
-          </DropdownMenu>
+          <TrackActionsMenu track={track}>
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-8 w-8 shrink-0"
+              aria-label="Track actions"
+            >
+              <MoreVertical className="h-4 w-4" />
+            </Button>
+          </TrackActionsMenu>
         </div>
       </div>
     </Card>

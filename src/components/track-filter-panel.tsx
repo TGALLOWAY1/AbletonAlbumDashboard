@@ -22,6 +22,7 @@ import {
   type TrackFilterOptions,
   type TrackFilters,
 } from "@/lib/track-filters";
+import { mergeQuery } from "@/lib/view-mode";
 import { cn } from "@/lib/utils";
 
 type FacetId = "status" | "album" | "key" | "tags";
@@ -41,10 +42,14 @@ export function TrackFilterPanel({
   filters,
   options,
   resultCount,
+  preserveQuery,
 }: {
   filters: TrackFilters;
   options: TrackFilterOptions;
   resultCount: number;
+  /** Query string owned by other controls (the view toggle) — carried through
+   *  every filter navigation so applying a filter doesn't reset the view. */
+  preserveQuery?: string;
 }) {
   const router = useRouter();
   const pathname = usePathname();
@@ -65,13 +70,13 @@ export function TrackFilterPanel({
 
   const navigate = React.useCallback(
     (next: TrackFilters) => {
-      const qs = serializeTrackFilters(next);
+      const qs = mergeQuery(preserveQuery, serializeTrackFilters(next));
       startTransition(() => {
         setLive(next);
         router.push(qs ? `${pathname}?${qs}` : pathname, { scroll: false });
       });
     },
-    [pathname, router, setLive],
+    [pathname, preserveQuery, router, setLive],
   );
 
   // Opening the sheet always starts from what's actually applied, so an
