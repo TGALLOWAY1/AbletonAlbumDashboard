@@ -5,8 +5,7 @@ import { cn } from "@/lib/utils";
 
 /**
  * Compact 1–5 rating control. Tapping the selected value again clears it
- * (back to null). Used by the session-completion flows and the calendar
- * complete dialog.
+ * (back to null). Used by the session-completion flows.
  */
 export function RatingPicker({
   label,

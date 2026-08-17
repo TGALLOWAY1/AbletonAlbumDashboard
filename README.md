@@ -29,7 +29,6 @@ open first.
   bottleneck, and bumps `last_worked_at`.
 - **All Tracks** — library view with status + tag filters, 5-active-cap
   enforced server-side on activation.
-- **Calendar** — month grid of session logs with per-day minutes.
 - **Analytics** — avg time/track, completion rate, sessions/week, top
   bottleneck category, plus a category bar chart.
 
@@ -117,7 +116,6 @@ src/
       [id]/edit/page.tsx     Edit metadata
     focus/[trackId]/page.tsx Focus Mode (timer)
     focus/log/page.tsx       Production-logging page (post-session)
-    calendar/page.tsx        Month history grid
     analytics/page.tsx       V1 metrics
     actions/                 Server Actions (one file per resource)
   components/

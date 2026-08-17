@@ -10,7 +10,6 @@ type SessionTypeUpdate =
   Database["public"]["Tables"]["session_types"]["Update"];
 
 const REVALIDATE = () => {
-  revalidatePath("/calendar");
   revalidatePath("/settings/session-types");
 };
 

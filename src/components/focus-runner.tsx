@@ -9,28 +9,21 @@ import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
-import { SessionTodoChecklist } from "@/components/calendar/session-todo-checklist";
+import { SessionTodoChecklist } from "@/components/session-todo-checklist";
 import { TrackTodoList } from "@/components/mobile/track-todo-list";
 import { useFocusSession } from "@/components/focus-session-provider";
 import { useToast } from "@/components/toast";
-import type {
-  ActionRow,
-  CalendarSessionRow,
-  SessionTypeRow,
-  TrackRow,
-} from "@/lib/types";
+import type { ActionRow, SessionTypeRow, TrackRow } from "@/lib/types";
 
 export function FocusRunner({
   track,
   primaryAction,
-  plannedSession,
   sessionType,
   sessionTypes,
   trackTodos,
 }: {
   track: TrackRow | null;
   primaryAction: ActionRow | null;
-  plannedSession?: CalendarSessionRow | null;
   sessionType?: SessionTypeRow | null;
   sessionTypes?: SessionTypeRow[];
   tracks?: TrackRow[];
@@ -80,37 +73,19 @@ export function FocusRunner({
   const runningType = ctx.sessionTypeId
     ? sessionTypes?.find((t) => t.id === ctx.sessionTypeId)
     : null;
-  const headline =
-    track?.name ??
-    runningType?.name ??
-    sessionType?.name ??
-    plannedSession?.session_type?.name ??
-    "Focus";
+  const headline = track?.name ?? runningType?.name ?? sessionType?.name ?? "Focus";
 
   const start = () => {
-    // Calendar planning enforces requires_track; mirror it here so a
-    // track-required session type can't start track-less from /focus/new.
-    const effectiveType = sessionType ?? plannedSession?.session_type ?? null;
-    if (!track && effectiveType?.requires_track) {
-      toast(`${effectiveType.name} sessions require a track.`);
+    // A session type flagged requires_track can't run track-less from
+    // /focus/new.
+    if (!track && sessionType?.requires_track) {
+      toast(`${sessionType.name} sessions require a track.`);
       return;
     }
-    // Track sessions own their to-dos through the live TrackTodoList (which
-    // writes straight to the track), so only the track-less / planned-session
-    // flows seed the ephemeral checklist here.
-    const initialTodos = (plannedSession?.todos ?? []).map((t) => ({
-      id: t.id,
-      description: t.description,
-      done: t.done,
-    }));
     ctx.start({
       trackId: track?.id ?? null,
       trackName: track?.name ?? sessionType?.name ?? null,
-      sessionTypeId: track
-        ? (plannedSession?.session_type?.id ?? null)
-        : (sessionType?.id ?? plannedSession?.session_type?.id ?? null),
-      plannedSessionId: plannedSession?.id ?? null,
-      initialTodos,
+      sessionTypeId: sessionType?.id ?? null,
       // Committing to one outcome up front; the log page asks whether you
       // got there. Defaults to the track's primary action.
       goal: primaryAction?.description ?? "",
@@ -134,7 +109,7 @@ export function FocusRunner({
 
       <div className="flex flex-col gap-3">
         <div className="text-xs uppercase tracking-[0.2em] text-muted-foreground">
-          {track ? (plannedSession?.session_type?.name ?? "Focus") : "Session"}
+          {track ? "Focus" : "Session"}
         </div>
         <h1 className="text-4xl font-semibold tracking-tight">{headline}</h1>
         {track && (

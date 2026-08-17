@@ -1,10 +1,5 @@
 import Link from "next/link";
-import {
-  CalendarClock,
-  Disc3,
-  LayoutTemplate,
-  Repeat,
-} from "lucide-react";
+import { Disc3, Timer } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { listAlbums } from "@/lib/data/album";
@@ -56,28 +51,16 @@ export default async function SettingsPage() {
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
-            <CalendarClock className="h-4 w-4 text-primary" />
-            Calendar planning
+            <Timer className="h-4 w-4 text-primary" />
+            Sessions
           </CardTitle>
         </CardHeader>
         <CardContent className="grid gap-2 sm:grid-cols-3">
           <SettingsTile
             href="/settings/session-types"
-            icon={CalendarClock}
+            icon={Timer}
             title="Session types"
-            description="Categories shown on the calendar (Sound Design, Arrangement, etc.) with colors."
-          />
-          <SettingsTile
-            href="/settings/session-templates"
-            icon={LayoutTemplate}
-            title="Session templates"
-            description="Reusable session shapes with default duration and task lists."
-          />
-          <SettingsTile
-            href="/settings/recurring-blocks"
-            icon={Repeat}
-            title="Recurring blocks"
-            description="Auto-populate the calendar each week (e.g., every Tue 9–11am)."
+            description="Categories for focus and logged sessions (Sound Design, Arrangement, etc.) with colors."
           />
         </CardContent>
       </Card>
@@ -92,7 +75,7 @@ function SettingsTile({
   description,
 }: {
   href: string;
-  icon: typeof CalendarClock;
+  icon: typeof Timer;
   title: string;
   description: string;
 }) {

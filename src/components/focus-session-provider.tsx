@@ -8,7 +8,7 @@ import {
   useRef,
   useState,
 } from "react";
-import type { ChecklistItem } from "@/components/calendar/session-todo-checklist";
+import type { ChecklistItem } from "@/components/session-todo-checklist";
 
 const STORAGE_KEY = "finish-five.focus-session";
 
@@ -19,7 +19,6 @@ type FocusSessionState = {
   trackId: string | null;
   trackName: string | null;
   sessionTypeId: string | null;
-  plannedSessionId: string | null;
   startedAtMs: number | null;
   accumulatedMs: number;
   todos: ChecklistItem[];
@@ -33,7 +32,6 @@ const INITIAL_STATE: FocusSessionState = {
   trackId: null,
   trackName: null,
   sessionTypeId: null,
-  plannedSessionId: null,
   startedAtMs: null,
   accumulatedMs: 0,
   todos: [],
@@ -45,7 +43,6 @@ export type StartInput = {
   trackId: string | null;
   trackName: string | null;
   sessionTypeId?: string | null;
-  plannedSessionId?: string | null;
   initialTodos?: ChecklistItem[];
   goal?: string;
 };
@@ -127,7 +124,6 @@ export function FocusSessionProvider({ children }: { children: React.ReactNode }
       trackId: input.trackId,
       trackName: input.trackName,
       sessionTypeId: input.sessionTypeId ?? null,
-      plannedSessionId: input.plannedSessionId ?? null,
       startedAtMs: Date.now(),
       accumulatedMs: 0,
       todos: input.initialTodos ?? [],

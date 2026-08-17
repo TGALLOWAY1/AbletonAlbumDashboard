@@ -4,7 +4,6 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
   Activity,
-  Calendar as CalendarIcon,
   Home,
   Settings as SettingsIcon,
   type LucideIcon,
@@ -28,12 +27,6 @@ export const MOBILE_NAV_TABS: MobileNavTab[] = [
     match: (p) => p === "/" || p.startsWith("/tracks") || p.startsWith("/m/"),
   },
   {
-    label: "Calendar",
-    href: "/calendar",
-    icon: CalendarIcon,
-    match: (p) => p.startsWith("/calendar"),
-  },
-  {
     label: "Progress",
     href: "/analytics",
     icon: Activity,
@@ -55,7 +48,7 @@ export function MobileBottomNav() {
       className="fixed inset-x-0 bottom-0 z-40 border-t border-border bg-surface pb-[env(safe-area-inset-bottom)] shadow-[0_-1px_6px_rgba(0,0,0,0.04)] md:hidden"
       aria-label="Primary"
     >
-      <ul className="grid grid-cols-4">
+      <ul className="grid grid-cols-3">
         {MOBILE_NAV_TABS.map((tab) => {
           const active = tab.match(pathname);
           const Icon = tab.icon;
