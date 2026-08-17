@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   advanceQueue,
   hasPlayableNeighbour,
+  queueSignature,
   type PlayableAsset,
 } from "@/lib/data/library";
 
@@ -66,6 +67,50 @@ describe("advanceQueue", () => {
   it("skips unplayable items when re-entering a set", () => {
     const gappy = [asset("a", false), asset("b")];
     expect(advanceQueue(gappy, null, "next")?.id).toBe("b");
+  });
+});
+
+describe("queueSignature", () => {
+  it("is stable for an equivalent queue", () => {
+    expect(queueSignature([asset("a"), asset("b")])).toBe(
+      queueSignature([asset("a"), asset("b")]),
+    );
+  });
+
+  it("changes when an asset's preview is replaced", () => {
+    // The regression this guards: editing an asset leaves its id and position
+    // untouched, so a queue compared by id alone would keep serving the old
+    // URL and storage path.
+    const before = [{ ...asset("a"), previewUrl: "https://old.test/a.wav" }];
+    const after = [{ ...asset("a"), previewUrl: "https://new.test/a.wav" }];
+    expect(queueSignature(before)).not.toBe(queueSignature(after));
+  });
+
+  it("changes when an asset gains a preview it previously lacked", () => {
+    expect(queueSignature([asset("a", false)])).not.toBe(
+      queueSignature([asset("a", true)]),
+    );
+  });
+
+  it("changes when a name or subtitle is edited", () => {
+    const renamed = [{ ...asset("a"), name: "Renamed" }];
+    expect(queueSignature([asset("a")])).not.toBe(queueSignature(renamed));
+  });
+
+  it("changes when order or membership changes", () => {
+    expect(queueSignature([asset("a"), asset("b")])).not.toBe(
+      queueSignature([asset("b"), asset("a")]),
+    );
+    expect(queueSignature([asset("a")])).not.toBe(
+      queueSignature([asset("a"), asset("b")]),
+    );
+  });
+
+  it("cannot collide across differently split fields", () => {
+    // Separators are control characters, so a name containing the text of a
+    // neighbouring field can't forge another queue's signature.
+    const tricky = [{ ...asset("a"), name: "b", subtitle: "a" }];
+    expect(queueSignature(tricky)).not.toBe(queueSignature([asset("a")]));
   });
 });
 

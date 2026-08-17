@@ -33,6 +33,8 @@ type Row = {
   subtitle: string;
   artworkUrl?: string;
   alreadyIn: boolean;
+  /** Whether the current search text matches — selection is independent of it. */
+  matches: boolean;
 };
 
 /** Pick existing Library assets to file into a collection. */
@@ -84,35 +86,41 @@ function AddToCollectionForm({
 
   const present = new Set(collection.items.map((i) => i.id));
 
-  const rows: Row[] = [
-    ...loopStacks
-      .filter((s) => loopStackMatches(s, query))
-      .map((s) => ({
-        id: s.id,
-        type: "loopStack" as const,
-        name: s.name,
-        subtitle: loopStackSubtitle(s) || "Loop Stack",
-        artworkUrl: s.artworkUrl,
-        alreadyIn: present.has(s.id),
-      })),
-    ...presets
-      .filter((p) => presetMatches(p, query))
-      .map((p) => ({
-        id: p.id,
-        type: "preset" as const,
-        name: p.name,
-        subtitle: [p.plugin, PRESET_CATEGORY_LABELS[p.category]]
-          .filter(Boolean)
-          .join(" · "),
-        artworkUrl: p.artworkUrl,
-        alreadyIn: present.has(p.id),
-      })),
+  // Every asset, independent of the search box. Selections are made against
+  // this list so narrowing the search after picking something doesn't silently
+  // drop it on save — the count on the button would still include it.
+  const allRows: Row[] = [
+    ...loopStacks.map((s) => ({
+      id: s.id,
+      type: "loopStack" as const,
+      name: s.name,
+      subtitle: loopStackSubtitle(s) || "Loop Stack",
+      artworkUrl: s.artworkUrl,
+      alreadyIn: present.has(s.id),
+      matches: loopStackMatches(s, query),
+    })),
+    ...presets.map((p) => ({
+      id: p.id,
+      type: "preset" as const,
+      name: p.name,
+      subtitle: [p.plugin, PRESET_CATEGORY_LABELS[p.category]]
+        .filter(Boolean)
+        .join(" · "),
+      artworkUrl: p.artworkUrl,
+      alreadyIn: present.has(p.id),
+      matches: presetMatches(p, query),
+    })),
   ];
+
+  const rows = allRows.filter((r) => r.matches);
+  const hiddenSelected = selected.filter(
+    (id) => !rows.some((r) => r.id === id),
+  ).length;
 
   const save = async () => {
     setPending(true);
     try {
-      const refs = rows
+      const refs = allRows
         .filter((r) => selected.includes(r.id))
         .map((r) => ({ type: r.type, id: r.id }));
       await addToCollection(collection.id, refs);
@@ -155,6 +163,13 @@ function AddToCollectionForm({
         {rows.length === 0 && (
           <li className="py-6 text-center text-sm text-muted-foreground">
             Nothing matches.
+          </li>
+        )}
+        {hiddenSelected > 0 && (
+          <li className="px-2 py-2 text-xs text-muted-foreground">
+            {hiddenSelected === 1
+              ? "1 selected item is hidden by your search — it will still be added."
+              : `${hiddenSelected} selected items are hidden by your search — they will still be added.`}
           </li>
         )}
         {rows.map((row) => {

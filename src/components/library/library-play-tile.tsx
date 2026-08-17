@@ -83,7 +83,8 @@ export function LibraryPlayTile({
             {(() => {
               const icon = size === "sm" ? "h-3.5 w-3.5" : "h-5 w-5";
               if (!playable) return <VolumeX className={icon} />;
-              if (playing) return <Pause className={icon} fill="currentColor" />;
+              if (playing)
+                return <Pause className={icon} fill="currentColor" />;
               return (
                 <Play
                   className={cn(icon, "translate-x-[1px]")}

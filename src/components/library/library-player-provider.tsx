@@ -6,6 +6,7 @@ import { useToast } from "@/components/toast";
 import {
   advanceQueue,
   hasPlayableNeighbour,
+  queueSignature,
   type PlayableAsset,
 } from "@/lib/data/library";
 
@@ -156,13 +157,16 @@ export function LibraryPlayerProvider({
       });
   }, [current, toast]);
 
-  /** Replace the queue only when the ordered ids actually differ. */
+  /**
+   * Replace the queue only when something the player actually uses changed.
+   *
+   * Comparing ids alone isn't enough: editing an asset's preview leaves the id
+   * and position untouched, so the queue would keep serving the superseded URL
+   * and storage path until the layout remounted.
+   */
   const syncQueue = React.useCallback((assets: PlayableAsset[]) => {
     setQueue((prev) =>
-      prev.length === assets.length &&
-      prev.every((a, i) => a.id === assets[i].id)
-        ? prev
-        : assets,
+      queueSignature(prev) === queueSignature(assets) ? prev : assets,
     );
   }, []);
 
@@ -286,9 +290,9 @@ export function LibraryPlayerProvider({
  */
 export function useSyncPlayerQueue(assets: PlayableAsset[]) {
   const { syncQueue } = useLibraryPlayer();
-  // Depend on the ordered ids rather than the array identity, which changes on
+  // Depend on the content rather than the array identity, which changes on
   // every render of the parent.
-  const signature = assets.map((a) => a.id).join("|");
+  const signature = queueSignature(assets);
   React.useEffect(() => {
     syncQueue(assets);
     // eslint-disable-next-line react-hooks/exhaustive-deps

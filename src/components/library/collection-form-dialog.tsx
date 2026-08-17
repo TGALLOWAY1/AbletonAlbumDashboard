@@ -63,6 +63,9 @@ function CollectionForm({
     artworkUrl: collection?.artworkUrl ?? null,
   });
   const [pending, setPending] = React.useState(false);
+  // Submitting mid-upload would save the previous artwork and strand the
+  // finished upload as an unreferenced object.
+  const [uploading, setUploading] = React.useState(false);
   const [error, setError] = React.useState<string | null>(null);
 
   const submit = async (e: React.FormEvent) => {
@@ -128,6 +131,7 @@ function CollectionForm({
         value={media}
         onChange={setMedia}
         showPreview={false}
+        onUploadingChange={setUploading}
       />
 
       {error && (
@@ -145,8 +149,14 @@ function CollectionForm({
         >
           Cancel
         </Button>
-        <Button type="submit" disabled={pending}>
-          {pending ? "Saving…" : collection ? "Save changes" : "Create"}
+        <Button type="submit" disabled={pending || uploading}>
+          {uploading
+            ? "Uploading…"
+            : pending
+              ? "Saving…"
+              : collection
+                ? "Save changes"
+                : "Create"}
         </Button>
       </DialogFooter>
     </form>

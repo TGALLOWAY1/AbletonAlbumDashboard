@@ -34,12 +34,31 @@ export function LibraryMediaFields({
   onChange,
   /** Collections have artwork but nothing to audition. */
   showPreview = true,
+  /**
+   * Reported so the parent form can disable its submit button. Saving while an
+   * upload is still in flight would persist the old (or null) media value and
+   * leave the finished upload behind as an unreferenced object.
+   */
+  onUploadingChange,
 }: {
   folder: string;
   value: LibraryMedia;
   onChange: (next: LibraryMedia) => void;
   showPreview?: boolean;
+  onUploadingChange?: (uploading: boolean) => void;
 }) {
+  // A count rather than a flag per field, so two uploads finishing in either
+  // order can't clear the parent's gate while one is still running.
+  const [inFlight, setInFlight] = React.useState(0);
+  const onUpload = React.useCallback(
+    (uploading: boolean) => setInFlight((n) => n + (uploading ? 1 : -1)),
+    [],
+  );
+
+  React.useEffect(() => {
+    onUploadingChange?.(inFlight > 0);
+  }, [inFlight, onUploadingChange]);
+
   return (
     <div className={cn("grid gap-3", showPreview && "sm:grid-cols-2")}>
       {showPreview && (
@@ -54,6 +73,7 @@ export function LibraryMediaFields({
           filledLabel={value.previewPath?.split("/").pop() ?? ""}
           onUploaded={(key) => onChange({ ...value, previewPath: key })}
           onClear={() => onChange({ ...value, previewPath: null })}
+          onBusyChange={onUpload}
         />
       )}
       <UploadField
@@ -68,6 +88,7 @@ export function LibraryMediaFields({
         filledLabel={value.artworkUrl?.split("/").pop() ?? ""}
         onUploaded={(url) => onChange({ ...value, artworkUrl: url })}
         onClear={() => onChange({ ...value, artworkUrl: null })}
+        onBusyChange={onUpload}
       />
     </div>
   );
@@ -85,6 +106,7 @@ function UploadField({
   filledLabel,
   onUploaded,
   onClear,
+  onBusyChange,
 }: {
   label: string;
   hint: string;
@@ -97,6 +119,7 @@ function UploadField({
   filledLabel: string;
   onUploaded: (value: string) => void;
   onClear: () => void;
+  onBusyChange: (busy: boolean) => void;
 }) {
   const { toast } = useToast();
   const [busy, setBusy] = React.useState(false);
@@ -104,6 +127,7 @@ function UploadField({
 
   const upload = async (file: File) => {
     setBusy(true);
+    onBusyChange(true);
     try {
       const supabase = getBrowserSupabase();
       const key = libraryObjectKey(folder, file.name);
@@ -126,6 +150,7 @@ function UploadField({
       );
     } finally {
       setBusy(false);
+      onBusyChange(false);
       if (inputRef.current) inputRef.current.value = "";
     }
   };

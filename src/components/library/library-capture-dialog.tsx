@@ -256,6 +256,7 @@ function LoopStackForm({
     stack ? collectionsContaining(collections, stack.id).map((c) => c.id) : [],
   );
 
+  const [uploading, setUploading] = React.useState(false);
   const { saving, error, submit } = useCaptureSubmit(onDone);
 
   const onSubmit = (e: React.FormEvent) => {
@@ -309,6 +310,7 @@ function LoopStackForm({
         folder="loop-stacks"
         value={media}
         onChange={setMedia}
+        onUploadingChange={setUploading}
       />
 
       <div className="grid grid-cols-3 gap-3">
@@ -395,6 +397,7 @@ function LoopStackForm({
 
       <FormFooter
         saving={saving}
+        uploading={uploading}
         error={error}
         editing={editing}
         onCancel={onDone}
@@ -436,6 +439,7 @@ function PresetForm({
       : [],
   );
 
+  const [uploading, setUploading] = React.useState(false);
   const { saving, error, submit } = useCaptureSubmit(onDone);
 
   const onSubmit = (e: React.FormEvent) => {
@@ -483,7 +487,12 @@ function PresetForm({
         )}
       </Field>
 
-      <LibraryMediaFields folder="presets" value={media} onChange={setMedia} />
+      <LibraryMediaFields
+        folder="presets"
+        value={media}
+        onChange={setMedia}
+        onUploadingChange={setUploading}
+      />
 
       <div className="grid grid-cols-2 gap-3">
         <Field label="Plugin">
@@ -572,6 +581,7 @@ function PresetForm({
 
       <FormFooter
         saving={saving}
+        uploading={uploading}
         error={error}
         editing={editing}
         onCancel={onDone}
@@ -632,11 +642,15 @@ function FavoriteToggle({
 
 function FormFooter({
   saving,
+  uploading,
   error,
   editing,
   onCancel,
 }: {
   saving: boolean;
+  /** Submitting mid-upload would save the previous media value and strand the
+   * finished upload as an unreferenced object. */
+  uploading: boolean;
   error: string | null;
   editing: boolean;
   onCancel: () => void;
@@ -657,8 +671,14 @@ function FormFooter({
         >
           Cancel
         </Button>
-        <Button type="submit" disabled={saving}>
-          {saving ? "Saving…" : editing ? "Save changes" : "Capture"}
+        <Button type="submit" disabled={saving || uploading}>
+          {uploading
+            ? "Uploading…"
+            : saving
+              ? "Saving…"
+              : editing
+                ? "Save changes"
+                : "Capture"}
         </Button>
       </DialogFooter>
     </>

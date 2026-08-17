@@ -339,6 +339,30 @@ export function hasPlayableNeighbour(
   return advanceQueue(queue, currentId, direction) !== null;
 }
 
+/**
+ * Fingerprint of everything the player reads off a queue, so a change to any
+ * of it counts as a real change.
+ *
+ * Ids alone are not enough: editing an asset's preview leaves its id and
+ * position untouched, and a queue compared by id would go on serving the
+ * superseded URL and storage path. Signed URLs are re-minted on every page
+ * load, so this does replace the queue after a refresh — which is correct,
+ * since the old URLs have been superseded, and swapping the array doesn't
+ * interrupt playback.
+ *
+ * The separators are control characters that cannot occur in an id, URL or
+ * name, so distinct queues can never collide on the same signature.
+ */
+export function queueSignature(assets: PlayableAsset[]): string {
+  return assets
+    .map((a) =>
+      [a.id, a.previewUrl ?? "", a.previewPath ?? "", a.name, a.subtitle].join(
+        "\u0000",
+      ),
+    )
+    .join("\u0001");
+}
+
 // ---------------------------------------------------------------------------
 // Collections
 // ---------------------------------------------------------------------------
