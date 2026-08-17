@@ -85,7 +85,7 @@ export function FocusRunner({
     ctx.start({
       trackId: track?.id ?? null,
       trackName: track?.name ?? sessionType?.name ?? null,
-      sessionTypeId: track ? null : (sessionType?.id ?? null),
+      sessionTypeId: sessionType?.id ?? null,
       // Committing to one outcome up front; the log page asks whether you
       // got there. Defaults to the track's primary action.
       goal: primaryAction?.description ?? "",
