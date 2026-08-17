@@ -15,6 +15,7 @@ import {
   TaskBar,
   TrackActionsMenu,
   TrackCover,
+  type SessionStats,
 } from "@/components/track-card-parts";
 import { progressFromStages, type TrackWithDetails } from "@/lib/types";
 import { cn } from "@/lib/utils";
@@ -29,15 +30,26 @@ import { GALLERY_GRID_CLASSES, type ViewSize } from "@/lib/view-mode";
 export function TrackGalleryView({
   tracks,
   size,
+  sessionStats,
+  staleTrackIds,
 }: {
   tracks: TrackWithDetails[];
   size: ViewSize;
+  /** Real per-track aggregates; only the large tile surfaces them. */
+  sessionStats?: Map<string, SessionStats>;
+  /** Computed by the (server) caller — render stays pure, no Date.now(). */
+  staleTrackIds?: Set<string>;
 }) {
   return (
     <div className={cn("grid gap-3", GALLERY_GRID_CLASSES[size])}>
       {tracks.map((track) =>
         size === "large" ? (
-          <LargeTile key={track.id} track={track} />
+          <LargeTile
+            key={track.id}
+            track={track}
+            stats={sessionStats?.get(track.id)}
+            stale={staleTrackIds?.has(track.id) ?? false}
+          />
         ) : size === "medium" ? (
           <MediumTile key={track.id} track={track} />
         ) : (
@@ -48,7 +60,15 @@ export function TrackGalleryView({
   );
 }
 
-function LargeTile({ track }: { track: TrackWithDetails }) {
+function LargeTile({
+  track,
+  stats,
+  stale,
+}: {
+  track: TrackWithDetails;
+  stats?: SessionStats;
+  stale: boolean;
+}) {
   const progress = progressFromStages(track.stages);
   const [genre] = track.tags;
   const lastWorked = track.last_worked_at
@@ -110,9 +130,9 @@ function LargeTile({ track }: { track: TrackWithDetails }) {
           </div>
 
           <MetaRow
-            stats={{ seconds: 0, count: 0 }}
+            stats={stats}
             lastWorked={lastWorked}
-            stale={false}
+            stale={stale}
             estMinutes={track.estMinutesRemaining}
           />
 

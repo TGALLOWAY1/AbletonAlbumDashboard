@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { getAllTracks } from "@/lib/data/tracks";
+import { getSessionStatsByTrack } from "@/lib/data/sessions";
 import {
   collectFilterOptions,
   filterTracks,
@@ -22,7 +23,11 @@ import {
   serializeViewPreference,
   type ViewSearchParams,
 } from "@/lib/view-mode";
-import { TRACK_STATUSES, type TrackWithDetails } from "@/lib/types";
+import {
+  isTrackStale,
+  TRACK_STATUSES,
+  type TrackWithDetails,
+} from "@/lib/types";
 
 export const dynamic = "force-dynamic";
 
@@ -31,8 +36,16 @@ export default async function AllTracksPage({
 }: {
   searchParams: Promise<TrackFilterSearchParams & ViewSearchParams>;
 }) {
-  const params = await searchParams;
-  const tracks = await getAllTracks();
+  const now = new Date();
+  const [params, tracks, sessionStats] = await Promise.all([
+    searchParams,
+    getAllTracks(),
+    getSessionStatsByTrack(),
+  ]);
+  // Staleness is decided here so the cards stay pure renderers.
+  const staleTrackIds = new Set(
+    tracks.filter((t) => isTrackStale(t, now.getTime())).map((t) => t.id),
+  );
 
   const filters = parseTrackFilters(params);
   const view = parseViewPreference(params, DEFAULT_TRACK_VIEW);
@@ -101,9 +114,16 @@ export default async function AllTracksPage({
                 <TrackGalleryView
                   tracks={grouped.get(s) ?? []}
                   size={view.size}
+                  sessionStats={sessionStats}
+                  staleTrackIds={staleTrackIds}
                 />
               ) : (
-                <TrackListView tracks={grouped.get(s) ?? []} size={view.size} />
+                <TrackListView
+                  tracks={grouped.get(s) ?? []}
+                  size={view.size}
+                  sessionStats={sessionStats}
+                  staleTrackIds={staleTrackIds}
+                />
               )}
             </section>
           ))}

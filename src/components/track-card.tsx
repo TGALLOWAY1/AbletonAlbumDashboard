@@ -37,7 +37,6 @@ export function TrackCard({
 }) {
   const progress = progressFromStages(track.stages);
   const [genre] = track.tags;
-  const stats = sessionStats ?? { seconds: 0, count: 0 };
   const lastWorked = track.last_worked_at
     ? format(new Date(track.last_worked_at), "MMM d, yyyy")
     : "Never";
@@ -84,7 +83,7 @@ export function TrackCard({
             )}
 
             <MetaRow
-              stats={stats}
+              stats={sessionStats}
               lastWorked={lastWorked}
               stale={stale}
               estMinutes={track.estMinutesRemaining}
@@ -175,7 +174,7 @@ export function TrackCard({
           )}
           <div className="mt-2">
             <MetaRow
-              stats={stats}
+              stats={sessionStats}
               lastWorked={lastWorked}
               stale={stale}
               estMinutes={track.estMinutesRemaining}

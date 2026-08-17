@@ -34,8 +34,9 @@ import { startOfWeekMonday } from "@/lib/dates";
 import { recommendTrack } from "@/lib/recommend";
 import { formatDuration } from "@/lib/utils";
 import {
+  daysSinceWorked,
+  isTrackStale,
   progressFromStages,
-  STALE_AFTER_DAYS,
   type TrackWithDetails,
 } from "@/lib/types";
 
@@ -47,21 +48,16 @@ function greetingForHour(hour: number) {
   return "Good evening";
 }
 
-function daysSinceWorked(track: TrackWithDetails): number {
-  if (!track.last_worked_at) return Infinity;
-  return (Date.now() - new Date(track.last_worked_at).getTime()) / 86_400_000;
-}
-
 // Opinionated triage order instead of a sort control: tracks being worked
 // ("in motion", closest to done first) vs. tracks going stale ("needs
 // attention", stalest first).
-function triageTracks(tracks: TrackWithDetails[]) {
+function triageTracks(tracks: TrackWithDetails[], nowMs: number) {
   const inMotion = tracks
-    .filter((t) => daysSinceWorked(t) <= STALE_AFTER_DAYS)
+    .filter((t) => !isTrackStale(t, nowMs))
     .sort((a, b) => progressFromStages(b.stages) - progressFromStages(a.stages));
   const needsAttention = tracks
-    .filter((t) => daysSinceWorked(t) > STALE_AFTER_DAYS)
-    .sort((a, b) => daysSinceWorked(b) - daysSinceWorked(a));
+    .filter((t) => isTrackStale(t, nowMs))
+    .sort((a, b) => daysSinceWorked(b, nowMs) - daysSinceWorked(a, nowMs));
   return { inMotion, needsAttention };
 }
 
@@ -104,7 +100,7 @@ export default async function DashboardPage() {
   // One recommended track up top; everything else triaged below it.
   const recommendation = recommendTrack(activeTracks, recentCounts);
   const rest = activeTracks.filter((t) => t.id !== recommendation?.track.id);
-  const { inMotion, needsAttention } = triageTracks(rest);
+  const { inMotion, needsAttention } = triageTracks(rest, now.getTime());
 
   const nearCompletion = activeTracks.filter(
     (t) => progressFromStages(t.stages) > 60,

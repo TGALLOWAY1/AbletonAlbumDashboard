@@ -1,8 +1,11 @@
 import { describe, expect, it } from "vitest";
 import {
   currentStageLabel,
+  daysSinceWorked,
+  isTrackStale,
   progressFromStages,
   STAGE_KEYS,
+  STALE_AFTER_DAYS,
   type StageKey,
   type StageRow,
 } from "@/lib/types";
@@ -77,5 +80,30 @@ describe("currentStageLabel", () => {
     expect(currentStageLabel(allStages(() => ({ complete: true })))).toBe(
       "Mastering",
     );
+  });
+});
+
+describe("daysSinceWorked / isTrackStale", () => {
+  const NOW = Date.parse("2026-08-17T00:00:00Z");
+  const daysAgo = (n: number) =>
+    new Date(NOW - n * 86_400_000).toISOString();
+
+  it("treats a track that was never worked on as infinitely stale", () => {
+    expect(daysSinceWorked({ last_worked_at: null }, NOW)).toBe(Infinity);
+    expect(isTrackStale({ last_worked_at: null }, NOW)).toBe(true);
+  });
+
+  it("measures elapsed days from the caller's clock", () => {
+    expect(daysSinceWorked({ last_worked_at: daysAgo(3) }, NOW)).toBe(3);
+    expect(daysSinceWorked({ last_worked_at: daysAgo(0) }, NOW)).toBe(0);
+  });
+
+  it("goes stale only past the threshold, not on it", () => {
+    expect(
+      isTrackStale({ last_worked_at: daysAgo(STALE_AFTER_DAYS) }, NOW),
+    ).toBe(false);
+    expect(
+      isTrackStale({ last_worked_at: daysAgo(STALE_AFTER_DAYS + 0.5) }, NOW),
+    ).toBe(true);
   });
 });

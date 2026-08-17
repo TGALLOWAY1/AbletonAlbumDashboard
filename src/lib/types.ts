@@ -121,6 +121,27 @@ export const MAX_ACTIVE_TRACKS = 5;
 // flagged on the dashboard ("Needs attention") and on track cards.
 export const STALE_AFTER_DAYS = 7;
 
+/**
+ * Days since a track was last worked on — `Infinity` when it never was.
+ * `nowMs` is passed in rather than read from the clock so callers stay pure:
+ * staleness is computed once on the server and handed to the card, never
+ * derived during render.
+ */
+export function daysSinceWorked(
+  track: Pick<TrackRow, "last_worked_at">,
+  nowMs: number,
+): number {
+  if (!track.last_worked_at) return Infinity;
+  return (nowMs - new Date(track.last_worked_at).getTime()) / 86_400_000;
+}
+
+export function isTrackStale(
+  track: Pick<TrackRow, "last_worked_at">,
+  nowMs: number,
+): boolean {
+  return daysSinceWorked(track, nowMs) > STALE_AFTER_DAYS;
+}
+
 // Compact summary of a track's open (non-terminal) Suno experiment, computed
 // by attachDetails for badges, the dashboard strip, and the recommendation.
 export type TrackSunoSummary = {

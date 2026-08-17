@@ -18,6 +18,7 @@ import {
 import { TrackCardActions } from "@/components/track-card-actions";
 import { DeleteTrackMenuItem } from "@/components/delete-track-menu-item";
 import { sunoBadgeLabel } from "@/lib/suno";
+import type { SessionStats } from "@/lib/data/sessions";
 import type { TrackWithDetails } from "@/lib/types";
 import { cn, formatDuration, formatMinutes } from "@/lib/utils";
 
@@ -25,7 +26,7 @@ import { cn, formatDuration, formatMinutes } from "@/lib/utils";
 // (`TrackCard`), the compact list rows, and the gallery tiles. Keeping them
 // here means a track shows the same badges, bars, and menu at every density.
 
-export type SessionStats = { seconds: number; count: number };
+export type { SessionStats };
 
 export function TrackCover({
   track,
@@ -103,18 +104,24 @@ export function MetaRow({
   stale,
   estMinutes,
 }: {
-  stats: SessionStats;
+  /** Omitted when the caller has not loaded session aggregates — the logged
+   *  time and session count are then left out rather than shown as zeroes. */
+  stats?: SessionStats;
   lastWorked: string;
   stale: boolean;
   estMinutes: number;
 }) {
   return (
     <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs">
-      <MetaStat icon={Clock} value={formatDuration(stats.seconds)} />
-      <MetaStat
-        icon={AudioLines}
-        value={`${stats.count} ${stats.count === 1 ? "session" : "sessions"}`}
-      />
+      {stats && (
+        <>
+          <MetaStat icon={Clock} value={formatDuration(stats.seconds)} />
+          <MetaStat
+            icon={AudioLines}
+            value={`${stats.count} ${stats.count === 1 ? "session" : "sessions"}`}
+          />
+        </>
+      )}
       <MetaStat icon={CalendarDays} value={lastWorked} warn={stale} />
       {estMinutes > 0 && (
         <MetaStat

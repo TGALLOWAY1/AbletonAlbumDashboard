@@ -9,6 +9,7 @@ import {
   SunoChip,
   TrackActionsMenu,
   TrackCover,
+  type SessionStats,
 } from "@/components/track-card-parts";
 import { progressFromStages, type TrackWithDetails } from "@/lib/types";
 import { cn } from "@/lib/utils";
@@ -23,15 +24,26 @@ import type { ViewSize } from "@/lib/view-mode";
 export function TrackListView({
   tracks,
   size,
+  sessionStats,
+  staleTrackIds,
 }: {
   tracks: TrackWithDetails[];
   size: ViewSize;
+  /** Real per-track aggregates; only the large row surfaces them. */
+  sessionStats?: Map<string, SessionStats>;
+  /** Computed by the (server) caller — render stays pure, no Date.now(). */
+  staleTrackIds?: Set<string>;
 }) {
   if (size === "large") {
     return (
       <div className="flex flex-col gap-3">
         {tracks.map((track) => (
-          <TrackCard key={track.id} track={track} />
+          <TrackCard
+            key={track.id}
+            track={track}
+            sessionStats={sessionStats?.get(track.id)}
+            stale={staleTrackIds?.has(track.id) ?? false}
+          />
         ))}
       </div>
     );
