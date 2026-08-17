@@ -25,6 +25,7 @@ Run `pnpm typecheck && pnpm lint && pnpm test` before committing.
 - Desktop track detail → `src/app/tracks/[id]/page.tsx`
 - Mobile track detail → `src/app/m/[trackId]/page.tsx`
 - Dashboard root (`src/app/page.tsx`) is a single responsive surface using Tailwind `md:` breakpoints — no user-agent sniffing, no separate desktop/mobile route for the home page.
+- Library (`src/app/library/**`) is likewise a single responsive surface — the feature parity rule below is track-level and does not imply an `/m/library` route. `src/app/library/layout.tsx` mounts the preview player so playback survives navigation between Library routes without leaking an audio element onto every other page.
 - Server actions live under `src/app/actions/`.
 - Data fetchers live under `src/lib/data/`.
 

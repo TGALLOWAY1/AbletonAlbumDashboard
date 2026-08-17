@@ -5,6 +5,7 @@ import { usePathname, useRouter } from "next/navigation";
 import { Pause, Play, Square, ChevronRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useFocusSession } from "@/components/focus-session-provider";
+import { cn } from "@/lib/utils";
 
 export function FloatingFocusBar() {
   const router = useRouter();
@@ -17,6 +18,11 @@ export function FloatingFocusBar() {
   const focusPath = ctx.trackId ? `/focus/${ctx.trackId}` : "/focus/new";
   if (pathname === focusPath) return null;
 
+  // The Library pins its own persistent mini-player along the bottom edge
+  // (above the mobile nav, flush to the viewport on desktop). Lift this pill
+  // clear of it there so the two pieces of fixed bottom chrome don't overlap.
+  const inLibrary = pathname.startsWith("/library");
+
   const handleStop = () => {
     ctx.stop();
     router.push(focusPath);
@@ -24,7 +30,10 @@ export function FloatingFocusBar() {
 
   return (
     <div
-      className="fixed bottom-24 right-4 z-50 md:bottom-4"
+      className={cn(
+        "fixed right-4 z-50",
+        inLibrary ? "bottom-44 md:bottom-20" : "bottom-24 md:bottom-4",
+      )}
       role="status"
       aria-label="Focus session running"
     >
