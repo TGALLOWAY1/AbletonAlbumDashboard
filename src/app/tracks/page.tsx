@@ -6,28 +6,24 @@ import { TrackListView } from "@/components/track-list-view";
 import { ViewModeToggle } from "@/components/view-mode-toggle";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
 import { getAllTracks } from "@/lib/data/tracks";
+import { listAlbums } from "@/lib/data/album";
 import { getSessionStatsByTrack } from "@/lib/data/sessions";
 import {
   collectFilterOptions,
   filterTracks,
   parseTrackFilters,
   serializeTrackFilters,
-  STATUS_LABELS,
   type TrackFilterSearchParams,
 } from "@/lib/track-filters";
+import { groupTracksByAlbum } from "@/lib/track-grouping";
 import {
   DEFAULT_TRACK_VIEW,
   parseViewPreference,
   serializeViewPreference,
   type ViewSearchParams,
 } from "@/lib/view-mode";
-import {
-  isTrackStale,
-  TRACK_STATUSES,
-  type TrackWithDetails,
-} from "@/lib/types";
+import { isTrackStale } from "@/lib/types";
 
 export const dynamic = "force-dynamic";
 
@@ -37,9 +33,10 @@ export default async function AllTracksPage({
   searchParams: Promise<TrackFilterSearchParams & ViewSearchParams>;
 }) {
   const now = new Date();
-  const [params, tracks, sessionStats] = await Promise.all([
+  const [params, tracks, albums, sessionStats] = await Promise.all([
     searchParams,
     getAllTracks(),
+    listAlbums(),
     getSessionStatsByTrack(),
   ]);
   // Staleness is decided here so the cards stay pure renderers.
@@ -52,12 +49,11 @@ export default async function AllTracksPage({
   const options = collectFilterOptions(tracks);
   const filtered = filterTracks(tracks, filters);
 
-  const grouped = new Map<string, TrackWithDetails[]>();
-  filtered.forEach((t) => {
-    const list = grouped.get(t.status) ?? [];
-    list.push(t);
-    grouped.set(t.status, list);
-  });
+  // Albums shelf order, so /tracks and /albums list records the same way.
+  const groups = groupTracksByAlbum(
+    filtered,
+    albums.map((a) => a.id),
+  );
 
   return (
     <div className="flex flex-col gap-6">
@@ -77,24 +73,23 @@ export default async function AllTracksPage({
       </header>
 
       {/* The filter panel and the view toggle each own their own query params
-          and hand the other's through, so neither drops the other. */}
-      <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
-        <div className="min-w-0 flex-1">
-          <TrackFilterPanel
-            filters={filters}
-            options={options}
-            resultCount={filtered.length}
-            preserveQuery={serializeViewPreference(view, DEFAULT_TRACK_VIEW)}
+          and hand the other's through, so neither drops the other. The toggle
+          is passed in as the panel's trailing control so both sit on one row,
+          with the filter chips wrapping underneath. */}
+      <TrackFilterPanel
+        filters={filters}
+        options={options}
+        resultCount={filtered.length}
+        preserveQuery={serializeViewPreference(view, DEFAULT_TRACK_VIEW)}
+        trailing={
+          <ViewModeToggle
+            basePath="/tracks"
+            value={view}
+            defaults={DEFAULT_TRACK_VIEW}
+            preserveQuery={serializeTrackFilters(filters)}
           />
-        </div>
-        <ViewModeToggle
-          basePath="/tracks"
-          value={view}
-          defaults={DEFAULT_TRACK_VIEW}
-          preserveQuery={serializeTrackFilters(filters)}
-          className="md:shrink-0"
-        />
-      </div>
+        }
+      />
 
       {filtered.length === 0 ? (
         <Card>
@@ -104,22 +99,30 @@ export default async function AllTracksPage({
         </Card>
       ) : (
         <div className="flex flex-col gap-8">
-          {TRACK_STATUSES.filter((s) => grouped.has(s)).map((s) => (
-            <section key={s}>
-              <h2 className="mb-3 flex items-center gap-2 text-sm font-semibold uppercase tracking-wide text-muted-foreground">
-                {STATUS_LABELS[s]}
-                <Badge variant="default">{grouped.get(s)?.length ?? 0}</Badge>
+          {groups.map((group) => (
+            <section key={group.id}>
+              <h2 className="mb-3 text-sm font-semibold uppercase tracking-wide text-muted-foreground">
+                {group.href ? (
+                  <Link
+                    href={group.href}
+                    className="transition-colors hover:text-foreground"
+                  >
+                    {group.label}
+                  </Link>
+                ) : (
+                  group.label
+                )}
               </h2>
               {view.layout === "gallery" ? (
                 <TrackGalleryView
-                  tracks={grouped.get(s) ?? []}
+                  tracks={group.tracks}
                   size={view.size}
                   sessionStats={sessionStats}
                   staleTrackIds={staleTrackIds}
                 />
               ) : (
                 <TrackListView
-                  tracks={grouped.get(s) ?? []}
+                  tracks={group.tracks}
                   size={view.size}
                   sessionStats={sessionStats}
                   staleTrackIds={staleTrackIds}

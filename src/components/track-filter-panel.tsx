@@ -43,6 +43,7 @@ export function TrackFilterPanel({
   options,
   resultCount,
   preserveQuery,
+  trailing,
 }: {
   filters: TrackFilters;
   options: TrackFilterOptions;
@@ -50,6 +51,9 @@ export function TrackFilterPanel({
   /** Query string owned by other controls (the view toggle) — carried through
    *  every filter navigation so applying a filter doesn't reset the view. */
   preserveQuery?: string;
+  /** Controls rendered on the same row as the filter button (the view
+   *  toggle), so the page's whole control bar reads as one line. */
+  trailing?: React.ReactNode;
 }) {
   const router = useRouter();
   const pathname = usePathname();
@@ -263,22 +267,28 @@ export function TrackFilterPanel({
           </SheetContent>
         </Sheet>
 
-        {chips.map((chip) => (
-          <button
-            key={`${chip.facet}:${chip.value}`}
-            type="button"
-            onClick={() =>
-              navigate(removeFilterValue(live, chip.facet, chip.value))
-            }
-            className="inline-flex items-center gap-1 rounded-full border border-primary/40 bg-primary/15 py-1 pl-3 pr-2 text-xs text-primary transition-colors hover:bg-primary/25"
-            aria-label={`Remove ${FACET_LABELS[chip.facet as FacetId]} filter ${chip.label}`}
-          >
-            {chip.label}
-            <X className="h-3.5 w-3.5" />
-          </button>
-        ))}
+        {trailing}
+      </div>
 
-        {applied > 0 && (
+      {applied > 0 && (
+        // Chips get their own row so the control bar above stays a single
+        // clean line however many filters are applied.
+        <div className="flex flex-wrap items-center gap-2">
+          {chips.map((chip) => (
+            <button
+              key={`${chip.facet}:${chip.value}`}
+              type="button"
+              onClick={() =>
+                navigate(removeFilterValue(live, chip.facet, chip.value))
+              }
+              className="inline-flex items-center gap-1 rounded-full border border-primary/40 bg-primary/15 py-1 pl-3 pr-2 text-xs text-primary transition-colors hover:bg-primary/25"
+              aria-label={`Remove ${FACET_LABELS[chip.facet as FacetId]} filter ${chip.label}`}
+            >
+              {chip.label}
+              <X className="h-3.5 w-3.5" />
+            </button>
+          ))}
+
           <button
             type="button"
             onClick={() => navigate(EMPTY_TRACK_FILTERS)}
@@ -286,8 +296,8 @@ export function TrackFilterPanel({
           >
             Clear all
           </button>
-        )}
-      </div>
+        </div>
+      )}
 
       {applied > 0 && (
         // The count comes from the server, so it trails the chips by one
