@@ -6,6 +6,7 @@ import { z } from "zod";
 import { getServerSupabase } from "@/lib/supabase/server";
 import { OWNER_ID } from "@/lib/owner";
 import { revalidateAlbumSurfaces } from "@/lib/revalidate-track";
+import { albumPatchSchema, type AlbumPatchInput } from "@/lib/types";
 import {
   ALBUMS_MIGRATION_MISSING_MESSAGE,
   isMissingRelation,
@@ -130,23 +131,36 @@ export async function createAlbum(
   redirect(`/albums/${newId}`);
 }
 
-export async function updateAlbum(formData: FormData) {
-  const parsed = upsertSchema.parse({
-    id: formData.get("id"),
-    title: formData.get("title") ?? "",
-    cover_image_url: formData.get("cover_image_url") ?? "",
-    start_date: formData.get("start_date") ?? "",
-  });
-  if (!parsed.id) throw new Error("Missing album id");
+export async function updateAlbum(input: AlbumPatchInput) {
+  // safeParse rather than parse: a raw ZodError stringifies to a JSON blob,
+  // and the caller toasts `error.message` straight to the user.
+  const result = albumPatchSchema.safeParse(input);
+  if (!result.success) {
+    throw new Error(
+      result.error.issues[0]?.message ?? "Could not save that album change.",
+    );
+  }
+  const parsed = result.data;
+
+  // Only the keys the caller sent get written — the album header saves one
+  // field at a time, and a missing key must not blank the other columns.
+  const patch: {
+    title?: string | null;
+    cover_image_url?: string | null;
+    start_date?: string | null;
+  } = {};
+  if (parsed.title !== undefined) patch.title = parsed.title.trim() || null;
+  if (parsed.cover_image_url !== undefined) {
+    patch.cover_image_url = parsed.cover_image_url || null;
+  }
+  if (parsed.start_date !== undefined) {
+    patch.start_date = parsed.start_date || null;
+  }
 
   const supabase = getServerSupabase();
   const { error } = await supabase
     .from("albums")
-    .update({
-      title: parsed.title || null,
-      cover_image_url: parsed.cover_image_url || null,
-      start_date: parsed.start_date || null,
-    })
+    .update(patch)
     .eq("owner_id", OWNER_ID)
     .eq("id", parsed.id);
   throwIfMissingAlbums(error);

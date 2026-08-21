@@ -43,6 +43,34 @@ export type AssignTracksToAlbumInput = z.infer<
   typeof assignTracksToAlbumSchema
 >;
 
+// Partial update for a single album (`updateAlbum` in src/app/actions/album.ts).
+// The album header edits one field at a time — cover, title, or start date —
+// so every key is optional and an absent key means "leave this column alone".
+// An empty string is a real value: it clears the column.
+export const albumPatchSchema = z
+  .object({
+    id: z.string().uuid("Invalid album id"),
+    title: z.string().max(120, "Title must be 120 characters or fewer").optional(),
+    cover_image_url: z
+      .union([z.string().url("Cover must be a URL"), z.literal("")])
+      .optional(),
+    start_date: z
+      .string()
+      .refine(
+        (v) => v === "" || /^\d{4}-\d{2}-\d{2}$/.test(v),
+        "Date must be YYYY-MM-DD",
+      )
+      .optional(),
+  })
+  .refine(
+    (v) =>
+      v.title !== undefined ||
+      v.cover_image_url !== undefined ||
+      v.start_date !== undefined,
+    "Nothing to update",
+  );
+export type AlbumPatchInput = z.infer<typeof albumPatchSchema>;
+
 export const SESSION_STATUSES = [
   "planned",
   "in_progress",
