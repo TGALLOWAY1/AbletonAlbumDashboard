@@ -15,6 +15,13 @@ import { progressFromStages, type TrackWithDetails } from "@/lib/types";
 import { cn } from "@/lib/utils";
 import type { ViewSize } from "@/lib/view-mode";
 
+/** Key / tempo pair shown on every list row — omits whichever isn't set. */
+function trackKeyAndBpm(track: TrackWithDetails): string[] {
+  return [track.song_key, track.bpm ? `${track.bpm} BPM` : null].filter(
+    Boolean,
+  ) as string[];
+}
+
 /**
  * Row-per-track layout at three densities:
  *  - large  — the full `TrackCard` (cover, meta, next action, actions).
@@ -71,13 +78,9 @@ export function TrackListView({
 function MediumRow({ track }: { track: TrackWithDetails }) {
   const progress = progressFromStages(track.stages);
   const [genre] = track.tags;
-  const meta = [
-    track.song_key,
-    track.bpm ? `${track.bpm} BPM` : null,
-    track.openTaskCount > 0
-      ? `${track.openTaskCount} open ${track.openTaskCount === 1 ? "task" : "tasks"}`
-      : null,
-  ].filter(Boolean) as string[];
+  // Key and tempo rather than a task count: they're what you match a track
+  // against the rest of the record by.
+  const meta = trackKeyAndBpm(track);
 
   return (
     <Card className="flex items-center gap-3 p-3">
@@ -139,6 +142,7 @@ function MediumRow({ track }: { track: TrackWithDetails }) {
 // Whole row is a single link — no nested interactive elements at this density.
 function CompactRow({ track }: { track: TrackWithDetails }) {
   const progress = progressFromStages(track.stages);
+  const meta = trackKeyAndBpm(track);
 
   return (
     <Link
@@ -153,9 +157,9 @@ function CompactRow({ track }: { track: TrackWithDetails }) {
       <span className="min-w-0 flex-1 truncate text-sm font-medium">
         {track.name}
       </span>
-      {track.openTaskCount > 0 && (
+      {meta.length > 0 && (
         <span className="shrink-0 text-xs tabular-nums text-muted-foreground">
-          {track.openTaskCount} open
+          {meta.join(" · ")}
         </span>
       )}
       <ProgressMeter value={progress} className="hidden sm:flex" />
