@@ -5,11 +5,13 @@ import {
   TEMPLATE_CATEGORY_LABELS,
   type TemplateItem,
 } from "@/lib/data/templates";
+import type { TemplateValues } from "@/lib/template-value";
 import { cn } from "@/lib/utils";
 import { GALLERY_GRID_CLASSES, type ViewSize } from "@/lib/view-mode";
 import type { TemplateAction } from "./types";
 import { TemplateActionsMenu } from "./template-actions-menu";
 import { TemplateThumbnail } from "./template-thumbnail";
+import { TemplateValueBadge } from "./template-value-badge";
 
 const DATE_FORMATTER = new Intl.DateTimeFormat("en-US", {
   month: "short",
@@ -28,12 +30,15 @@ const DATE_FORMATTER = new Intl.DateTimeFormat("en-US", {
  */
 export function TemplateGalleryView({
   items,
+  values = {},
   size,
   showCategory = true,
   onSelect,
   onAction,
 }: {
   items: TemplateItem[];
+  /** The producer's 1–5 ratings, keyed by template id. */
+  values?: TemplateValues;
   size: ViewSize;
   showCategory?: boolean;
   onSelect: (id: string) => void;
@@ -46,6 +51,7 @@ export function TemplateGalleryView({
           <LargeTile
             key={item.id}
             item={item}
+            value={values[item.id]}
             showCategory={showCategory}
             onSelect={onSelect}
             onAction={onAction}
@@ -54,6 +60,7 @@ export function TemplateGalleryView({
           <MediumTile
             key={item.id}
             item={item}
+            value={values[item.id]}
             showCategory={showCategory}
             onSelect={onSelect}
             onAction={onAction}
@@ -68,11 +75,13 @@ export function TemplateGalleryView({
 
 function LargeTile({
   item,
+  value,
   showCategory,
   onSelect,
   onAction,
 }: {
   item: TemplateItem;
+  value: number | undefined;
   showCategory: boolean;
   onSelect: (id: string) => void;
   onAction: (action: TemplateAction, item: TemplateItem) => void;
@@ -106,6 +115,7 @@ function LargeTile({
                   {TEMPLATE_CATEGORY_LABELS[item.category]}
                 </Badge>
               )}
+              <TemplateValueBadge value={value} />
             </div>
             <p className="mt-1 text-sm text-muted-foreground">
               {item.description}
@@ -124,11 +134,13 @@ function LargeTile({
 
 function MediumTile({
   item,
+  value,
   showCategory,
   onSelect,
   onAction,
 }: {
   item: TemplateItem;
+  value: number | undefined;
   showCategory: boolean;
   onSelect: (id: string) => void;
   onAction: (action: TemplateAction, item: TemplateItem) => void;
@@ -169,9 +181,12 @@ function MediumTile({
           ) : (
             <span />
           )}
-          <span className="shrink-0 text-[11px] tabular-nums text-muted-foreground">
-            {item.useCount}×
-          </span>
+          <div className="flex shrink-0 items-center gap-1.5">
+            <TemplateValueBadge value={value} />
+            <span className="text-[11px] tabular-nums text-muted-foreground">
+              {item.useCount}×
+            </span>
+          </div>
         </div>
       </div>
     </div>

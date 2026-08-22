@@ -7,12 +7,14 @@ import {
   TEMPLATE_CATEGORY_LABELS,
   type TemplateItem,
 } from "@/lib/data/templates";
+import type { TemplateValues } from "@/lib/template-value";
 import type { ViewSize } from "@/lib/view-mode";
 import type { TemplateAction } from "./types";
 import { CategoryIcon } from "./category-icon";
 import { TemplateActionsMenu } from "./template-actions-menu";
 import { TemplateListRow } from "./template-list-row";
 import { TemplateThumbnail } from "./template-thumbnail";
+import { TemplateValueBadge } from "./template-value-badge";
 
 const DATE_FORMATTER = new Intl.DateTimeFormat("en-US", {
   month: "short",
@@ -31,12 +33,15 @@ const DATE_FORMATTER = new Intl.DateTimeFormat("en-US", {
  */
 export function TemplateListView({
   items,
+  values = {},
   size,
   showCategory = true,
   onSelect,
   onAction,
 }: {
   items: TemplateItem[];
+  /** The producer's 1–5 ratings, keyed by template id. */
+  values?: TemplateValues;
   size: ViewSize;
   showCategory?: boolean;
   onSelect: (id: string) => void;
@@ -49,6 +54,7 @@ export function TemplateListView({
           <LargeRow
             key={item.id}
             item={item}
+            value={values[item.id]}
             showCategory={showCategory}
             onSelect={onSelect}
             onAction={onAction}
@@ -65,6 +71,7 @@ export function TemplateListView({
           <TemplateListRow
             key={item.id}
             item={item}
+            value={values[item.id]}
             showCategory={showCategory}
             onSelect={onSelect}
             onAction={onAction}
@@ -80,6 +87,7 @@ export function TemplateListView({
         <CompactRow
           key={item.id}
           item={item}
+          value={values[item.id]}
           showCategory={showCategory}
           onSelect={onSelect}
         />
@@ -90,11 +98,13 @@ export function TemplateListView({
 
 function LargeRow({
   item,
+  value,
   showCategory,
   onSelect,
   onAction,
 }: {
   item: TemplateItem;
+  value: number | undefined;
   showCategory: boolean;
   onSelect: (id: string) => void;
   onAction: (action: TemplateAction, item: TemplateItem) => void;
@@ -127,6 +137,7 @@ function LargeRow({
               {TEMPLATE_CATEGORY_LABELS[item.category]}
             </Badge>
           )}
+          <TemplateValueBadge value={value} />
         </div>
         <p className="mt-1 text-sm text-muted-foreground">{item.description}</p>
         <p className="mt-2 text-xs text-muted-foreground">
@@ -147,10 +158,12 @@ function LargeRow({
 // density, matching the tracks compact list.
 function CompactRow({
   item,
+  value,
   showCategory,
   onSelect,
 }: {
   item: TemplateItem;
+  value: number | undefined;
   showCategory: boolean;
   onSelect: (id: string) => void;
 }) {
@@ -173,6 +186,7 @@ function CompactRow({
           {TEMPLATE_CATEGORY_LABELS[item.category]}
         </span>
       )}
+      <TemplateValueBadge value={value} />
       <span className="shrink-0 text-xs tabular-nums text-muted-foreground">
         {item.useCount}×
       </span>

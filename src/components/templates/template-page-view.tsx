@@ -8,6 +8,7 @@ import {
   type AudioPreview,
   type TemplateItem,
 } from "@/lib/data/templates";
+import { useTemplateValues } from "@/lib/template-value";
 import { TemplateDetailPanel } from "./template-detail-panel";
 import type { TemplateAction } from "./types";
 
@@ -17,6 +18,7 @@ function TemplatePageInner({ initial }: { initial: TemplateItem }) {
   const router = useRouter();
   const { toast } = useToast();
   const [item, setItem] = React.useState(initial);
+  const { values, setValue } = useTemplateValues();
   const notesRef = React.useRef<HTMLTextAreaElement | null>(null);
 
   const updateNotes = (_id: string, notes: string) =>
@@ -63,9 +65,11 @@ function TemplatePageInner({ initial }: { initial: TemplateItem }) {
       <TemplateDetailPanel
         ref={notesRef}
         item={item}
+        value={values[item.id] ?? null}
         onBack={() => router.push("/templates")}
         onAction={handleAction}
         onNotesChange={updateNotes}
+        onValueChange={setValue}
         onPreviewPlay={handlePreviewPlay}
       />
     </div>
