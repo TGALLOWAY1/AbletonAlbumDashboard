@@ -1,23 +1,39 @@
 "use client";
 
 import * as React from "react";
-import { Check, Sparkles } from "lucide-react";
 import { setTrackSunoStatus } from "@/app/actions/tracks";
 import { useToast } from "@/components/toast";
-import { Button } from "@/components/ui/button";
-import { nextSunoStatus, type SunoStatus } from "@/lib/types";
+import {
+  nextSunoStatus,
+  SUNO_STATUS_EMOJI,
+  SUNO_STATUS_LABELS,
+  SUNO_STATUSES,
+  type SunoStatus,
+} from "@/lib/types";
 import { cn } from "@/lib/utils";
 
 /**
- * The track's standing "Suno" marker — one click flips it between todo and
- * done, saving immediately (no separate save step), same as
+ * The track's standing "Suno" marker — not done / complete / tried but
+ * errored, saving immediately (no separate save step), same as
  * `<TrackAlbumSelect>`.
  *
- * `variant` controls sizing only, per CLAUDE.md's shared-component rule:
- *  - `chip`  — badge-sized, for track cards and rows on either platform.
- *  - `field` — a labelled row with a full tap target, for the track detail
- *              surfaces (`/tracks/[id]` and `/m/[trackId]`).
+ * `variant` controls sizing and affordance only, per CLAUDE.md's
+ * shared-component rule:
+ *  - `chip`  — badge-sized, for track cards and rows on either platform. One
+ *              tap target, so it cycles through the states.
+ *  - `field` — a labelled row of full-size buttons, one per state, for the
+ *              track detail surfaces (`/tracks/[id]` and `/m/[trackId]`).
+ *              With three states a cycling button would hide two of them
+ *              behind repeat taps, and there's room here not to.
  */
+
+/** Per-state chip colours: muted until something has happened to the track. */
+const CHIP_TONE: Record<SunoStatus, string> = {
+  todo: "border-border bg-surface-2 text-muted-foreground hover:text-foreground",
+  done: "border-primary/30 bg-primary/15 text-primary hover:bg-primary/25",
+  error: "border-warning/40 bg-warning/15 text-warning hover:bg-warning/25",
+};
+
 export function SunoStatusToggle({
   trackId,
   status,
@@ -42,17 +58,14 @@ export function SunoStatusToggle({
     setValue(status);
   }
 
-  const done = value === "done";
-
-  function toggle() {
-    if (pending) return;
+  function save(next: SunoStatus) {
+    if (pending || next === value) return;
     const previous = value;
-    const next = nextSunoStatus(previous);
     setValue(next);
     start(async () => {
       try {
         await setTrackSunoStatus(trackId, next);
-        toast(next === "done" ? "Suno marked done" : "Suno marked not done");
+        toast(`Suno: ${SUNO_STATUS_LABELS[next]}`);
       } catch (e) {
         setValue(previous);
         toast((e as Error).message);
@@ -64,57 +77,63 @@ export function SunoStatusToggle({
     return (
       <div
         className={cn(
-          "flex items-center justify-between gap-3 rounded-lg border border-border bg-surface px-3 py-2",
+          "flex flex-wrap items-center justify-between gap-3 rounded-lg border border-border bg-surface px-3 py-2",
           className,
         )}
+        role="group"
+        aria-label="Suno status"
       >
         <div className="min-w-0">
           <p className="text-sm font-medium leading-tight">Suno</p>
           <p className="text-xs text-muted-foreground">
-            {done ? "Done" : "Not done yet"}
+            {SUNO_STATUS_LABELS[value]}
           </p>
         </div>
-        <Button
-          type="button"
-          variant={done ? "default" : "outline"}
-          // h-11 keeps the tap target comfortable on the mobile surface.
-          className="h-11 shrink-0 px-4"
-          aria-pressed={done}
-          disabled={pending}
-          onClick={toggle}
-        >
-          {done ? (
-            <Check className="h-4 w-4" />
-          ) : (
-            <Sparkles className="h-4 w-4" />
-          )}
-          {done ? "Done" : "Mark done"}
-        </Button>
+        <div className="flex shrink-0 flex-wrap gap-1.5">
+          {SUNO_STATUSES.map((option) => {
+            const active = option === value;
+            return (
+              <button
+                key={option}
+                type="button"
+                aria-pressed={active}
+                disabled={pending}
+                onClick={() => save(option)}
+                // h-11 keeps the tap target comfortable on the mobile surface.
+                className={cn(
+                  "inline-flex h-11 items-center gap-1.5 rounded-md border px-3 text-sm font-medium transition-colors disabled:opacity-60",
+                  active
+                    ? CHIP_TONE[option]
+                    : "border-border bg-surface-2 text-muted-foreground hover:text-foreground",
+                )}
+              >
+                <span aria-hidden>{SUNO_STATUS_EMOJI[option]}</span>
+                {SUNO_STATUS_LABELS[option]}
+              </button>
+            );
+          })}
+        </div>
       </div>
     );
   }
 
+  const next = nextSunoStatus(value);
+  const label = `Suno: ${SUNO_STATUS_LABELS[value]} — click for ${SUNO_STATUS_LABELS[next]}`;
+
   return (
     <button
       type="button"
-      aria-pressed={done}
-      aria-label={done ? "Suno done — mark not done" : "Mark Suno done"}
-      title={done ? "Suno done — click to undo" : "Mark Suno done"}
+      aria-label={label}
+      title={label}
       disabled={pending}
-      onClick={toggle}
+      onClick={() => save(next)}
       className={cn(
         "inline-flex items-center gap-1 rounded-full border px-2.5 py-0.5 text-xs font-medium transition-colors disabled:opacity-60",
-        done
-          ? "border-primary/30 bg-primary/15 text-primary hover:bg-primary/25"
-          : "border-border bg-surface-2 text-muted-foreground hover:text-foreground",
+        CHIP_TONE[value],
         className,
       )}
     >
-      {done ? (
-        <Check className="h-3 w-3 shrink-0" />
-      ) : (
-        <Sparkles className="h-3 w-3 shrink-0" />
-      )}
+      <span aria-hidden>{SUNO_STATUS_EMOJI[value]}</span>
       Suno
     </button>
   );
