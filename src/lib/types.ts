@@ -91,19 +91,36 @@ export const TRACK_STATUSES = [
 export type TrackStatus = (typeof TRACK_STATUSES)[number];
 
 /**
- * Standing "has this track been through Suno yet?" marker, toggled straight
- * from a track card. Deliberately separate from the `suno_experiments`
- * round-trip (src/lib/suno.ts): that models one bounded experiment and its
- * candidates, while this is the album-planning question of whether the track
- * has had its Suno pass at all. Keep in sync with the check constraint in
- * supabase/migrations/0021_album_genre_track_suno.sql.
+ * Standing "has this track been through Suno yet?" marker, set straight from a
+ * track card. Deliberately separate from the `suno_experiments` round-trip
+ * (src/lib/suno.ts): that models one bounded experiment and its candidates,
+ * while this is the album-planning question of whether the track has had its
+ * Suno pass at all.
+ *
+ * Three states, because "not done" and "tried and it came back broken" are
+ * different pieces of planning information — the second one is a track to
+ * revisit, not one to start. Array order is the click order of the chip, so
+ * the common "I did the pass" case stays one click from `todo`. Keep in sync
+ * with the check constraint in
+ * supabase/migrations/0022_suno_status_error.sql.
  */
-export const SUNO_STATUSES = ["todo", "done"] as const;
+export const SUNO_STATUSES = ["todo", "done", "error"] as const;
 export type SunoStatus = (typeof SUNO_STATUSES)[number];
 
 export const SUNO_STATUS_LABELS: Record<SunoStatus, string> = {
-  todo: "Suno",
-  done: "Suno done",
+  todo: "Not done",
+  done: "Complete",
+  error: "Tried — error",
+};
+
+/**
+ * The marker for each state. The chip is badge-sized, so the state has to read
+ * from the emoji alone; the word only appears on the detail surfaces.
+ */
+export const SUNO_STATUS_EMOJI: Record<SunoStatus, string> = {
+  todo: "⬜",
+  done: "✅",
+  error: "⚠️",
 };
 
 export const DEFAULT_SUNO_STATUS: SunoStatus = "todo";
@@ -112,12 +129,15 @@ export const DEFAULT_SUNO_STATUS: SunoStatus = "todo";
 export function trackSunoStatus(
   track: Pick<TrackRow, "suno_status">,
 ): SunoStatus {
-  return track.suno_status === "done" ? "done" : DEFAULT_SUNO_STATUS;
+  return SUNO_STATUSES.includes(track.suno_status as SunoStatus)
+    ? (track.suno_status as SunoStatus)
+    : DEFAULT_SUNO_STATUS;
 }
 
-/** The other status — what a toggle click should write. */
+/** The next status in the cycle — what a chip click should write. */
 export function nextSunoStatus(current: SunoStatus): SunoStatus {
-  return current === "done" ? "todo" : "done";
+  const index = SUNO_STATUSES.indexOf(current);
+  return SUNO_STATUSES[(index + 1) % SUNO_STATUSES.length];
 }
 
 export const STAGE_KEYS = [

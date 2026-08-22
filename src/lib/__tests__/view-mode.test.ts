@@ -60,7 +60,7 @@ describe("serializeViewPreference", () => {
     ).toBe("size=small");
     expect(
       serializeViewPreference(
-        { layout: "gallery", size: "large" },
+        { layout: "gallery", size: "medium" },
         DEFAULT_TRACK_VIEW,
       ),
     ).toBe("view=gallery");
