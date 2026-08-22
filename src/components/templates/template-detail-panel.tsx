@@ -20,6 +20,7 @@ import {
 import type { TemplateAction } from "./types";
 import { TemplateNotesEditor } from "./template-notes-editor";
 import { TemplateThumbnail } from "./template-thumbnail";
+import { TemplateValuePicker } from "./template-value-picker";
 
 const DATE_FORMATTER = new Intl.DateTimeFormat("en-US", {
   month: "short",
@@ -41,13 +42,16 @@ export const TemplateDetailPanel = React.forwardRef<
   HTMLTextAreaElement,
   {
     item: TemplateItem | null;
+    /** The producer's 1–5 rating, or null when unrated. */
+    value: number | null;
     onBack: () => void;
     onAction: (action: TemplateAction, item: TemplateItem) => void;
     onNotesChange: (id: string, notes: string) => void;
+    onValueChange: (id: string, value: number | null) => void;
     onPreviewPlay: (item: TemplateItem, preview: AudioPreview) => void;
   }
 >(function TemplateDetailPanel(
-  { item, onBack, onAction, onNotesChange, onPreviewPlay },
+  { item, value, onBack, onAction, onNotesChange, onValueChange, onPreviewPlay },
   notesRef,
 ) {
   if (!item) {
@@ -94,6 +98,13 @@ export const TemplateDetailPanel = React.forwardRef<
         </div>
         <p className="text-sm text-muted-foreground">{item.description}</p>
       </div>
+
+      <Section title="Value">
+        <TemplateValuePicker
+          value={value}
+          onChange={(v) => onValueChange(item.id, v)}
+        />
+      </Section>
 
       <Section title="Audio Preview">
         {item.audioPreviews.length === 0 ? (

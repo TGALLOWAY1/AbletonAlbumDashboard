@@ -11,44 +11,25 @@ import {
   type TemplateCategory,
   type TemplateItem,
 } from "@/lib/data/templates";
+import {
+  compareTemplates,
+  DEFAULT_TEMPLATE_SORT,
+  type TemplateSort,
+} from "@/lib/template-sort";
+import { useTemplateValues } from "@/lib/template-value";
 import { CategoryBrowseList } from "./category-browse-list";
 import { TemplateListRow } from "./template-list-row";
-import {
-  TemplateSortControl,
-  type TemplateSort,
-} from "./template-sort-control";
+import { TemplateSortControl } from "./template-sort-control";
 import type { TemplateAction } from "./types";
 
 const DESKTOP_TOAST = "Desktop integration required to open local files.";
-const RECENT_LIMIT = 5;
-
-function compareTemplates(
-  a: TemplateItem,
-  b: TemplateItem,
-  sort: TemplateSort,
-): number {
-  switch (sort) {
-    case "recently-modified":
-      return new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime();
-    case "recently-created":
-      return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
-    case "category": {
-      const ai = TEMPLATE_CATEGORY_ORDER.indexOf(a.category);
-      const bi = TEMPLATE_CATEGORY_ORDER.indexOf(b.category);
-      if (ai !== bi) return ai - bi;
-      return a.name.localeCompare(b.name);
-    }
-    case "most-used":
-      if (b.useCount !== a.useCount) return b.useCount - a.useCount;
-      return a.name.localeCompare(b.name);
-  }
-}
 
 function TemplatesPageInner({ items: initialItems }: { items: TemplateItem[] }) {
   const router = useRouter();
   const { toast } = useToast();
   const [items, setItems] = React.useState<TemplateItem[]>(initialItems);
-  const [sort, setSort] = React.useState<TemplateSort>("recently-modified");
+  const { values } = useTemplateValues();
+  const [sort, setSort] = React.useState<TemplateSort>(DEFAULT_TEMPLATE_SORT);
   const [view, setView] = React.useState<"home" | "category">("home");
   const [activeCategory, setActiveCategory] = React.useState<
     "all" | TemplateCategory
@@ -62,21 +43,13 @@ function TemplatesPageInner({ items: initialItems }: { items: TemplateItem[] }) 
     return map;
   }, [items]);
 
-  const recent = React.useMemo(
-    () =>
-      [...items]
-        .sort((a, b) => compareTemplates(a, b, "recently-modified"))
-        .slice(0, RECENT_LIMIT),
-    [items],
-  );
-
   const categoryItems = React.useMemo(() => {
     const filtered =
       activeCategory === "all"
         ? items
         : items.filter((i) => i.category === activeCategory);
-    return [...filtered].sort((a, b) => compareTemplates(a, b, sort));
-  }, [items, activeCategory, sort]);
+    return [...filtered].sort((a, b) => compareTemplates(a, b, sort, values));
+  }, [items, activeCategory, sort, values]);
 
   const openCategory = (category: "all" | TemplateCategory) => {
     setActiveCategory(category);
@@ -156,45 +129,21 @@ function TemplatesPageInner({ items: initialItems }: { items: TemplateItem[] }) 
       </header>
 
       {view === "home" ? (
-        <div className="flex flex-col gap-8">
-          <section className="flex flex-col gap-3">
+        <section className="flex flex-col gap-3">
+          <div className="flex items-center justify-between gap-3">
             <h2 className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
               Browse by Category
             </h2>
-            <CategoryBrowseList counts={counts} onSelect={openCategory} />
-          </section>
-
-          <section className="flex flex-col gap-3">
-            <div className="flex items-center justify-between gap-3">
-              <h2 className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
-                Recent Templates
-              </h2>
-              <button
-                type="button"
-                onClick={() => openCategory("all")}
-                className="text-xs font-medium text-primary transition-colors hover:text-primary/80"
-              >
-                View all
-              </button>
-            </div>
-            {recent.length === 0 ? (
-              <div className="rounded-lg border border-dashed border-border bg-surface p-10 text-center text-sm text-muted-foreground">
-                No templates yet.
-              </div>
-            ) : (
-              <div className="flex flex-col gap-2">
-                {recent.map((item) => (
-                  <TemplateListRow
-                    key={item.id}
-                    item={item}
-                    onSelect={handleSelect}
-                    onAction={handleAction}
-                  />
-                ))}
-              </div>
-            )}
-          </section>
-        </div>
+            <button
+              type="button"
+              onClick={() => openCategory("all")}
+              className="text-xs font-medium text-primary transition-colors hover:text-primary/80"
+            >
+              View all
+            </button>
+          </div>
+          <CategoryBrowseList counts={counts} onSelect={openCategory} />
+        </section>
       ) : (
         <div className="flex flex-col gap-4">
           <div className="flex flex-wrap items-start justify-between gap-3">
@@ -232,6 +181,7 @@ function TemplatesPageInner({ items: initialItems }: { items: TemplateItem[] }) 
                 <TemplateListRow
                   key={item.id}
                   item={item}
+                  value={values[item.id]}
                   onSelect={handleSelect}
                   onAction={handleAction}
                 />

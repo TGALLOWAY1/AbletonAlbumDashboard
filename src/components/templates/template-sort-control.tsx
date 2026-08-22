@@ -7,19 +7,9 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { TEMPLATE_SORT_OPTIONS, type TemplateSort } from "@/lib/template-sort";
 
-export type TemplateSort =
-  | "recently-modified"
-  | "recently-created"
-  | "category"
-  | "most-used";
-
-const SORT_OPTIONS: { value: TemplateSort; label: string }[] = [
-  { value: "recently-modified", label: "Sort: Recently Modified" },
-  { value: "recently-created", label: "Sort: Recently Created" },
-  { value: "category", label: "Sort: Category" },
-  { value: "most-used", label: "Sort: Most Used" },
-];
+export type { TemplateSort };
 
 export function TemplateSortControl({
   sort,
@@ -35,7 +25,7 @@ export function TemplateSortControl({
           <SelectValue />
         </SelectTrigger>
         <SelectContent>
-          {SORT_OPTIONS.map((o) => (
+          {TEMPLATE_SORT_OPTIONS.map((o) => (
             <SelectItem key={o.value} value={o.value}>
               {o.label}
             </SelectItem>

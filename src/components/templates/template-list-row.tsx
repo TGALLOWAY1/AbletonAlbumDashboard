@@ -15,13 +15,17 @@ import {
 } from "@/lib/data/templates";
 import type { TemplateAction } from "./types";
 import { CategoryIcon } from "./category-icon";
+import { TemplateValueBadge } from "./template-value-badge";
 
 export function TemplateListRow({
   item,
+  value,
   onSelect,
   onAction,
 }: {
   item: TemplateItem;
+  /** The producer's 1–5 rating, or undefined when unrated. */
+  value?: number;
   onSelect: (id: string) => void;
   onAction: (action: TemplateAction, item: TemplateItem) => void;
 }) {
@@ -47,6 +51,7 @@ export function TemplateListRow({
           <Badge variant="primary">
             {TEMPLATE_CATEGORY_LABELS[item.category]}
           </Badge>
+          <TemplateValueBadge value={value} />
         </div>
         <p className="mt-0.5 truncate text-xs text-muted-foreground">
           {item.description}
