@@ -129,9 +129,11 @@ const updateSchema = z.object({
   als_file_path: z.string().max(1000).optional().default(""),
   song_key: optionalTrimmed.pipe(z.string().max(20)),
   bpm: optionalBpm,
-  album_id: optionalUuid,
 });
 
+// Album membership is not part of this form — it saves immediately through
+// `assignTracksToAlbum` via <TrackAlbumSelect>, independent of this form's
+// "Save changes" button, on every surface that shows it.
 export async function updateTrack(formData: FormData) {
   const parsed = updateSchema.parse({
     id: formData.get("id"),
@@ -141,21 +143,10 @@ export async function updateTrack(formData: FormData) {
     als_file_path: formData.get("als_file_path") ?? "",
     song_key: formData.get("song_key") ?? "",
     bpm: formData.get("bpm") ?? "",
-    album_id: formData.get("album_id") ?? "",
   });
   const supabase = getServerSupabase();
 
-  // Read the current album before updating so we can refresh the old album's
-  // detail page too when the track moves between albums.
-  const { data: previous, error: readError } = await supabase
-    .from("tracks")
-    .select("album_id")
-    .eq("owner_id", OWNER_ID)
-    .eq("id", parsed.id)
-    .maybeSingle();
-  if (readError) throw readError;
-
-  const { error } = await supabase
+  const { data: updated, error } = await supabase
     .from("tracks")
     .update({
       name: parsed.name,
@@ -164,14 +155,16 @@ export async function updateTrack(formData: FormData) {
       als_file_path: parsed.als_file_path.trim() || null,
       song_key: parsed.song_key || null,
       bpm: parsed.bpm,
-      album_id: parsed.album_id,
     })
     .eq("owner_id", OWNER_ID)
-    .eq("id", parsed.id);
+    .eq("id", parsed.id)
+    .select("id")
+    .maybeSingle();
   if (error) throw error;
-  revalidateTrackSurfaces(parsed.id, {
-    albumIds: [previous?.album_id, parsed.album_id],
-  });
+  if (!updated) {
+    throw new Error("Track not found, or the update was blocked.");
+  }
+  revalidateTrackSurfaces(parsed.id);
 }
 
 export async function setTrackStatus(id: string, status: string) {
