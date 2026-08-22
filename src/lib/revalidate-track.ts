@@ -24,11 +24,13 @@ export function revalidateTrackSurfaces(
 }
 
 // Album-level mutations must refresh every surface that renders album data:
-// the dashboard (focus album card), the album listing, and settings (which
-// shows an album card), plus the album's own detail page when known.
+// the dashboard (focus album card), the album listing, settings (which shows
+// an album card), and the track library — whose group headings carry the
+// album's title and genre — plus the album's own detail page when known.
 export function revalidateAlbumSurfaces(albumId?: string | null) {
   revalidatePath("/");
   revalidatePath("/albums");
   revalidatePath("/settings");
+  revalidatePath("/tracks");
   if (albumId) revalidatePath(`/albums/${albumId}`);
 }

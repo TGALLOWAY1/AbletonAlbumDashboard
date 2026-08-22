@@ -57,6 +57,7 @@ export type Database = {
         Row: {
           cover_image_url: string | null;
           created_at: string;
+          genre: string | null;
           id: string;
           is_active: boolean;
           owner_id: string;
@@ -68,6 +69,7 @@ export type Database = {
         Insert: {
           cover_image_url?: string | null;
           created_at?: string;
+          genre?: string | null;
           id?: string;
           is_active?: boolean;
           owner_id: string;
@@ -79,6 +81,7 @@ export type Database = {
         Update: {
           cover_image_url?: string | null;
           created_at?: string;
+          genre?: string | null;
           id?: string;
           is_active?: boolean;
           owner_id?: string;
@@ -885,6 +888,7 @@ export type Database = {
           owner_id: string;
           song_key: string | null;
           status: string;
+          suno_status: string;
           tags: string[];
           updated_at: string;
         };
@@ -902,6 +906,7 @@ export type Database = {
           owner_id: string;
           song_key?: string | null;
           status: string;
+          suno_status?: string;
           tags?: string[];
           updated_at?: string;
         };
@@ -919,6 +924,7 @@ export type Database = {
           owner_id?: string;
           song_key?: string | null;
           status?: string;
+          suno_status?: string;
           tags?: string[];
           updated_at?: string;
         };

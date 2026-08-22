@@ -4,7 +4,7 @@
 // goal is stored structurally.
 
 export type SunoPromptInput = {
-  genre?: string | null; // track.tags[0]
+  genre?: string | null; // the album's genre (albums.genre)
   bpm?: number | null;
   songKey?: string | null;
   goal: string;

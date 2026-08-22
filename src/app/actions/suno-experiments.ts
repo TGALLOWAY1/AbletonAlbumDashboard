@@ -45,13 +45,26 @@ export async function createSunoExperiment(input: {
 
   const { data: track, error: trackError } = await supabase
     .from("tracks")
-    .select("name, tags, bpm, song_key")
+    .select("name, bpm, song_key, album_id")
     .eq("id", parsed.trackId)
     .single();
   if (trackError) throw trackError;
 
+  // Genre lives on the album (migration 0021), so it is read from there
+  // rather than off the track's tags. Fetched separately rather than embedded
+  // so a project without the albums table still gets a usable prompt.
+  let genre: string | null = null;
+  if (track.album_id) {
+    const { data: album } = await supabase
+      .from("albums")
+      .select("genre")
+      .eq("id", track.album_id)
+      .maybeSingle();
+    genre = album?.genre?.trim() || null;
+  }
+
   const prompt = buildSunoPrompt({
-    genre: track.tags?.[0] ?? null,
+    genre,
     bpm: track.bpm,
     songKey: track.song_key,
     goal: parsed.goal,

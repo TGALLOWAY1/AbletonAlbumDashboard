@@ -64,6 +64,7 @@ function extractErrorMessage(err: unknown, fallback: string): string {
 const upsertSchema = z.object({
   id: z.string().uuid().optional(),
   title: z.string().max(120).optional().default(""),
+  genre: z.string().max(60).optional().default(""),
   cover_image_url: z.string().url().optional().or(z.literal("")),
   start_date: z
     .string()
@@ -83,6 +84,7 @@ export async function createAlbum(
   try {
     const parsed = upsertSchema.parse({
       title: formData.get("title") ?? "",
+      genre: formData.get("genre") ?? "",
       cover_image_url: formData.get("cover_image_url") ?? "",
       start_date: formData.get("start_date") ?? "",
     });
@@ -102,6 +104,7 @@ export async function createAlbum(
       .insert({
         owner_id: OWNER_ID,
         title: parsed.title || null,
+        genre: parsed.genre.trim() || null,
         cover_image_url: parsed.cover_image_url || null,
         start_date: parsed.start_date || null,
         sort_order: count ?? 0,
@@ -146,10 +149,12 @@ export async function updateAlbum(input: AlbumPatchInput) {
   // field at a time, and a missing key must not blank the other columns.
   const patch: {
     title?: string | null;
+    genre?: string | null;
     cover_image_url?: string | null;
     start_date?: string | null;
   } = {};
   if (parsed.title !== undefined) patch.title = parsed.title.trim() || null;
+  if (parsed.genre !== undefined) patch.genre = parsed.genre.trim() || null;
   if (parsed.cover_image_url !== undefined) {
     patch.cover_image_url = parsed.cover_image_url || null;
   }

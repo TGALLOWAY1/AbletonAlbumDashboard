@@ -7,6 +7,7 @@ import {
   CalendarDays,
   Check,
   Disc3,
+  Music4,
   Pencil,
   Star,
   X,
@@ -29,6 +30,9 @@ import { OWNER_ID } from "@/lib/owner";
 export type AlbumHeaderAlbum = {
   id: string;
   title: string | null;
+  // Genre is an album-level fact — one record, one genre — rather than
+  // something each track carries (migration 0021).
+  genre: string | null;
   cover_image_url: string | null;
   start_date: string | null;
   is_active: boolean;
@@ -38,9 +42,10 @@ export type AlbumHeaderAlbum = {
  * Album identity strip: artwork, title, and the album-level switches.
  *
  * Editing is inline and one field at a time — a pencil on the artwork, a
- * pencil beside the title, a chip for the start date — so a saved album stops
- * carrying a permanent "create album" form around. Each control calls
- * `updateAlbum` with just its own key; the server leaves the rest alone.
+ * pencil beside the title, a chip each for the genre and the start date — so
+ * a saved album stops carrying a permanent "create album" form around. Each
+ * control calls `updateAlbum` with just its own key; the server leaves the
+ * rest alone.
  */
 export function AlbumHeader({
   album,
@@ -57,6 +62,7 @@ export function AlbumHeader({
         <div className="min-w-0 flex-1 pt-0.5">
           <TitleEditor album={album} />
           <p className="mt-1 text-sm text-muted-foreground">
+            {album.genre?.trim() ? `${album.genre.trim()} · ` : ""}
             {trackCount} {trackCount === 1 ? "track" : "tracks"}
           </p>
         </div>
@@ -67,6 +73,7 @@ export function AlbumHeader({
           <Link href="/albums">All albums</Link>
         </Button>
         <SetActiveButton album={album} />
+        <GenreControl album={album} />
         <StartDateControl album={album} />
       </div>
     </header>
@@ -284,6 +291,93 @@ function SetActiveButton({ album }: { album: AlbumHeaderAlbum }) {
       <Star className="h-4 w-4" />
       {pending ? "Setting…" : "Set active"}
     </Button>
+  );
+}
+
+function GenreControl({ album }: { album: AlbumHeaderAlbum }) {
+  const [editing, setEditing] = React.useState(false);
+  const [value, setValue] = React.useState(album.genre ?? "");
+  const [pending, start] = React.useTransition();
+  const { toast } = useToast();
+
+  function begin() {
+    setValue(album.genre ?? "");
+    setEditing(true);
+  }
+
+  function save(next: string) {
+    if (next.trim() === (album.genre ?? "").trim()) {
+      setEditing(false);
+      return;
+    }
+    start(async () => {
+      try {
+        await updateAlbum({ id: album.id, genre: next });
+        setEditing(false);
+        toast(next.trim() ? "Genre updated" : "Genre cleared");
+      } catch (e) {
+        toast((e as Error).message);
+      }
+    });
+  }
+
+  if (!editing) {
+    return (
+      <Button
+        type="button"
+        variant="outline"
+        size="sm"
+        onClick={begin}
+        className={album.genre?.trim() ? undefined : "text-muted-foreground"}
+      >
+        <Music4 className="h-4 w-4" />
+        {album.genre?.trim() || "Genre"}
+      </Button>
+    );
+  }
+
+  return (
+    <div className="flex items-center gap-1">
+      <Input
+        autoFocus
+        value={value}
+        maxLength={60}
+        disabled={pending}
+        aria-label="Album genre"
+        placeholder="e.g. Dubstep"
+        onChange={(e) => setValue(e.target.value)}
+        onKeyDown={(e) => {
+          if (e.key === "Enter") {
+            e.preventDefault();
+            save(value);
+          }
+          if (e.key === "Escape") setEditing(false);
+        }}
+        className="h-8 w-[10rem]"
+      />
+      <Button
+        type="button"
+        variant="ghost"
+        size="icon"
+        className="h-8 w-8 shrink-0"
+        onClick={() => save(value)}
+        disabled={pending}
+        aria-label="Save genre"
+      >
+        <Check className="h-4 w-4" />
+      </Button>
+      <Button
+        type="button"
+        variant="ghost"
+        size="icon"
+        className="h-8 w-8 shrink-0"
+        onClick={() => setEditing(false)}
+        disabled={pending}
+        aria-label="Cancel"
+      >
+        <X className="h-4 w-4" />
+      </Button>
+    </div>
   );
 }
 

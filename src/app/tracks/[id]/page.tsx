@@ -25,6 +25,7 @@ import { NextActionEditor } from "@/components/next-action-editor";
 import { NotesEditor } from "@/components/notes-editor";
 import { AudioVersionList } from "@/components/audio-version-list";
 import { CopyPathButton } from "@/components/copy-path-button";
+import { SunoStatusToggle } from "@/components/suno-status-toggle";
 import { TrackTodoHistory } from "@/components/mobile/track-todo-history";
 import { TrackTodoList } from "@/components/mobile/track-todo-list";
 import { ManualSessionEntry } from "@/components/manual-session-dialog";
@@ -40,6 +41,7 @@ import { getSessionsForTrack } from "@/lib/data/sessions";
 import { getOpenExperimentWithCandidates } from "@/lib/data/suno";
 import { listAlbums } from "@/lib/data/album";
 import { TrackSessionHistory } from "@/components/track-session-history";
+import { trackSunoStatus } from "@/lib/types";
 
 export const dynamic = "force-dynamic";
 
@@ -75,15 +77,20 @@ export default async function TrackDetailPage({
   ]);
   if (!track) notFound();
 
+  // Genre is an album-level fact now (migration 0021), so the prompt and the
+  // header badge both read it off the album rather than off `tags[0]`.
+  const genre = track.album?.genre?.trim() || null;
   const sunoMeta = {
     trackId: track.id,
     trackName: track.name,
-    genre: track.tags[0] ?? null,
+    genre,
     bpm: track.bpm,
     songKey: track.song_key,
   };
 
-  const [genre, ...descriptors] = track.tags;
+  const sunoStatus = trackSunoStatus(track);
+  // Every tag is a descriptor now — none of them stands in for the genre.
+  const descriptors = track.tags;
   const meta = [
     track.song_key ? track.song_key : null,
     track.bpm ? `${track.bpm} BPM` : null,
@@ -121,8 +128,13 @@ export default async function TrackDetailPage({
               {track.name}
             </h1>
             <div className="flex flex-wrap items-center gap-2">
-              {genre && <Badge variant="primary">{genre}</Badge>}
+              {genre && (
+                <Badge variant="primary" title="Album genre">
+                  {genre}
+                </Badge>
+              )}
               <Badge variant="default">{track.status}</Badge>
+              <SunoStatusToggle trackId={track.id} status={sunoStatus} />
               {track.album && (
                 <Link href={`/albums/${track.album.id}`}>
                   <Badge className="gap-1 hover:bg-surface-2/80 hover:text-foreground">
@@ -245,6 +257,13 @@ export default async function TrackDetailPage({
         </TabsContent>
 
         <TabsContent value="suno">
+          <div className="mb-4">
+            <SunoStatusToggle
+              trackId={track.id}
+              status={sunoStatus}
+              variant="field"
+            />
+          </div>
           <SunoPanel
             meta={sunoMeta}
             variant="desktop"

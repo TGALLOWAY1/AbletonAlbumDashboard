@@ -30,6 +30,23 @@ describe("albumPatchSchema", () => {
     expect(parsed.start_date).toBe("");
   });
 
+  it("accepts a genre-only patch", () => {
+    expect(albumPatchSchema.parse({ id: ALBUM_ID, genre: "Dubstep" })).toEqual({
+      id: ALBUM_ID,
+      genre: "Dubstep",
+    });
+  });
+
+  it("accepts an empty genre as an explicit clear", () => {
+    expect(albumPatchSchema.parse({ id: ALBUM_ID, genre: "" }).genre).toBe("");
+  });
+
+  it("rejects a genre over 60 characters", () => {
+    expect(() =>
+      albumPatchSchema.parse({ id: ALBUM_ID, genre: "a".repeat(61) }),
+    ).toThrow();
+  });
+
   it("rejects a patch with no fields to update", () => {
     expect(() => albumPatchSchema.parse({ id: ALBUM_ID })).toThrow();
   });

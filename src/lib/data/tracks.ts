@@ -55,7 +55,7 @@ async function attachDetails(tracks: TrackRow[]): Promise<TrackWithDetails[]> {
         .select("track_id")
         .in("track_id", ids)
         .not("completed_at", "is", null),
-      supabase.from("albums").select("id, title").in("id", albumIds),
+      supabase.from("albums").select("id, title, genre").in("id", albumIds),
       // At most one non-terminal Suno experiment per track (partial unique
       // index); embedded candidate decisions give the unreviewed count.
       supabase
@@ -93,7 +93,10 @@ async function attachDetails(tracks: TrackRow[]): Promise<TrackWithDetails[]> {
       (completedCountByTrack.get(a.track_id) ?? 0) + 1,
     );
   });
-  const albumById = new Map<string, { id: string; title: string | null }>();
+  const albumById = new Map<
+    string,
+    { id: string; title: string | null; genre: string | null }
+  >();
   (albumsRes.data ?? []).forEach((a) => albumById.set(a.id, a));
   const sunoByTrack = new Map<string, TrackSunoSummary>();
   (sunoRes.data ?? []).forEach((e) => {
