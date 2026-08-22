@@ -38,7 +38,7 @@ The codebase is well-positioned: strong task/session/bottleneck machinery, a rec
 **Assets:**
 - `track_versions` + `track-audio` bucket + `AudioVersionList`/`VersionItem` (wavesurfer playback, signed URLs) — the natural home for generated audio.
 - `actions` (todos + one primary "next action"), `bottlenecks` (one active per track), `sessions` + `session_activities` — the tracking machinery the user asked for already exists; Suno work should flow *into* it, not beside it.
-- Track metadata that seeds prompts for free: `tags` (genre), `song_key`, `bpm`, `notes`, active bottleneck description.
+- Track metadata that seeds prompts for free: the album's `genre`, `song_key`, `bpm`, `notes`, active bottleneck description.
 - `recommendTrack()` + NextUpCard + stale/"needs attention" triage — the right place to surface "you have unreviewed variations."
 - Conventions that constrain the design: parity rule (one component, `variant` prop), `revalidateTrackSurfaces()` on every track-level mutation, Zod in every server action.
 
@@ -101,7 +101,7 @@ create table suno_experiments (
 
 ```
 buildSunoPrompt({track, experiment}) →
-  "[genre from tags[0]] track, [bpm] BPM, key of [song_key], [mood words from goal].
+  "[genre from the track's album] track, [bpm] BPM, key of [song_key], [mood words from goal].
    [experiment-type-specific suffix]"
 ```
 

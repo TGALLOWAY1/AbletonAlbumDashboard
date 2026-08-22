@@ -40,6 +40,21 @@ export function NewAlbumForm({
           </div>
 
           <div className="grid gap-2">
+            <Label htmlFor="genre">Genre</Label>
+            <Input
+              id="genre"
+              name="genre"
+              placeholder="e.g. Dubstep"
+              maxLength={60}
+              disabled={disabled}
+            />
+            <p className="text-xs text-muted-foreground">
+              Applies to the whole record — tracks inherit it rather than
+              carrying their own.
+            </p>
+          </div>
+
+          <div className="grid gap-2">
             <Label>Cover</Label>
             <CoverImageUpload
               name="cover_image_url"

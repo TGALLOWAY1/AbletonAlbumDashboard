@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { Plus } from "lucide-react";
+import { TrackAlbumGroup } from "@/components/track-album-group";
 import { TrackFilterPanel } from "@/components/track-filter-panel";
 import { TrackGalleryView } from "@/components/track-gallery-view";
 import { TrackListView } from "@/components/track-list-view";
@@ -100,19 +101,16 @@ export default async function AllTracksPage({
       ) : (
         <div className="flex flex-col gap-8">
           {groups.map((group) => (
-            <section key={group.id}>
-              <h2 className="mb-3 text-sm font-semibold uppercase tracking-wide text-muted-foreground">
-                {group.href ? (
-                  <Link
-                    href={group.href}
-                    className="transition-colors hover:text-foreground"
-                  >
-                    {group.label}
-                  </Link>
-                ) : (
-                  group.label
-                )}
-              </h2>
+            // Each album shelf collapses from its heading, so a long library
+            // can be narrowed to the record you're working on.
+            <TrackAlbumGroup
+              key={group.id}
+              groupId={group.id}
+              label={group.label}
+              href={group.href}
+              genre={group.genre}
+              count={group.tracks.length}
+            >
               {view.layout === "gallery" ? (
                 <TrackGalleryView
                   tracks={group.tracks}
@@ -128,7 +126,7 @@ export default async function AllTracksPage({
                   staleTrackIds={staleTrackIds}
                 />
               )}
-            </section>
+            </TrackAlbumGroup>
           ))}
         </div>
       )}

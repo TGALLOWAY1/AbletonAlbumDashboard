@@ -21,6 +21,7 @@ function track(overrides: Partial<TrackWithDetails>): TrackWithDetails {
     owner_id: "owner",
     song_key: null,
     status: "active",
+    suno_status: "todo",
     tags: [],
     updated_at: "2026-01-01T00:00:00Z",
     stages: [],
@@ -35,8 +36,8 @@ function track(overrides: Partial<TrackWithDetails>): TrackWithDetails {
   } as TrackWithDetails;
 }
 
-const forestation = { id: "alb-1", title: "Forestation" };
-const nocturne = { id: "alb-2", title: "Nocturne" };
+const forestation = { id: "alb-1", title: "Forestation", genre: "Dubstep" };
+const nocturne = { id: "alb-2", title: "Nocturne", genre: null };
 
 describe("groupTracksByAlbum", () => {
   it("groups by album and pins unassigned tracks to a backlog group last", () => {
@@ -79,7 +80,7 @@ describe("groupTracksByAlbum", () => {
   });
 
   it("sorts albums missing from the order hint alphabetically, after the known ones", () => {
-    const zephyr = { id: "alb-3", title: "Zephyr" };
+    const zephyr = { id: "alb-3", title: "Zephyr", genre: null };
     const groups = groupTracksByAlbum(
       [
         track({ id: "z", album: zephyr }),
@@ -106,9 +107,28 @@ describe("groupTracksByAlbum", () => {
 
   it("labels an album with no title rather than rendering a blank heading", () => {
     const groups = groupTracksByAlbum([
-      track({ id: "a", album: { id: "alb-9", title: "  " } }),
+      track({ id: "a", album: { id: "alb-9", title: "  ", genre: null } }),
     ]);
     expect(groups[0].label).toBe("Untitled album");
+  });
+
+  it("carries the album's genre onto the group so cards need not repeat it", () => {
+    const groups = groupTracksByAlbum([
+      track({ id: "a", album: forestation }),
+      track({ id: "b", album: nocturne }),
+      track({ id: "loose", album: null }),
+    ]);
+    expect(groups[0].genre).toBe("Dubstep");
+    // An album without a genre, and the backlog group, both carry null.
+    expect(groups[1].genre).toBeNull();
+    expect(groups[2].genre).toBeNull();
+  });
+
+  it("treats a whitespace-only album genre as unset", () => {
+    const groups = groupTracksByAlbum([
+      track({ id: "a", album: { id: "alb-9", title: "Nine", genre: "  " } }),
+    ]);
+    expect(groups[0].genre).toBeNull();
   });
 
   it("links album groups to the album page and leaves the backlog unlinked", () => {

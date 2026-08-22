@@ -1,13 +1,12 @@
 import Link from "next/link";
 import { format } from "date-fns";
 import { MoreVertical, Play } from "lucide-react";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { ProgressRing } from "@/components/ui/progress-ring";
 import { CopyPathButton } from "@/components/copy-path-button";
+import { SunoStatusToggle } from "@/components/suno-status-toggle";
 import {
-  AlbumChip,
   MetaRow,
   NextAction,
   ProgressStrip,
@@ -17,7 +16,11 @@ import {
   TrackCover,
   type SessionStats,
 } from "@/components/track-card-parts";
-import { progressFromStages, type TrackWithDetails } from "@/lib/types";
+import {
+  progressFromStages,
+  trackSunoStatus,
+  type TrackWithDetails,
+} from "@/lib/types";
 import { cn } from "@/lib/utils";
 import { GALLERY_GRID_CLASSES, type ViewSize } from "@/lib/view-mode";
 
@@ -70,7 +73,6 @@ function LargeTile({
   stale: boolean;
 }) {
   const progress = progressFromStages(track.stages);
-  const [genre] = track.tags;
   const lastWorked = track.last_worked_at
     ? format(new Date(track.last_worked_at), "MMM d, yyyy")
     : "Never";
@@ -103,13 +105,13 @@ function LargeTile({
               >
                 {track.name}
               </Link>
-              {(genre || track.album || track.sunoExperiment) && (
-                <div className="mt-2 flex flex-wrap items-center gap-1.5">
-                  {genre && <Badge variant="primary">{genre}</Badge>}
-                  {track.album && <AlbumChip album={track.album} />}
-                  <SunoChip suno={track.sunoExperiment} />
-                </div>
-              )}
+              <div className="mt-2 flex flex-wrap items-center gap-1.5">
+                <SunoStatusToggle
+                  trackId={track.id}
+                  status={trackSunoStatus(track)}
+                />
+                <SunoChip suno={track.sunoExperiment} />
+              </div>
               {meta.length > 0 && (
                 <p className="mt-1.5 text-xs font-medium text-foreground/80 tabular-nums">
                   {meta.join(" · ")}
@@ -162,7 +164,6 @@ function LargeTile({
 
 function MediumTile({ track }: { track: TrackWithDetails }) {
   const progress = progressFromStages(track.stages);
-  const [genre] = track.tags;
 
   return (
     <Card className="flex flex-col overflow-hidden">
@@ -198,12 +199,13 @@ function MediumTile({ track }: { track: TrackWithDetails }) {
           </TrackActionsMenu>
         </div>
 
-        {(genre || track.sunoExperiment) && (
-          <div className="flex flex-wrap items-center gap-1.5">
-            {genre && <Badge variant="primary">{genre}</Badge>}
-            <SunoChip suno={track.sunoExperiment} />
-          </div>
-        )}
+        <div className="flex flex-wrap items-center gap-1.5">
+          <SunoStatusToggle
+            trackId={track.id}
+            status={trackSunoStatus(track)}
+          />
+          <SunoChip suno={track.sunoExperiment} />
+        </div>
 
         {track.primaryAction && (
           <p className="line-clamp-2 text-xs text-muted-foreground">

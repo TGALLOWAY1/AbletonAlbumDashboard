@@ -10,6 +10,8 @@ import { GALLERY_GRID_CLASSES, type ViewPreference } from "@/lib/view-mode";
 
 type AlbumSummary = {
   title: string;
+  /** Album-level genre — the record's one genre, not a per-track tag. */
+  genre: string | null;
   trackLabel: string;
   startLabel: string | null;
 };
@@ -17,11 +19,19 @@ type AlbumSummary = {
 function summarize(album: AlbumWithTrackCount): AlbumSummary {
   return {
     title: album.title?.trim() || "Untitled album",
+    genre: album.genre?.trim() || null,
     trackLabel: `${album.trackCount} ${album.trackCount === 1 ? "track" : "tracks"}`,
     startLabel: album.start_date
       ? format(parseISO(album.start_date), "MMM d, yyyy")
       : null,
   };
+}
+
+/** "Dubstep · 6 tracks · starts Aug 21, 2026" — whichever parts are set. */
+function subtitle({ genre, trackLabel, startLabel }: AlbumSummary): string {
+  return [genre, trackLabel, startLabel ? `starts ${startLabel}` : null]
+    .filter(Boolean)
+    .join(" · ");
 }
 
 /**
@@ -140,7 +150,8 @@ function SetActiveButton({ albumId }: { albumId: string }) {
 }
 
 function LargeTile({ album }: { album: AlbumWithTrackCount }) {
-  const { title, trackLabel, startLabel } = summarize(album);
+  const summary = summarize(album);
+  const { title } = summary;
 
   return (
     <Card
@@ -170,10 +181,7 @@ function LargeTile({ album }: { album: AlbumWithTrackCount }) {
               </h3>
               {album.is_active && <ActiveFlag />}
             </div>
-            <p className="text-sm text-white/80">
-              {trackLabel}
-              {startLabel ? ` · starts ${startLabel}` : ""}
-            </p>
+            <p className="text-sm text-white/80">{subtitle(summary)}</p>
           </div>
         </AlbumCover>
       </Link>
@@ -188,7 +196,8 @@ function LargeTile({ album }: { album: AlbumWithTrackCount }) {
 }
 
 function MediumTile({ album }: { album: AlbumWithTrackCount }) {
-  const { title, trackLabel, startLabel } = summarize(album);
+  const summary = summarize(album);
+  const { title } = summary;
 
   return (
     <Card
@@ -211,9 +220,8 @@ function MediumTile({ album }: { album: AlbumWithTrackCount }) {
           <h3 className="truncate text-sm font-semibold leading-tight">
             {title}
           </h3>
-          <p className="text-xs text-muted-foreground">
-            {trackLabel}
-            {startLabel ? ` · starts ${startLabel}` : ""}
+          <p className="truncate text-xs text-muted-foreground">
+            {subtitle(summary)}
           </p>
         </div>
         {!album.is_active && <SetActiveButton albumId={album.id} />}
@@ -262,7 +270,8 @@ function AlbumRow({
   album: AlbumWithTrackCount;
   size: "large" | "medium";
 }) {
-  const { title, trackLabel, startLabel } = summarize(album);
+  const summary = summarize(album);
+  const { title } = summary;
   const large = size === "large";
 
   return (
@@ -297,8 +306,7 @@ function AlbumRow({
           {album.is_active && <ActiveFlag />}
         </div>
         <p className="mt-0.5 truncate text-xs text-muted-foreground">
-          {trackLabel}
-          {startLabel ? ` · starts ${startLabel}` : ""}
+          {subtitle(summary)}
         </p>
       </div>
       {!album.is_active && <SetActiveButton albumId={album.id} />}

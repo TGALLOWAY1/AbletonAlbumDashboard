@@ -17,6 +17,8 @@ export type TrackGroup = {
   /** Album id, or `NO_ALBUM` for the backlog group. */
   id: string;
   label: string;
+  /** Album-level genre — null for the backlog group, or an album without one. */
+  genre: string | null;
   /** Album detail route — null for the backlog group. */
   href: string | null;
   tracks: TrackWithDetails[];
@@ -50,6 +52,9 @@ export function groupTracksByAlbum(
       label: track.album
         ? (track.album.title?.trim() || "Untitled album")
         : BACKLOG_GROUP_LABEL,
+      // Genre is an album-level fact, so it belongs to the group heading
+      // rather than to each track card underneath it.
+      genre: track.album?.genre?.trim() || null,
       href: track.album ? `/albums/${track.album.id}` : null,
       tracks: [track],
     });

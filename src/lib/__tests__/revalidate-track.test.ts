@@ -68,22 +68,28 @@ describe("revalidateAlbumSurfaces", () => {
     revalidateAlbumSurfaces();
     const calls = vi.mocked(revalidatePath).mock.calls.map((c) => c[0]);
     expect(calls).toEqual(
-      expect.arrayContaining(["/", "/albums", "/settings"]),
+      expect.arrayContaining(["/", "/albums", "/settings", "/tracks"]),
     );
-    expect(calls).toHaveLength(3);
+    expect(calls).toHaveLength(4);
   });
 
   it("also revalidates the album detail page when an id is provided", () => {
     revalidateAlbumSurfaces("album-9");
     const calls = vi.mocked(revalidatePath).mock.calls.map((c) => c[0]);
     expect(calls).toEqual(
-      expect.arrayContaining(["/", "/albums", "/settings", "/albums/album-9"]),
+      expect.arrayContaining([
+        "/",
+        "/albums",
+        "/settings",
+        "/tracks",
+        "/albums/album-9",
+      ]),
     );
-    expect(calls).toHaveLength(4);
+    expect(calls).toHaveLength(5);
   });
 
   it("skips the detail page for a null id", () => {
     revalidateAlbumSurfaces(null);
-    expect(vi.mocked(revalidatePath).mock.calls).toHaveLength(3);
+    expect(vi.mocked(revalidatePath).mock.calls).toHaveLength(4);
   });
 });

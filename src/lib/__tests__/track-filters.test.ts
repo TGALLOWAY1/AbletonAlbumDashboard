@@ -27,6 +27,7 @@ function track(overrides: Partial<TrackWithDetails>): TrackWithDetails {
     owner_id: "owner",
     song_key: null,
     status: "active",
+    suno_status: "todo",
     tags: [],
     updated_at: "2026-01-01T00:00:00Z",
     stages: [],
@@ -41,8 +42,8 @@ function track(overrides: Partial<TrackWithDetails>): TrackWithDetails {
   } as TrackWithDetails;
 }
 
-const forestation = { id: "alb-1", title: "Forestation" };
-const nocturne = { id: "alb-2", title: "Nocturne" };
+const forestation = { id: "alb-1", title: "Forestation", genre: "Dubstep" };
+const nocturne = { id: "alb-2", title: "Nocturne", genre: null };
 
 const tracks: TrackWithDetails[] = [
   track({

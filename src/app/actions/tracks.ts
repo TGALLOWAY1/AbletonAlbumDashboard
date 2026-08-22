@@ -7,6 +7,7 @@ import { OWNER_ID } from "@/lib/owner";
 import {
   assignTracksToAlbumSchema,
   MAX_ACTIVE_TRACKS,
+  SUNO_STATUSES,
   TRACK_STATUSES,
 } from "@/lib/types";
 import {
@@ -192,6 +193,30 @@ export async function setTrackStatus(id: string, status: string) {
     .eq("owner_id", OWNER_ID)
     .eq("id", id);
   if (error) throw error;
+  revalidateTrackSurfaces(id);
+}
+
+/**
+ * Set the track's standing Suno marker (`todo` / `done`). The toggle lives on
+ * track cards and both detail surfaces, so it takes the target status rather
+ * than flipping server-side — the client already knows what it is showing, and
+ * a double-click can't then race itself into the wrong state.
+ */
+export async function setTrackSunoStatus(id: string, status: string) {
+  const next = z.enum(SUNO_STATUSES).parse(status);
+  const supabase = getServerSupabase();
+
+  const { data: updated, error } = await supabase
+    .from("tracks")
+    .update({ suno_status: next })
+    .eq("owner_id", OWNER_ID)
+    .eq("id", id)
+    .select("id")
+    .maybeSingle();
+  if (error) throw error;
+  if (!updated) {
+    throw new Error("Track not found, or the update was blocked.");
+  }
   revalidateTrackSurfaces(id);
 }
 

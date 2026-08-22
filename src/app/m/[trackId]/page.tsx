@@ -26,7 +26,9 @@ import { NextActionEditor } from "@/components/next-action-editor";
 import { NotesEditor } from "@/components/notes-editor";
 import { AudioVersionList } from "@/components/audio-version-list";
 import { CopyPathButton } from "@/components/copy-path-button";
+import { SunoStatusToggle } from "@/components/suno-status-toggle";
 import { ManualSessionEntry } from "@/components/manual-session-dialog";
+import { trackSunoStatus } from "@/lib/types";
 
 export const dynamic = "force-dynamic";
 
@@ -69,15 +71,20 @@ export default async function MobileTrackPage({
 
   if (!track) notFound();
 
-  const [genre, ...descriptors] = track.tags;
+  // Genre is an album-level fact now (migration 0021), so the prompt and the
+  // header badge both read it off the album rather than off `tags[0]`.
+  const genre = track.album?.genre?.trim() || null;
+  // Every tag is a descriptor now — none of them stands in for the genre.
+  const descriptors = track.tags;
   const meta = [
     track.song_key ? track.song_key : null,
     track.bpm ? `${track.bpm} BPM` : null,
   ].filter(Boolean) as string[];
+  const sunoStatus = trackSunoStatus(track);
   const sunoMeta = {
     trackId: track.id,
     trackName: track.name,
-    genre: track.tags[0] ?? null,
+    genre,
     bpm: track.bpm,
     songKey: track.song_key,
   };
@@ -117,8 +124,13 @@ export default async function MobileTrackPage({
           <h1 className="truncate text-xl font-semibold leading-tight">
             {track.name}
           </h1>
-          <div className="mt-1.5 flex flex-wrap items-center gap-x-1.5">
-            {genre && <Badge variant="primary">{genre}</Badge>}
+          <div className="mt-1.5 flex flex-wrap items-center gap-x-1.5 gap-y-1">
+            {genre && (
+              <Badge variant="primary" title="Album genre">
+                {genre}
+              </Badge>
+            )}
+            <SunoStatusToggle trackId={track.id} status={sunoStatus} />
             {/* py-3/-my-3 pads the tap target to ~44px without adding
                 visual height to the header. */}
             {track.album && (
@@ -191,6 +203,11 @@ export default async function MobileTrackPage({
 
       <section className="flex flex-col gap-2">
         <SectionHeading>Suno</SectionHeading>
+        <SunoStatusToggle
+          trackId={track.id}
+          status={sunoStatus}
+          variant="field"
+        />
         <SunoPanel
           meta={sunoMeta}
           variant="mobile"

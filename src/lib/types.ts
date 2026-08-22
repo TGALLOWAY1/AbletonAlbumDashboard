@@ -44,13 +44,15 @@ export type AssignTracksToAlbumInput = z.infer<
 >;
 
 // Partial update for a single album (`updateAlbum` in src/app/actions/album.ts).
-// The album header edits one field at a time — cover, title, or start date —
+// The album header edits one field at a time — cover, title, genre, or start
+// date —
 // so every key is optional and an absent key means "leave this column alone".
 // An empty string is a real value: it clears the column.
 export const albumPatchSchema = z
   .object({
     id: z.string().uuid("Invalid album id"),
     title: z.string().max(120, "Title must be 120 characters or fewer").optional(),
+    genre: z.string().max(60, "Genre must be 60 characters or fewer").optional(),
     cover_image_url: z
       .union([z.string().url("Cover must be a URL"), z.literal("")])
       .optional(),
@@ -65,6 +67,7 @@ export const albumPatchSchema = z
   .refine(
     (v) =>
       v.title !== undefined ||
+      v.genre !== undefined ||
       v.cover_image_url !== undefined ||
       v.start_date !== undefined,
     "Nothing to update",
@@ -86,6 +89,36 @@ export const TRACK_STATUSES = [
   "archived",
 ] as const;
 export type TrackStatus = (typeof TRACK_STATUSES)[number];
+
+/**
+ * Standing "has this track been through Suno yet?" marker, toggled straight
+ * from a track card. Deliberately separate from the `suno_experiments`
+ * round-trip (src/lib/suno.ts): that models one bounded experiment and its
+ * candidates, while this is the album-planning question of whether the track
+ * has had its Suno pass at all. Keep in sync with the check constraint in
+ * supabase/migrations/0021_album_genre_track_suno.sql.
+ */
+export const SUNO_STATUSES = ["todo", "done"] as const;
+export type SunoStatus = (typeof SUNO_STATUSES)[number];
+
+export const SUNO_STATUS_LABELS: Record<SunoStatus, string> = {
+  todo: "Suno",
+  done: "Suno done",
+};
+
+export const DEFAULT_SUNO_STATUS: SunoStatus = "todo";
+
+/** Rows written before migration 0021 have no value — read them as "todo". */
+export function trackSunoStatus(
+  track: Pick<TrackRow, "suno_status">,
+): SunoStatus {
+  return track.suno_status === "done" ? "done" : DEFAULT_SUNO_STATUS;
+}
+
+/** The other status — what a toggle click should write. */
+export function nextSunoStatus(current: SunoStatus): SunoStatus {
+  return current === "done" ? "todo" : "done";
+}
 
 export const STAGE_KEYS = [
   "idea",
@@ -171,7 +204,9 @@ export type TrackWithDetails = TrackRow & {
   openTaskCount: number;
   completedTaskCount: number;
   estMinutesRemaining: number;
-  album: { id: string; title: string | null } | null;
+  // Genre rides along with the album because it is an album-level fact — a
+  // record has one genre, not one per track.
+  album: { id: string; title: string | null; genre: string | null } | null;
   sunoExperiment: TrackSunoSummary | null;
 };
 

@@ -61,6 +61,7 @@ export default async function NewTrackPage({
               />
               <p className="text-xs text-muted-foreground">
                 Comma-separated. Free text — use whatever helps you find it.
+                Genre is set on the album, not here.
               </p>
             </div>
 

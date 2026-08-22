@@ -1,17 +1,20 @@
 import Link from "next/link";
 import { ChevronRight, MoreVertical, Play } from "lucide-react";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { TrackCard } from "@/components/track-card";
+import { SunoStatusToggle } from "@/components/suno-status-toggle";
 import {
-  AlbumChip,
   SunoChip,
   TrackActionsMenu,
   TrackCover,
   type SessionStats,
 } from "@/components/track-card-parts";
-import { progressFromStages, type TrackWithDetails } from "@/lib/types";
+import {
+  progressFromStages,
+  trackSunoStatus,
+  type TrackWithDetails,
+} from "@/lib/types";
 import { cn } from "@/lib/utils";
 import type { ViewSize } from "@/lib/view-mode";
 
@@ -77,7 +80,6 @@ export function TrackListView({
 
 function MediumRow({ track }: { track: TrackWithDetails }) {
   const progress = progressFromStages(track.stages);
-  const [genre] = track.tags;
   // Key and tempo rather than a task count: they're what you match a track
   // against the rest of the record by.
   const meta = trackKeyAndBpm(track);
@@ -104,8 +106,10 @@ function MediumRow({ track }: { track: TrackWithDetails }) {
           >
             {track.name}
           </Link>
-          {genre && <Badge variant="primary">{genre}</Badge>}
-          {track.album && <AlbumChip album={track.album} />}
+          <SunoStatusToggle
+            trackId={track.id}
+            status={trackSunoStatus(track)}
+          />
           <SunoChip suno={track.sunoExperiment} />
         </div>
         {(meta.length > 0 || track.primaryAction) && (

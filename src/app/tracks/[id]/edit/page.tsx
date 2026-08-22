@@ -55,7 +55,7 @@ export default async function EditTrackPage({
                 defaultValue={track.tags.join(", ")}
               />
               <p className="text-xs text-muted-foreground">
-                Comma-separated.
+                Comma-separated. Genre is set on the album, not here.
               </p>
             </div>
 

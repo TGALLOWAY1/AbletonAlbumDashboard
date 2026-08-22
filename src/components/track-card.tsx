@@ -8,13 +8,12 @@ import {
   Play,
 } from "lucide-react";
 import { Card } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { ProgressRing } from "@/components/ui/progress-ring";
 import { AddNoteDialog } from "@/components/add-note-dialog";
 import { CopyPathButton } from "@/components/copy-path-button";
+import { SunoStatusToggle } from "@/components/suno-status-toggle";
 import {
-  AlbumChip,
   MetaRow,
   NextAction,
   SunoChip,
@@ -23,7 +22,11 @@ import {
   TrackCover,
   type SessionStats,
 } from "@/components/track-card-parts";
-import { progressFromStages, type TrackWithDetails } from "@/lib/types";
+import {
+  progressFromStages,
+  trackSunoStatus,
+  type TrackWithDetails,
+} from "@/lib/types";
 
 export function TrackCard({
   track,
@@ -36,7 +39,7 @@ export function TrackCard({
   stale?: boolean;
 }) {
   const progress = progressFromStages(track.stages);
-  const [genre] = track.tags;
+  const sunoStatus = trackSunoStatus(track);
   const lastWorked = track.last_worked_at
     ? format(new Date(track.last_worked_at), "MMM d, yyyy")
     : "Never";
@@ -74,13 +77,10 @@ export function TrackCard({
           </div>
 
           <div className="flex flex-col gap-2">
-            {(genre || track.album || track.sunoExperiment) && (
-              <div className="flex flex-wrap items-center gap-1.5">
-                {genre && <Badge variant="primary">{genre}</Badge>}
-                {track.album && <AlbumChip album={track.album} />}
-                <SunoChip suno={track.sunoExperiment} />
-              </div>
-            )}
+            <div className="flex flex-wrap items-center gap-1.5">
+              <SunoStatusToggle trackId={track.id} status={sunoStatus} />
+              <SunoChip suno={track.sunoExperiment} />
+            </div>
 
             <MetaRow
               stats={sessionStats}
@@ -160,13 +160,10 @@ export function TrackCard({
           >
             {track.name}
           </Link>
-          {(genre || track.album || track.sunoExperiment) && (
-            <div className="mt-1.5 flex flex-wrap items-center gap-1.5">
-              {genre && <Badge variant="primary">{genre}</Badge>}
-              {track.album && <AlbumChip album={track.album} />}
-              <SunoChip suno={track.sunoExperiment} />
-            </div>
-          )}
+          <div className="mt-1.5 flex flex-wrap items-center gap-1.5">
+            <SunoStatusToggle trackId={track.id} status={sunoStatus} />
+            <SunoChip suno={track.sunoExperiment} />
+          </div>
           {meta.length > 0 && (
             <p className="mt-1.5 text-xs font-medium text-foreground/80 tabular-nums">
               {meta.join(" · ")}
