@@ -4,7 +4,6 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
   Activity,
-  Disc3,
   Home,
   ListMusic,
   Settings as SettingsIcon,
@@ -29,18 +28,14 @@ export const MOBILE_NAV_TABS: MobileNavTab[] = [
     match: (p) => p === "/",
   },
   {
-    label: "Albums",
-    href: "/albums",
-    icon: Disc3,
-    match: (p) => p.startsWith("/albums"),
-  },
-  {
     label: "Tracks",
     href: "/tracks",
     icon: ListMusic,
-    // The mobile track detail route lives at /m/[trackId], so it counts as
-    // "Tracks" here even though its URL doesn't start with /tracks.
-    match: (p) => p.startsWith("/tracks") || p.startsWith("/m/"),
+    // The mobile track detail route lives at /m/[trackId], and the library
+    // absorbed the albums shelf, so both count as "Tracks" here even though
+    // neither URL starts with /tracks.
+    match: (p) =>
+      p.startsWith("/tracks") || p.startsWith("/m/") || p.startsWith("/albums"),
   },
   {
     label: "Progress",
@@ -64,7 +59,14 @@ export function MobileBottomNav() {
       className="fixed inset-x-0 bottom-0 z-40 border-t border-border bg-surface pb-[env(safe-area-inset-bottom)] shadow-[0_-1px_6px_rgba(0,0,0,0.04)] md:hidden"
       aria-label="Primary"
     >
-      <ul className="grid grid-cols-5">
+      {/* Columns follow the tab count rather than a hard-coded class, so
+          adding or dropping a tab can't leave a gap in the bar. */}
+      <ul
+        className="grid"
+        style={{
+          gridTemplateColumns: `repeat(${MOBILE_NAV_TABS.length}, minmax(0, 1fr))`,
+        }}
+      >
         {MOBILE_NAV_TABS.map((tab) => {
           const active = tab.match(pathname);
           const Icon = tab.icon;

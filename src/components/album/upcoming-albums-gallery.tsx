@@ -17,7 +17,7 @@ export function UpcomingAlbumsGallery({
           Upcoming albums
         </h2>
         <Button asChild variant="ghost" size="sm">
-          <Link href="/albums">Manage</Link>
+          <Link href="/tracks">Manage</Link>
         </Button>
       </div>
 

@@ -70,7 +70,7 @@ export function AlbumHeader({
 
       <div className="flex flex-wrap items-center gap-2">
         <Button asChild variant="ghost" size="sm">
-          <Link href="/albums">All albums</Link>
+          <Link href="/tracks">All tracks</Link>
         </Button>
         <SetActiveButton album={album} />
         <GenreControl album={album} />

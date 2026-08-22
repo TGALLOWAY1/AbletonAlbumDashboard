@@ -1,20 +1,25 @@
 import { describe, expect, it } from "vitest";
 import {
-  DEFAULT_ALBUM_VIEW,
   DEFAULT_TRACK_VIEW,
   mergeQuery,
   parseViewPreference,
   serializeViewPreference,
   viewHref,
 } from "@/lib/view-mode";
+import type { ViewPreference } from "@/lib/view-mode";
+
+// A fallback that differs from DEFAULT_TRACK_VIEW on both axes, so the tests
+// below prove the fallback is actually consulted rather than the track
+// default being hard-coded.
+const GALLERY_FALLBACK: ViewPreference = { layout: "gallery", size: "medium" };
 
 describe("parseViewPreference", () => {
   it("falls back to the page default when nothing is in the URL", () => {
     expect(parseViewPreference({}, DEFAULT_TRACK_VIEW)).toEqual(
       DEFAULT_TRACK_VIEW,
     );
-    expect(parseViewPreference({}, DEFAULT_ALBUM_VIEW)).toEqual(
-      DEFAULT_ALBUM_VIEW,
+    expect(parseViewPreference({}, GALLERY_FALLBACK)).toEqual(
+      GALLERY_FALLBACK,
     );
   });
 
@@ -30,8 +35,8 @@ describe("parseViewPreference", () => {
 
   it("ignores unknown values instead of rendering an unhandled view", () => {
     expect(
-      parseViewPreference({ view: "carousel", size: "huge" }, DEFAULT_ALBUM_VIEW),
-    ).toEqual(DEFAULT_ALBUM_VIEW);
+      parseViewPreference({ view: "carousel", size: "huge" }, GALLERY_FALLBACK),
+    ).toEqual(GALLERY_FALLBACK);
   });
 
   it("takes the first value of a repeated param and trims it", () => {
@@ -67,7 +72,7 @@ describe("serializeViewPreference", () => {
     expect(
       serializeViewPreference(
         { layout: "list", size: "small" },
-        DEFAULT_ALBUM_VIEW,
+        GALLERY_FALLBACK,
       ),
     ).toBe("view=list&size=small");
   });
