@@ -1,7 +1,10 @@
 import {
   AudioWaveform,
+  Disc3,
   Gauge,
   LayoutTemplate,
+  ListMusic,
+  MicVocal,
   Music,
   SlidersHorizontal,
   Workflow,
@@ -43,6 +46,21 @@ export const TEMPLATE_CATEGORY_META: Record<
     icon: Workflow,
     bg: "bg-teal-500/15",
     fg: "text-teal-600",
+  },
+  rehearsal: {
+    icon: ListMusic,
+    bg: "bg-orange-500/15",
+    fg: "text-orange-600",
+  },
+  performance: {
+    icon: MicVocal,
+    bg: "bg-fuchsia-500/15",
+    fg: "text-fuchsia-600",
+  },
+  dj: {
+    icon: Disc3,
+    bg: "bg-indigo-500/15",
+    fg: "text-indigo-600",
   },
 };
 

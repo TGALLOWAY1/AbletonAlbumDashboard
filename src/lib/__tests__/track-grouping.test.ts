@@ -48,7 +48,7 @@ describe("groupTracksByAlbum", () => {
         track({ id: "b", album: nocturne }),
         track({ id: "c", album: forestation }),
       ],
-      [forestation.id, nocturne.id],
+      [forestation, nocturne],
     );
 
     expect(groups.map((g) => [g.id, g.label])).toEqual([
@@ -66,7 +66,7 @@ describe("groupTracksByAlbum", () => {
         track({ id: "newest", album: forestation }),
         track({ id: "older", album: forestation }),
       ],
-      [forestation.id],
+      [forestation],
     );
     expect(groups[0].tracks.map((t) => t.id)).toEqual(["newest", "older"]);
   });
@@ -74,7 +74,7 @@ describe("groupTracksByAlbum", () => {
   it("follows the album order it is given, not the tracks' order", () => {
     const groups = groupTracksByAlbum(
       [track({ id: "a", album: forestation }), track({ id: "b", album: nocturne })],
-      [nocturne.id, forestation.id],
+      [nocturne, forestation],
     );
     expect(groups.map((g) => g.id)).toEqual([nocturne.id, forestation.id]);
   });
@@ -87,7 +87,7 @@ describe("groupTracksByAlbum", () => {
         track({ id: "n", album: nocturne }),
         track({ id: "f", album: forestation }),
       ],
-      [nocturne.id],
+      [nocturne],
     );
     expect(groups.map((g) => g.label)).toEqual([
       "Nocturne",
@@ -96,13 +96,43 @@ describe("groupTracksByAlbum", () => {
     ]);
   });
 
-  it("omits albums with no matching tracks", () => {
+  it("omits albums with no matching tracks by default", () => {
     const groups = groupTracksByAlbum(
       [track({ id: "a", album: forestation })],
-      [forestation.id, nocturne.id],
+      [forestation, nocturne],
     );
     expect(groups).toHaveLength(1);
     expect(groups[0].id).toBe(forestation.id);
+  });
+
+  // The library is the app's only album index, so an album nothing is on yet
+  // still needs a heading to reach it by.
+  it("keeps empty albums, in shelf order, when asked to include them", () => {
+    const groups = groupTracksByAlbum(
+      [track({ id: "a", album: nocturne })],
+      [forestation, nocturne],
+      { includeEmptyAlbums: true },
+    );
+    expect(groups.map((g) => [g.id, g.tracks.length])).toEqual([
+      [forestation.id, 0],
+      [nocturne.id, 1],
+    ]);
+  });
+
+  it("still lists every album when the library has no tracks at all", () => {
+    const groups = groupTracksByAlbum([], [forestation, nocturne], {
+      includeEmptyAlbums: true,
+    });
+    expect(groups.map((g) => g.id)).toEqual([forestation.id, nocturne.id]);
+  });
+
+  it("never invents an empty backlog group", () => {
+    const groups = groupTracksByAlbum(
+      [track({ id: "a", album: forestation })],
+      [forestation],
+      { includeEmptyAlbums: true },
+    );
+    expect(groups.map((g) => g.id)).toEqual([forestation.id]);
   });
 
   it("labels an album with no title rather than rendering a blank heading", () => {
@@ -129,6 +159,34 @@ describe("groupTracksByAlbum", () => {
       track({ id: "a", album: { id: "alb-9", title: "Nine", genre: "  " } }),
     ]);
     expect(groups[0].genre).toBeNull();
+  });
+
+  // The heading shows artwork and an "Active" flag, and only the full album
+  // row carries those — the stub on a track doesn't.
+  it("takes cover art and the active flag from the albums list", () => {
+    const groups = groupTracksByAlbum(
+      [track({ id: "a", album: forestation })],
+      [
+        {
+          ...forestation,
+          cover_image_url: "https://example.test/cover.jpg",
+          is_active: true,
+        },
+      ],
+    );
+    expect(groups[0].coverImageUrl).toBe("https://example.test/cover.jpg");
+    expect(groups[0].isActive).toBe(true);
+  });
+
+  it("falls back to no cover and inactive for an album only a track knows about", () => {
+    const groups = groupTracksByAlbum([
+      track({ id: "a", album: forestation }),
+      track({ id: "loose", album: null }),
+    ]);
+    expect(groups[0].coverImageUrl).toBeNull();
+    expect(groups[0].isActive).toBe(false);
+    expect(groups[1].coverImageUrl).toBeNull();
+    expect(groups[1].isActive).toBe(false);
   });
 
   it("links album groups to the album page and leaves the backlog unlinked", () => {

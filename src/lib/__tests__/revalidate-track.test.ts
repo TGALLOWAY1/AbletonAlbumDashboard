@@ -14,7 +14,6 @@ const BASE_TRACK_PATHS = [
   "/focus/abc-123",
   "/",
   "/tracks",
-  "/albums",
 ];
 
 describe("revalidateTrackSurfaces", () => {
@@ -26,7 +25,7 @@ describe("revalidateTrackSurfaces", () => {
     revalidateTrackSurfaces("abc-123");
     const calls = vi.mocked(revalidatePath).mock.calls.map((c) => c[0]);
     // The feature-parity contract: both track detail route shapes plus the
-    // focus page, the aggregate surfaces, and the track/album listings.
+    // focus page, the aggregate surfaces, and the track library.
     expect(calls).toEqual(expect.arrayContaining(BASE_TRACK_PATHS));
     expect(calls).toHaveLength(BASE_TRACK_PATHS.length);
   });
@@ -67,28 +66,22 @@ describe("revalidateAlbumSurfaces", () => {
     revalidateAlbumSurfaces();
     const calls = vi.mocked(revalidatePath).mock.calls.map((c) => c[0]);
     expect(calls).toEqual(
-      expect.arrayContaining(["/", "/albums", "/settings", "/tracks"]),
+      expect.arrayContaining(["/", "/settings", "/tracks"]),
     );
-    expect(calls).toHaveLength(4);
+    expect(calls).toHaveLength(3);
   });
 
   it("also revalidates the album detail page when an id is provided", () => {
     revalidateAlbumSurfaces("album-9");
     const calls = vi.mocked(revalidatePath).mock.calls.map((c) => c[0]);
     expect(calls).toEqual(
-      expect.arrayContaining([
-        "/",
-        "/albums",
-        "/settings",
-        "/tracks",
-        "/albums/album-9",
-      ]),
+      expect.arrayContaining(["/", "/settings", "/tracks", "/albums/album-9"]),
     );
-    expect(calls).toHaveLength(5);
+    expect(calls).toHaveLength(4);
   });
 
   it("skips the detail page for a null id", () => {
     revalidateAlbumSurfaces(null);
-    expect(vi.mocked(revalidatePath).mock.calls).toHaveLength(4);
+    expect(vi.mocked(revalidatePath).mock.calls).toHaveLength(3);
   });
 });

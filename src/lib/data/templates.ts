@@ -4,7 +4,10 @@ export type TemplateCategory =
   | "mixing"
   | "mastering"
   | "genre"
-  | "workflow";
+  | "workflow"
+  | "rehearsal"
+  | "performance"
+  | "dj";
 
 export const TEMPLATE_CATEGORY_LABELS: Record<TemplateCategory, string> = {
   "sound-design": "Sound Design",
@@ -13,6 +16,9 @@ export const TEMPLATE_CATEGORY_LABELS: Record<TemplateCategory, string> = {
   mastering: "Mastering",
   genre: "Genre Specific",
   workflow: "Workflow",
+  rehearsal: "Rehearsal",
+  performance: "Live Performance",
+  dj: "DJ",
 };
 
 export const TEMPLATE_TAB_LABELS: Record<TemplateCategory | "all", string> = {
@@ -23,15 +29,22 @@ export const TEMPLATE_TAB_LABELS: Record<TemplateCategory | "all", string> = {
   mastering: "Mastering",
   genre: "Genre",
   workflow: "Workflow",
+  rehearsal: "Rehearsal",
+  performance: "Performance",
+  dj: "DJ",
 };
 
+// Browse-grid order: three rows of three (creation → polish → playing out).
 export const TEMPLATE_CATEGORY_ORDER: TemplateCategory[] = [
+  "workflow",
   "sound-design",
+  "genre",
   "arrangement",
   "mixing",
   "mastering",
-  "genre",
-  "workflow",
+  "rehearsal",
+  "performance",
+  "dj",
 ];
 
 export interface AudioPreview {
@@ -408,10 +421,10 @@ export const TEMPLATES: TemplateItem[] = [
   {
     id: "tpl-live-performance",
     name: "Live Performance",
-    category: "workflow",
+    category: "performance",
     description: "Optimized for live sets and performance.",
-    filePath: `${ROOT}/Workflow/Live Performance.als`,
-    folderPath: `${ROOT}/Workflow`,
+    filePath: `${ROOT}/Live Performance/Live Performance.als`,
+    folderPath: `${ROOT}/Live Performance`,
     tags: ["live", "performance"],
     audioPreviews: [],
     notes: "Session view set with launch quantization and scenes.",
@@ -432,5 +445,75 @@ export const TEMPLATES: TemplateItem[] = [
     useCount: 25,
     createdAt: "2024-01-28T09:00:00.000Z",
     updatedAt: "2024-04-14T09:00:00.000Z",
+  },
+  {
+    id: "tpl-setlist-rehearsal",
+    name: "Setlist Rehearsal",
+    category: "rehearsal",
+    description: "Run the full setlist top to bottom with locators.",
+    filePath: `${ROOT}/Rehearsal/Setlist Rehearsal.als`,
+    folderPath: `${ROOT}/Rehearsal`,
+    tags: ["setlist", "practice"],
+    audioPreviews: [],
+    notes: "Locator per song with count-in cues and click bus routed to phones.",
+    useCount: 7,
+    createdAt: "2024-04-03T09:00:00.000Z",
+    updatedAt: "2024-05-06T09:00:00.000Z",
+  },
+  {
+    id: "tpl-section-loop-practice",
+    name: "Section Loop Practice",
+    category: "rehearsal",
+    description: "Loop tricky sections at reduced tempo.",
+    filePath: `${ROOT}/Rehearsal/Section Loop Practice.als`,
+    folderPath: `${ROOT}/Rehearsal`,
+    tags: ["practice", "looping"],
+    audioPreviews: [],
+    notes: "Loop brace presets with tempo ramp automation from 70% to full speed.",
+    useCount: 5,
+    createdAt: "2024-04-10T09:00:00.000Z",
+    updatedAt: "2024-05-03T09:00:00.000Z",
+  },
+  {
+    id: "tpl-hybrid-live-set",
+    name: "Hybrid Live Set",
+    category: "performance",
+    description: "Backing clips plus live instrument inputs.",
+    filePath: `${ROOT}/Live Performance/Hybrid Live Set.als`,
+    folderPath: `${ROOT}/Live Performance`,
+    tags: ["live", "hybrid"],
+    audioPreviews: [],
+    notes: "Scene-per-song layout with armed input tracks and a safety limiter.",
+    useCount: 6,
+    createdAt: "2024-04-06T09:00:00.000Z",
+    updatedAt: "2024-05-05T09:00:00.000Z",
+  },
+  {
+    id: "tpl-dj-set",
+    name: "DJ Set Template",
+    category: "dj",
+    description: "Four-deck session view rig with crossfader mapped.",
+    filePath: `${ROOT}/DJ/DJ Set Template.als`,
+    folderPath: `${ROOT}/DJ`,
+    tags: ["dj", "decks"],
+    audioPreviews: [],
+    notes: "Two A/B deck pairs with EQ three-bands, filter racks, and cue bus.",
+    useCount: 8,
+    createdAt: "2024-04-08T09:00:00.000Z",
+    updatedAt: "2024-05-07T09:00:00.000Z",
+  },
+  {
+    id: "tpl-dj-transitions",
+    name: "Transition Practice",
+    category: "dj",
+    description: "Practice blends across keys and tempos.",
+    filePath: `${ROOT}/DJ/Transition Practice.als`,
+    folderPath: `${ROOT}/DJ`,
+    tags: ["dj", "transitions"],
+    audioPreviews: [],
+    notes: "Warp-marker exercises with tempo ramps and harmonic mixing notes.",
+    useCount: 4,
+    createdAt: "2024-04-15T09:00:00.000Z",
+    updatedAt: "2024-05-01T09:00:00.000Z",
   },
 ];

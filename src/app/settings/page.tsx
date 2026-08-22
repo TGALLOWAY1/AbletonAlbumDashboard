@@ -43,7 +43,7 @@ export default async function SettingsPage() {
             )}
           </div>
           <Button asChild size="sm">
-            <Link href="/albums">Manage albums</Link>
+            <Link href="/tracks">Manage albums</Link>
           </Button>
         </CardContent>
       </Card>

@@ -25,6 +25,7 @@ Run `pnpm typecheck && pnpm lint && pnpm test` before committing.
 - Desktop track detail → `src/app/tracks/[id]/page.tsx`
 - Mobile track detail → `src/app/m/[trackId]/page.tsx`
 - Dashboard root (`src/app/page.tsx`) is a single responsive surface using Tailwind `md:` breakpoints — no user-agent sniffing, no separate desktop/mobile route for the home page.
+- The dashboard is also the progress surface: it ends with a Progress section (`src/components/home/progress-panel.tsx`, anchor `#progress`) carrying the work heatmap, range stats, bottleneck categories and the session-history log. There is no `/analytics` or `/sessions` page — both routes redirect to `/#progress`.
 - Library (`src/app/library/**`) is likewise a single responsive surface — the feature parity rule below is track-level and does not imply an `/m/library` route. `src/app/library/layout.tsx` mounts the preview player so playback survives navigation between Library routes without leaking an audio element onto every other page.
 - Server actions live under `src/app/actions/`.
 - Data fetchers live under `src/lib/data/`.
@@ -62,8 +63,14 @@ useful on desktop (documented exception).
 - User-facing errors in client components go through `useToast()` (`src/components/toast.tsx`, provider mounted in the root layout) — never `window.alert()`.
 - Optimistic UI uses React 19's `useOptimistic` (see `TrackTodoList`).
 - Styling: Tailwind utility classes, no CSS modules. Use `cn()` / `tailwind-merge` for conditional classes.
-- Collection pages (`/tracks`, `/albums`) keep their gallery/list + large/medium/small
-  view preference in the URL (`src/lib/view-mode.ts`), so the pages stay server
-  components and the choice is linkable. Controls that own their own query params
+- The track library (`/tracks`) keeps its gallery/list + large/medium/small
+  view preference in the URL (`src/lib/view-mode.ts`), so the page stays a server
+  component and the choice is linkable. Controls that own their own query params
   take a `preserveQuery` prop and merge with `mergeQuery()` rather than
   overwriting the whole query string.
+- `/tracks` is also the album shelf: it groups the library by album
+  (`src/lib/track-grouping.ts`), listing empty albums too when no filter is
+  applied, so every record has an entry point. There is no `/albums` index —
+  that route redirects here; `/albums/[id]` is still where an album is edited,
+  and it highlights the Tracks nav item (`EXTRA_SECTION_PREFIXES` in
+  `src/components/nav-items.ts`).

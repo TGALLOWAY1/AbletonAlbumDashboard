@@ -13,8 +13,8 @@ export default function AlbumsError({
     <ErrorView
       error={error}
       reset={reset}
-      fallbackHref="/albums"
-      fallbackLabel="Back to albums"
+      fallbackHref="/tracks"
+      fallbackLabel="Back to tracks"
     />
   );
 }

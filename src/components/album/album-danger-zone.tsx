@@ -52,7 +52,7 @@ export function AlbumDangerZone({
               // The server action doesn't redirect (redirect() would throw
               // NEXT_REDIRECT through our catch) — navigate client-side on
               // success instead, matching the old form's redirect behavior.
-              router.push("/albums");
+              router.push("/tracks");
             });
           }}
         >

@@ -1,6 +1,5 @@
 import {
   BookOpen,
-  Disc3,
   Home,
   LayoutTemplate,
   Library,
@@ -17,7 +16,6 @@ export type NavItem = {
 
 export const NAV_ITEMS: NavItem[] = [
   { href: "/", label: "Home", icon: Home },
-  { href: "/albums", label: "Albums", icon: Disc3 },
   { href: "/tracks", label: "Tracks", icon: ListMusic },
   { href: "/library", label: "Library", icon: Library },
   { href: "/templates", label: "Templates", icon: LayoutTemplate },
@@ -25,7 +23,21 @@ export const NAV_ITEMS: NavItem[] = [
   { href: "/settings", label: "Settings", icon: Settings },
 ];
 
+/**
+ * Routes that belong to a nav item but don't live under its href.
+ *
+ * The track library absorbed the albums shelf, so an album — whether the
+ * detail page or the create form — highlights Tracks. Same for the mobile
+ * track detail route, which is served from `/m/[trackId]`.
+ */
+const EXTRA_SECTION_PREFIXES: Record<string, string[]> = {
+  "/tracks": ["/albums", "/m/"],
+};
+
 export function isNavActive(pathname: string, href: string) {
   if (href === "/") return pathname === "/";
-  return pathname === href || pathname.startsWith(href + "/");
+  if (pathname === href || pathname.startsWith(href + "/")) return true;
+  return (EXTRA_SECTION_PREFIXES[href] ?? []).some((prefix) =>
+    pathname.startsWith(prefix),
+  );
 }
