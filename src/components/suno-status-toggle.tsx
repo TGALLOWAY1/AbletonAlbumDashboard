@@ -63,12 +63,23 @@ export function SunoStatusToggle({
     const previous = value;
     setValue(next);
     start(async () => {
+      // The action reports failure in its return value, not by throwing: React
+      // strips the message off anything a server action throws before the
+      // rejection gets here, so a thrown message would toast as the generic
+      // "An error occurred in the Server Components render". The catch stays
+      // for the cases that genuinely reject — a dropped connection, a failed
+      // fetch — where there is no result to read.
       try {
-        await setTrackSunoStatus(trackId, next);
+        const result = await setTrackSunoStatus(trackId, next);
+        if (result.error) {
+          setValue(previous);
+          toast(result.error);
+          return;
+        }
         toast(`Suno: ${SUNO_STATUS_LABELS[next]}`);
-      } catch (e) {
+      } catch {
         setValue(previous);
-        toast((e as Error).message);
+        toast("Could not reach the server. Please try again.");
       }
     });
   }

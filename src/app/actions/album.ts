@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { z } from "zod";
 import { getServerSupabase } from "@/lib/supabase/server";
+import { logSupabaseError } from "@/lib/supabase/log-error";
 import { OWNER_ID } from "@/lib/owner";
 import { revalidateAlbumSurfaces } from "@/lib/revalidate-track";
 import { albumPatchSchema, type AlbumPatchInput } from "@/lib/types";
@@ -27,21 +28,6 @@ function throwIfMissingAlbums(
 }
 
 export type CreateAlbumState = { error: string | null };
-
-function logSupabaseError(label: string, err: unknown) {
-  const e = err as {
-    code?: string;
-    message?: string;
-    details?: string;
-    hint?: string;
-  };
-  console.error(label, {
-    code: e?.code,
-    message: e?.message ?? (err instanceof Error ? err.message : String(err)),
-    details: e?.details,
-    hint: e?.hint,
-  });
-}
 
 // Supabase PostgrestError is a plain object `{ code, message, details, hint }`,
 // not an `Error` instance — so `err instanceof Error` is false and we'd

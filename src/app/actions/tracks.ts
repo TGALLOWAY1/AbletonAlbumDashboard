@@ -3,6 +3,7 @@
 import { redirect } from "next/navigation";
 import { z } from "zod";
 import { getServerSupabase } from "@/lib/supabase/server";
+import { logSupabaseError } from "@/lib/supabase/log-error";
 import { OWNER_ID } from "@/lib/owner";
 import {
   assignTracksToAlbumSchema,
@@ -15,8 +16,10 @@ import {
   revalidateTrackSurfaces,
 } from "@/lib/revalidate-track";
 import {
+  isCheckViolation,
   isMissingColumn,
   MIGRATION_0021_MISSING_MESSAGE,
+  MIGRATION_0022_MISSING_MESSAGE,
 } from "@/lib/migration-errors";
 
 const optionalTrimmed = z
@@ -200,13 +203,25 @@ export async function setTrackStatus(id: string, status: string) {
   revalidateTrackSurfaces(id);
 }
 
+/** `error` is null on success — same shape as `CreateAlbumState`. */
+export type SetSunoStatusResult = { error: string | null };
+
 /**
- * Set the track's standing Suno marker (`todo` / `done`). The toggle lives on
- * track cards and both detail surfaces, so it takes the target status rather
- * than flipping server-side — the client already knows what it is showing, and
- * a double-click can't then race itself into the wrong state.
+ * Set the track's standing Suno marker (`todo` / `done` / `error`). The control
+ * lives on track cards and both detail surfaces, so it takes the target status
+ * rather than advancing server-side — the client already knows what it is
+ * showing, and a double-click can't then race itself into the wrong state.
+ *
+ * Returns its failure rather than throwing it, matching `createAlbum`: React
+ * replaces the message of anything a server action throws with a generic
+ * "An error occurred in the Server Components render" before the rejection
+ * reaches the client, so a thrown message is a message the user never sees.
+ * A returned value crosses intact.
  */
-export async function setTrackSunoStatus(id: string, status: string) {
+export async function setTrackSunoStatus(
+  id: string,
+  status: string,
+): Promise<SetSunoStatusResult> {
   const next = z.enum(SUNO_STATUSES).parse(status);
   const supabase = getServerSupabase();
 
@@ -218,13 +233,22 @@ export async function setTrackSunoStatus(id: string, status: string) {
     .select("id")
     .maybeSingle();
   if (error) {
-    if (isMissingColumn(error)) throw new Error(MIGRATION_0021_MISSING_MESSAGE);
-    throw error;
+    if (isMissingColumn(error)) {
+      return { error: MIGRATION_0021_MISSING_MESSAGE };
+    }
+    // 0022 widened this constraint to three states. Until it is applied, the
+    // column happily takes 'todo' and 'done' and rejects 'error'.
+    if (isCheckViolation(error, "tracks_suno_status_check")) {
+      return { error: MIGRATION_0022_MISSING_MESSAGE };
+    }
+    logSupabaseError("[setTrackSunoStatus] failed", error);
+    return { error: "Could not save the Suno status. Please try again." };
   }
   if (!updated) {
-    throw new Error("Track not found, or the update was blocked.");
+    return { error: "Track not found, or the update was blocked." };
   }
   revalidateTrackSurfaces(id);
+  return { error: null };
 }
 
 export async function toggleTrackFocus(id: string) {
