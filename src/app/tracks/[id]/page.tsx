@@ -18,6 +18,7 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { BackLink } from "@/components/back-link";
+import { TrackAlbumSelect } from "@/components/track-album-select";
 import { StagesChecklist } from "@/components/stages-checklist";
 import { BottleneckEditor } from "@/components/bottleneck-editor";
 import { NextActionEditor } from "@/components/next-action-editor";
@@ -37,6 +38,7 @@ import { getVersionsForTrack } from "@/lib/data/versions";
 import { getSessionTypes } from "@/lib/data/session-types";
 import { getSessionsForTrack } from "@/lib/data/sessions";
 import { getOpenExperimentWithCandidates } from "@/lib/data/suno";
+import { listAlbums } from "@/lib/data/album";
 import { TrackSessionHistory } from "@/components/track-session-history";
 
 export const dynamic = "force-dynamic";
@@ -60,6 +62,7 @@ export default async function TrackDetailPage({
     sessionTypes,
     sessions,
     sunoExperiment,
+    albums,
   ] = await Promise.all([
     getTrack(id),
     getVersionsForTrack(id),
@@ -68,6 +71,7 @@ export default async function TrackDetailPage({
     getSessionTypes(),
     getSessionsForTrack(id),
     getOpenExperimentWithCandidates(id),
+    listAlbums(),
   ]);
   if (!track) notFound();
 
@@ -119,21 +123,20 @@ export default async function TrackDetailPage({
             <div className="flex flex-wrap items-center gap-2">
               {genre && <Badge variant="primary">{genre}</Badge>}
               <Badge variant="default">{track.status}</Badge>
-              {track.album ? (
+              {track.album && (
                 <Link href={`/albums/${track.album.id}`}>
                   <Badge className="gap-1 hover:bg-surface-2/80 hover:text-foreground">
                     <Disc3 className="h-3 w-3 shrink-0" />
                     {track.album.title?.trim() || "Untitled album"}
                   </Badge>
                 </Link>
-              ) : (
-                <Link
-                  href={`/tracks/${track.id}/edit`}
-                  className="text-xs font-medium text-muted-foreground hover:text-foreground hover:underline"
-                >
-                  No album · Assign
-                </Link>
               )}
+              <TrackAlbumSelect
+                trackId={track.id}
+                albumId={track.album?.id ?? null}
+                albums={albums}
+                variant="compact"
+              />
             </div>
             {meta.length > 0 && (
               <p className="text-sm font-medium text-foreground/85 tabular-nums">

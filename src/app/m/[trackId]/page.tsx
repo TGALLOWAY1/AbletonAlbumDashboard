@@ -11,11 +11,13 @@ import { getVersionsForTrack } from "@/lib/data/versions";
 import { getSessionTypes } from "@/lib/data/session-types";
 import { getSessionsForTrack } from "@/lib/data/sessions";
 import { getOpenExperimentWithCandidates } from "@/lib/data/suno";
+import { listAlbums } from "@/lib/data/album";
 import { TrackSessionHistory } from "@/components/track-session-history";
 import { SunoPanel } from "@/components/suno/suno-panel";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { BackLink } from "@/components/back-link";
+import { TrackAlbumSelect } from "@/components/track-album-select";
 import { TrackTodoList } from "@/components/mobile/track-todo-list";
 import { TrackTodoHistory } from "@/components/mobile/track-todo-history";
 import { StagesChecklist } from "@/components/stages-checklist";
@@ -53,6 +55,7 @@ export default async function MobileTrackPage({
     sessionTypes,
     sessions,
     sunoExperiment,
+    albums,
   ] = await Promise.all([
     getTrack(trackId),
     getVersionsForTrack(trackId),
@@ -61,6 +64,7 @@ export default async function MobileTrackPage({
     getSessionTypes(),
     getSessionsForTrack(trackId),
     getOpenExperimentWithCandidates(trackId),
+    listAlbums(),
   ]);
 
   if (!track) notFound();
@@ -117,7 +121,7 @@ export default async function MobileTrackPage({
             {genre && <Badge variant="primary">{genre}</Badge>}
             {/* py-3/-my-3 pads the tap target to ~44px without adding
                 visual height to the header. */}
-            {track.album ? (
+            {track.album && (
               <Link
                 href={`/albums/${track.album.id}`}
                 className="-my-3 inline-flex max-w-full items-center py-3"
@@ -129,14 +133,13 @@ export default async function MobileTrackPage({
                   </span>
                 </Badge>
               </Link>
-            ) : (
-              <Link
-                href={`/tracks/${track.id}/edit`}
-                className="-my-3 inline-flex items-center py-3 text-xs font-medium text-muted-foreground"
-              >
-                No album · Assign
-              </Link>
             )}
+            <TrackAlbumSelect
+              trackId={track.id}
+              albumId={track.album?.id ?? null}
+              albums={albums}
+              variant="compact"
+            />
           </div>
           {meta.length > 0 && (
             <p className="mt-1.5 text-xs font-medium tabular-nums text-foreground/80">
