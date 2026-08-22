@@ -28,10 +28,13 @@ export type ViewSearchParams = {
   size?: string | string[];
 };
 
-/** Tracks default to the detailed list — the library view is a working list. */
+/**
+ * Tracks default to the list at medium — the library view is a working list,
+ * and medium rows fit a whole album shelf on screen without scrolling.
+ */
 export const DEFAULT_TRACK_VIEW: ViewPreference = {
   layout: "list",
-  size: "large",
+  size: "medium",
 };
 
 /** Albums default to the cover grid — artwork is the point of an album shelf. */
