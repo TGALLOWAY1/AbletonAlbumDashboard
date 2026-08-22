@@ -15,8 +15,10 @@ import {
   revalidateTrackSurfaces,
 } from "@/lib/revalidate-track";
 import {
+  isCheckViolation,
   isMissingColumn,
   MIGRATION_0021_MISSING_MESSAGE,
+  MIGRATION_0022_MISSING_MESSAGE,
 } from "@/lib/migration-errors";
 
 const optionalTrimmed = z
@@ -201,10 +203,10 @@ export async function setTrackStatus(id: string, status: string) {
 }
 
 /**
- * Set the track's standing Suno marker (`todo` / `done`). The toggle lives on
- * track cards and both detail surfaces, so it takes the target status rather
- * than flipping server-side — the client already knows what it is showing, and
- * a double-click can't then race itself into the wrong state.
+ * Set the track's standing Suno marker (`todo` / `done` / `error`). The control
+ * lives on track cards and both detail surfaces, so it takes the target status
+ * rather than advancing server-side — the client already knows what it is
+ * showing, and a double-click can't then race itself into the wrong state.
  */
 export async function setTrackSunoStatus(id: string, status: string) {
   const next = z.enum(SUNO_STATUSES).parse(status);
@@ -219,6 +221,11 @@ export async function setTrackSunoStatus(id: string, status: string) {
     .maybeSingle();
   if (error) {
     if (isMissingColumn(error)) throw new Error(MIGRATION_0021_MISSING_MESSAGE);
+    // 0022 widened this constraint to three states. Until it is applied, the
+    // column happily takes 'todo' and 'done' and rejects 'error'.
+    if (isCheckViolation(error, "tracks_suno_status_check")) {
+      throw new Error(MIGRATION_0022_MISSING_MESSAGE);
+    }
     throw error;
   }
   if (!updated) {

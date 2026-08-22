@@ -13,6 +13,25 @@ export function isMissingColumn(error: unknown): boolean {
   return code === "42703" || code === "PGRST204";
 }
 
+/**
+ * A check constraint that is narrower than the shipped code — Postgres 23514.
+ * Same root cause as a missing column, but a different symptom: the column
+ * exists, so the write is well-formed right up until the row is validated.
+ * Worth its own branch because the raw error is redacted by Next in production
+ * builds, leaving the user with "An error occurred in the Server Components
+ * render" and nothing to act on.
+ */
+export function isCheckViolation(error: unknown, constraint?: string): boolean {
+  const e = error as { code?: string; message?: string } | null;
+  if (e?.code !== "23514") return false;
+  return constraint ? (e.message ?? "").includes(constraint) : true;
+}
+
 export const MIGRATION_0021_MISSING_MESSAGE =
   "This needs supabase/migrations/0021_album_genre_track_suno.sql applied to " +
   "your Supabase project. Run it, then try again.";
+
+export const MIGRATION_0022_MISSING_MESSAGE =
+  "This needs supabase/migrations/0022_suno_status_error.sql applied to your " +
+  "Supabase project — the database still only accepts the old two Suno " +
+  "states. Run it, then try again.";
