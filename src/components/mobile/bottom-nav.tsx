@@ -73,7 +73,7 @@ export function MobileBottomNav() {
               <Link
                 href={tab.href}
                 className={cn(
-                  "flex flex-1 flex-col items-center justify-center gap-1 py-2 text-[10px] font-medium",
+                  "flex flex-1 flex-col items-center justify-center gap-1 py-2.5 text-[11px] font-medium",
                   active ? "text-primary" : "text-muted-foreground",
                 )}
                 aria-current={active ? "page" : undefined}
