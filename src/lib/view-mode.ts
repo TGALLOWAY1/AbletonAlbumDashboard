@@ -43,6 +43,15 @@ export const DEFAULT_ALBUM_VIEW: ViewPreference = {
   size: "medium",
 };
 
+/**
+ * Templates default to the gallery — the waveform thumbnails carry more
+ * identity than a text row, and a category rarely holds more than a handful.
+ */
+export const DEFAULT_TEMPLATE_VIEW: ViewPreference = {
+  layout: "gallery",
+  size: "medium",
+};
+
 export const VIEW_LAYOUT_LABELS: Record<ViewLayout, string> = {
   gallery: "Gallery",
   list: "List",
