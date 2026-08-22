@@ -43,7 +43,10 @@ alter table tracks drop constraint if exists tracks_suno_status_check;
 alter table tracks add constraint tracks_suno_status_check
   check (suno_status in ('todo', 'done'));
 
--- A track whose Suno round-trip already landed is done by definition. Guarded
+-- A track whose Suno round-trip already landed is done by definition. This is
+-- the one-time half of that invariant; `closeExperiment` in
+-- src/app/actions/suno-experiments.ts keeps it true for future integrations.
+-- Guarded
 -- because 0019 is applied by hand and may not have run on every project yet.
 do $$
 begin

@@ -496,6 +496,20 @@ export async function closeExperiment(input: CloseExperimentInput) {
       .eq("id", experiment.action_id)
       .is("completed_at", null);
   }
+  // An integrated round-trip answers the standing "has this been through
+  // Suno?" question, so the track's marker follows — the same invariant
+  // migration 0021 backfills for experiments integrated before it ran. The
+  // manual toggle can still flip it back. Discarding says nothing either way,
+  // so it leaves the marker alone.
+  if (parsed.outcome === "integrated") {
+    const { error: sunoStatusError } = await supabase
+      .from("tracks")
+      .update({ suno_status: "done" })
+      .eq("owner_id", OWNER_ID)
+      .eq("id", parsed.trackId);
+    if (sunoStatusError) throw sunoStatusError;
+  }
+
   if (parsed.outcome === "integrated" && parsed.integrationTaskDescription) {
     await insertSunoTask(parsed.trackId, parsed.integrationTaskDescription);
   }
