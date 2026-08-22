@@ -4,7 +4,9 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
   Activity,
+  Disc3,
   Home,
+  ListMusic,
   Settings as SettingsIcon,
   type LucideIcon,
 } from "lucide-react";
@@ -24,7 +26,21 @@ export const MOBILE_NAV_TABS: MobileNavTab[] = [
     label: "Home",
     href: "/",
     icon: Home,
-    match: (p) => p === "/" || p.startsWith("/tracks") || p.startsWith("/m/"),
+    match: (p) => p === "/",
+  },
+  {
+    label: "Albums",
+    href: "/albums",
+    icon: Disc3,
+    match: (p) => p.startsWith("/albums"),
+  },
+  {
+    label: "Tracks",
+    href: "/tracks",
+    icon: ListMusic,
+    // The mobile track detail route lives at /m/[trackId], so it counts as
+    // "Tracks" here even though its URL doesn't start with /tracks.
+    match: (p) => p.startsWith("/tracks") || p.startsWith("/m/"),
   },
   {
     label: "Progress",
@@ -48,7 +64,7 @@ export function MobileBottomNav() {
       className="fixed inset-x-0 bottom-0 z-40 border-t border-border bg-surface pb-[env(safe-area-inset-bottom)] shadow-[0_-1px_6px_rgba(0,0,0,0.04)] md:hidden"
       aria-label="Primary"
     >
-      <ul className="grid grid-cols-3">
+      <ul className="grid grid-cols-5">
         {MOBILE_NAV_TABS.map((tab) => {
           const active = tab.match(pathname);
           const Icon = tab.icon;
@@ -57,7 +73,7 @@ export function MobileBottomNav() {
               <Link
                 href={tab.href}
                 className={cn(
-                  "flex flex-1 flex-col items-center justify-center gap-1 py-2.5 text-[11px] font-medium",
+                  "flex flex-1 flex-col items-center justify-center gap-1 py-2 text-[10px] font-medium",
                   active ? "text-primary" : "text-muted-foreground",
                 )}
                 aria-current={active ? "page" : undefined}
