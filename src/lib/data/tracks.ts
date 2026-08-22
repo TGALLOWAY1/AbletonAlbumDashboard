@@ -11,6 +11,52 @@ import type {
   TrackWithDetails,
 } from "@/lib/types";
 
+type TrackAlbum = { id: string; title: string | null; genre: string | null };
+
+/**
+ * Album membership for a set of tracks.
+ *
+ * Membership is essential — it decides how `/tracks` groups, and whether a
+ * track reads as "on a record" at all — while `genre` (migration 0021) is
+ * decoration. So a project that has not applied 0021 yet must still get its
+ * albums: selecting the column outright made PostgREST fail the whole query
+ * with `42703 undefined_column`, which silently filed every track under
+ * Backlog. On any error we retry for just the columns that have always
+ * existed and treat the genre as unset.
+ */
+export async function fetchTrackAlbums(
+  supabase: ReturnType<typeof getServerSupabase>,
+  albumIds: string[],
+): Promise<TrackAlbum[]> {
+  if (albumIds.length === 0) return [];
+
+  const withGenre = await supabase
+    .from("albums")
+    .select("id, title, genre")
+    .in("id", albumIds);
+  if (!withGenre.error) return withGenre.data ?? [];
+
+  const base = await supabase
+    .from("albums")
+    .select("id, title")
+    .in("id", albumIds);
+  if (base.error) {
+    // Both attempts failed — the albums table itself is missing or
+    // unreadable. Membership is lost either way, but say so rather than
+    // letting the page quietly claim every track is unassigned.
+    console.warn(
+      "[tracks] could not load albums for track membership:",
+      base.error.message,
+    );
+    return [];
+  }
+  console.warn(
+    "[tracks] albums.genre is missing — apply supabase/migrations/" +
+      "0021_album_genre_track_suno.sql to enable album genres.",
+  );
+  return (base.data ?? []).map((a) => ({ ...a, genre: null }));
+}
+
 async function attachDetails(tracks: TrackRow[]): Promise<TrackWithDetails[]> {
   if (tracks.length === 0) return [];
   const supabase = getServerSupabase();
@@ -55,7 +101,7 @@ async function attachDetails(tracks: TrackRow[]): Promise<TrackWithDetails[]> {
         .select("track_id")
         .in("track_id", ids)
         .not("completed_at", "is", null),
-      supabase.from("albums").select("id, title, genre").in("id", albumIds),
+      fetchTrackAlbums(supabase, albumIds),
       // At most one non-terminal Suno experiment per track (partial unique
       // index); embedded candidate decisions give the unreviewed count.
       supabase
@@ -93,11 +139,8 @@ async function attachDetails(tracks: TrackRow[]): Promise<TrackWithDetails[]> {
       (completedCountByTrack.get(a.track_id) ?? 0) + 1,
     );
   });
-  const albumById = new Map<
-    string,
-    { id: string; title: string | null; genre: string | null }
-  >();
-  (albumsRes.data ?? []).forEach((a) => albumById.set(a.id, a));
+  const albumById = new Map<string, TrackAlbum>();
+  albumsRes.forEach((a) => albumById.set(a.id, a));
   const sunoByTrack = new Map<string, TrackSunoSummary>();
   (sunoRes.data ?? []).forEach((e) => {
     sunoByTrack.set(e.track_id, {

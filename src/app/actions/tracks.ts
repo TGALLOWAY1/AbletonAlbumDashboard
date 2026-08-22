@@ -14,6 +14,10 @@ import {
   revalidateAlbumSurfaces,
   revalidateTrackSurfaces,
 } from "@/lib/revalidate-track";
+import {
+  isMissingColumn,
+  MIGRATION_0021_MISSING_MESSAGE,
+} from "@/lib/migration-errors";
 
 const optionalTrimmed = z
   .string()
@@ -213,7 +217,10 @@ export async function setTrackSunoStatus(id: string, status: string) {
     .eq("id", id)
     .select("id")
     .maybeSingle();
-  if (error) throw error;
+  if (error) {
+    if (isMissingColumn(error)) throw new Error(MIGRATION_0021_MISSING_MESSAGE);
+    throw error;
+  }
   if (!updated) {
     throw new Error("Track not found, or the update was blocked.");
   }

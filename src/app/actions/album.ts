@@ -8,6 +8,10 @@ import { OWNER_ID } from "@/lib/owner";
 import { revalidateAlbumSurfaces } from "@/lib/revalidate-track";
 import { albumPatchSchema, type AlbumPatchInput } from "@/lib/types";
 import {
+  isMissingColumn,
+  MIGRATION_0021_MISSING_MESSAGE,
+} from "@/lib/migration-errors";
+import {
   ALBUMS_MIGRATION_MISSING_MESSAGE,
   isMissingRelation,
   warnMissingAlbumsOnce,
@@ -169,7 +173,10 @@ export async function updateAlbum(input: AlbumPatchInput) {
     .eq("owner_id", OWNER_ID)
     .eq("id", parsed.id);
   throwIfMissingAlbums(error);
-  if (error) throw error;
+  if (error) {
+    if (isMissingColumn(error)) throw new Error(MIGRATION_0021_MISSING_MESSAGE);
+    throw error;
+  }
 
   revalidateAlbumSurfaces(parsed.id);
 }
