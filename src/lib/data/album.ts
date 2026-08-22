@@ -123,25 +123,3 @@ export async function listAlbums(): Promise<AlbumWithTrackCount[]> {
   return attachTrackCounts(data ?? []);
 }
 
-export async function listUpcomingAlbums(
-  limit = 4,
-): Promise<AlbumWithTrackCount[]> {
-  const supabase = getServerSupabase();
-  const { data, error } = await supabase
-    .from("albums")
-    .select("*")
-    .eq("owner_id", OWNER_ID)
-    .eq("is_active", false)
-    .order("sort_order", { ascending: true })
-    .order("start_date", { ascending: true, nullsFirst: false })
-    .order("created_at", { ascending: true })
-    .limit(limit);
-  if (error) {
-    if (isMissingRelation(error)) {
-      warnMissingAlbumsOnce();
-      return [];
-    }
-    throw error;
-  }
-  return attachTrackCounts(data ?? []);
-}

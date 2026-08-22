@@ -25,6 +25,11 @@ describe("mobile bottom nav ↔ sidebar nav consistency", () => {
     expect(NAV_ITEMS.map((item) => item.href)).not.toContain("/albums");
     expect(MOBILE_NAV_TABS.map((tab) => tab.href)).not.toContain("/albums");
   });
+
+  it("has no nav entry pointing at the retired progress page", () => {
+    expect(NAV_ITEMS.map((item) => item.href)).not.toContain("/analytics");
+    expect(MOBILE_NAV_TABS.map((tab) => tab.href)).not.toContain("/analytics");
+  });
 });
 
 // The album routes outlived the albums nav entry: the library absorbed the

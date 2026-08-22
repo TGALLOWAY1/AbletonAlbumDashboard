@@ -3,7 +3,6 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
-  Activity,
   Home,
   ListMusic,
   Settings as SettingsIcon,
@@ -36,12 +35,6 @@ export const MOBILE_NAV_TABS: MobileNavTab[] = [
     // neither URL starts with /tracks.
     match: (p) =>
       p.startsWith("/tracks") || p.startsWith("/m/") || p.startsWith("/albums"),
-  },
-  {
-    label: "Progress",
-    href: "/analytics",
-    icon: Activity,
-    match: (p) => p.startsWith("/analytics"),
   },
   {
     label: "Settings",

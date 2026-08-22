@@ -9,9 +9,9 @@ import { revalidateTrackSurfaces } from "@/lib/revalidate-track";
 import { BOTTLENECK_CATEGORIES } from "@/lib/types";
 import { PRODUCTION_ACTIVITY_KEYS } from "@/lib/production-activities";
 
+// Session history and analytics both render on the dashboard now.
 const REVALIDATE = () => {
   revalidatePath("/");
-  revalidatePath("/analytics");
 };
 
 // ---------------------------------------------------------------------------

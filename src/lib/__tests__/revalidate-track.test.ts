@@ -13,7 +13,6 @@ const BASE_TRACK_PATHS = [
   "/tracks/abc-123",
   "/focus/abc-123",
   "/",
-  "/analytics",
   "/tracks",
 ];
 

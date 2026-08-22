@@ -9,10 +9,10 @@ import {
   TrendingUp,
 } from "lucide-react";
 import { TrackCard } from "@/components/track-card";
-import { NextUpCard } from "@/components/next-up-card";
 import { SunoWorkStrip } from "@/components/suno/suno-work-strip";
+import { ActiveAlbumCard } from "@/components/album/active-album-card";
 import { AssignTracksDialog } from "@/components/album/assign-tracks-dialog";
-import { UpcomingAlbumsGallery } from "@/components/album/upcoming-albums-gallery";
+import { ProgressPanel } from "@/components/home/progress-panel";
 import { LibraryStatCard } from "@/components/library/library-stat-card";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -21,16 +21,16 @@ import {
   getTracksByStatus,
   getTracksWithoutAlbum,
 } from "@/lib/data/tracks";
-import { getActiveAlbum, listAlbums, listUpcomingAlbums } from "@/lib/data/album";
-import {
-  getSessionCountsByTrackSince,
-  getSessionStatsByTrack,
-} from "@/lib/data/sessions";
+import { getActiveAlbum, listAlbums } from "@/lib/data/album";
+import { getSessionStatsByTrack } from "@/lib/data/sessions";
 import { getSunoWorkSummary } from "@/lib/data/suno";
 import { getWeeklyDelta } from "@/lib/data/weekly-delta";
 import { startOfWeekMonday } from "@/lib/dates";
-import { recommendTrack } from "@/lib/recommend";
 import { formatDuration } from "@/lib/utils";
+import {
+  parseProgressTab,
+  type ProgressSearchParams,
+} from "@/lib/progress-tab";
 import {
   daysSinceWorked,
   isTrackStale,
@@ -59,25 +59,22 @@ function triageTracks(tracks: TrackWithDetails[], nowMs: number) {
   return { inMotion, needsAttention };
 }
 
-export default async function DashboardPage() {
+export default async function DashboardPage({
+  searchParams,
+}: {
+  searchParams: Promise<ProgressSearchParams>;
+}) {
+  const progressTab = parseProgressTab(await searchParams);
   const now = new Date();
   const weekStart = startOfWeekMonday(now);
 
-  const [
-    activeAlbum,
-    upcomingAlbums,
-    sessionStats,
-    recentCounts,
-    weeklyDelta,
-    sunoSummary,
-  ] = await Promise.all([
-    getActiveAlbum(),
-    listUpcomingAlbums(4),
-    getSessionStatsByTrack(),
-    getSessionCountsByTrackSince(7),
-    getWeeklyDelta(weekStart.toISOString()),
-    getSunoWorkSummary(),
-  ]);
+  const [activeAlbum, sessionStats, weeklyDelta, sunoSummary] =
+    await Promise.all([
+      getActiveAlbum(),
+      getSessionStatsByTrack(),
+      getWeeklyDelta(weekStart.toISOString()),
+      getSunoWorkSummary(),
+    ]);
 
   // Active tracks live in the active album. If no album is set up yet (fresh
   // install, or every album deleted), fall back to all status=active tracks so
@@ -93,10 +90,9 @@ export default async function DashboardPage() {
   const orphanTracks = activeAlbum ? await getTracksWithoutAlbum() : [];
   const allAlbums = orphanTracks.length > 0 ? await listAlbums() : [];
 
-  // One recommended track up top; everything else triaged below it.
-  const recommendation = recommendTrack(activeTracks, recentCounts);
-  const rest = activeTracks.filter((t) => t.id !== recommendation?.track.id);
-  const { inMotion, needsAttention } = triageTracks(rest, now.getTime());
+  // No single "next up" pick — the process isn't one-song-at-a-time. The album
+  // card summarizes the record; each track card carries its own next action.
+  const { inMotion, needsAttention } = triageTracks(activeTracks, now.getTime());
 
   const nearCompletion = activeTracks.filter(
     (t) => progressFromStages(t.stages) > 60,
@@ -110,31 +106,15 @@ export default async function DashboardPage() {
   return (
     <div className="flex flex-col gap-6">
       <header className="flex flex-wrap items-start justify-between gap-4">
-        <div className="flex items-start gap-4">
-          {activeAlbum?.cover_image_url && (
-            <Link
-              href={`/albums/${activeAlbum.id}`}
-              className="h-16 w-16 shrink-0 overflow-hidden rounded-md border border-border bg-surface-2"
-              aria-label="Edit active album"
-            >
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img
-                src={activeAlbum.cover_image_url}
-                alt={albumTitle ?? "Album cover"}
-                className="h-full w-full object-cover"
-              />
-            </Link>
-          )}
-          <div>
-            <h1 className="text-2xl font-semibold tracking-tight md:text-3xl">
-              {greeting}, producer.
-            </h1>
-            <p className="mt-1 text-sm text-muted-foreground md:text-base">
-              {albumTitle
-                ? `Working on “${albumTitle}”.`
-                : "Focus on finishing, not starting."}
-            </p>
-          </div>
+        <div>
+          <h1 className="text-2xl font-semibold tracking-tight md:text-3xl">
+            {greeting}, producer.
+          </h1>
+          <p className="mt-1 text-sm text-muted-foreground md:text-base">
+            {albumTitle
+              ? `Working on “${albumTitle}”.`
+              : "Focus on finishing, not starting."}
+          </p>
         </div>
         <div className="flex items-center gap-3">
           <span className="hidden items-center gap-1.5 rounded-full border border-border bg-surface px-3 py-1.5 text-xs font-medium text-muted-foreground md:inline-flex">
@@ -150,7 +130,13 @@ export default async function DashboardPage() {
         </div>
       </header>
 
-      <NextUpCard rec={recommendation} />
+      {activeAlbum && (
+        <ActiveAlbumCard
+          album={activeAlbum}
+          tracks={activeTracks}
+          nowMs={now.getTime()}
+        />
+      )}
 
       {activeTracks.length > 0 && (
         <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
@@ -255,8 +241,6 @@ export default async function DashboardPage() {
         </>
       )}
 
-      <UpcomingAlbumsGallery albums={upcomingAlbums} />
-
       {orphanTracks.length > 0 && (
         <section>
           <div className="mb-3 flex items-center justify-between gap-3">
@@ -312,6 +296,8 @@ export default async function DashboardPage() {
           </Card>
         </section>
       )}
+
+      <ProgressPanel tab={progressTab} />
     </div>
   );
 }
