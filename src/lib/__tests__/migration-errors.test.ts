@@ -1,3 +1,5 @@
+import { readFileSync } from "node:fs";
+import path from "node:path";
 import { describe, expect, it } from "vitest";
 import {
   isCheckViolation,
@@ -7,9 +9,10 @@ import {
 } from "@/lib/migration-errors";
 
 // These guards exist so a not-yet-applied migration surfaces a sentence the
-// user can act on. In a production build Next redacts anything else a server
-// action throws down to "An error occurred in the Server Components render",
-// so a guard that fails to match doesn't degrade — it goes opaque.
+// user can act on. Matching is only half of it: in a production build React
+// replaces the message of anything a server action *throws* with the generic
+// "An error occurred in the Server Components render", so the matched message
+// has to be *returned* to survive the trip. See the contract test below.
 
 describe("isMissingColumn", () => {
   it("matches the two codes PostgREST uses for an unknown column", () => {
@@ -62,5 +65,40 @@ describe("migration messages", () => {
     expect(MIGRATION_0022_MISSING_MESSAGE).toContain(
       "0022_suno_status_error.sql",
     );
+  });
+});
+
+// Guards against a regression to `throw new Error(MESSAGE)`, which reads as if
+// it works — and does, in dev — while showing users nothing in production.
+describe("setTrackSunoStatus error contract", () => {
+  const SOURCE = readFileSync(
+    path.resolve(__dirname, "../../app/actions/tracks.ts"),
+    "utf8",
+  );
+
+  function body(name: string): string {
+    const start = SOURCE.indexOf(`export async function ${name}(`);
+    expect(start, `${name} present`).toBeGreaterThan(-1);
+    const next = SOURCE.indexOf("\nexport ", start + 1);
+    return SOURCE.slice(start, next === -1 ? undefined : next);
+  }
+
+  it("returns the migration messages rather than throwing them", () => {
+    const action = body("setTrackSunoStatus");
+    for (const message of [
+      "MIGRATION_0021_MISSING_MESSAGE",
+      "MIGRATION_0022_MISSING_MESSAGE",
+    ]) {
+      expect(action).toContain(`return { error: ${message} }`);
+      expect(action).not.toContain(`throw new Error(${message})`);
+    }
+  });
+
+  it("never throws at all — every exit reports through the return value", () => {
+    expect(body("setTrackSunoStatus")).not.toMatch(/\bthrow\b/);
+  });
+
+  it("logs an unrecognised failure, which returning would otherwise swallow", () => {
+    expect(body("setTrackSunoStatus")).toContain("logSupabaseError(");
   });
 });
