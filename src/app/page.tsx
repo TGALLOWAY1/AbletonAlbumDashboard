@@ -28,6 +28,10 @@ import { getWeeklyDelta } from "@/lib/data/weekly-delta";
 import { startOfWeekMonday } from "@/lib/dates";
 import { formatDuration } from "@/lib/utils";
 import {
+  parseProgressTab,
+  type ProgressSearchParams,
+} from "@/lib/progress-tab";
+import {
   daysSinceWorked,
   isTrackStale,
   progressFromStages,
@@ -55,7 +59,12 @@ function triageTracks(tracks: TrackWithDetails[], nowMs: number) {
   return { inMotion, needsAttention };
 }
 
-export default async function DashboardPage() {
+export default async function DashboardPage({
+  searchParams,
+}: {
+  searchParams: Promise<ProgressSearchParams>;
+}) {
+  const progressTab = parseProgressTab(await searchParams);
   const now = new Date();
   const weekStart = startOfWeekMonday(now);
 
@@ -288,7 +297,7 @@ export default async function DashboardPage() {
         </section>
       )}
 
-      <ProgressPanel />
+      <ProgressPanel tab={progressTab} />
     </div>
   );
 }
