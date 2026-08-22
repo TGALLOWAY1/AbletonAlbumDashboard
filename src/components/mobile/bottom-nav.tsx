@@ -8,6 +8,7 @@ import {
   Settings as SettingsIcon,
   type LucideIcon,
 } from "lucide-react";
+import { APP_CHROME } from "@/lib/layout-chrome";
 import { cn } from "@/lib/utils";
 
 export type MobileNavTab = {
@@ -49,7 +50,10 @@ export function MobileBottomNav() {
 
   return (
     <nav
-      className="fixed inset-x-0 bottom-0 z-40 border-t border-border bg-surface pb-[env(safe-area-inset-bottom)] shadow-[0_-1px_6px_rgba(0,0,0,0.04)] md:hidden"
+      className={cn(
+        APP_CHROME.mobileBottomNav,
+        "border-t border-border bg-surface pb-[env(safe-area-inset-bottom)] shadow-[0_-1px_6px_rgba(0,0,0,0.04)] md:hidden",
+      )}
       aria-label="Primary"
     >
       {/* Columns follow the tab count rather than a hard-coded class, so
