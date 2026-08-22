@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { ChevronLeft, Plus, Upload } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/components/toast";
+import { ViewModeToggle } from "@/components/view-mode-toggle";
 import {
   TEMPLATE_CATEGORY_LABELS,
   TEMPLATE_CATEGORY_ORDER,
@@ -17,14 +18,21 @@ import {
   type TemplateSort,
 } from "@/lib/template-sort";
 import { useTemplateValues } from "@/lib/template-value";
-import { CategoryBrowseList } from "./category-browse-list";
-import { TemplateListRow } from "./template-list-row";
+import { DEFAULT_TEMPLATE_VIEW, type ViewPreference } from "@/lib/view-mode";
+import { CategoryBrowseGallery } from "./category-browse-gallery";
+import { TemplateGalleryView } from "./template-gallery-view";
+import { TemplateListView } from "./template-list-view";
 import { TemplateSortControl } from "./template-sort-control";
 import type { TemplateAction } from "./types";
 
 const DESKTOP_TOAST = "Desktop integration required to open local files.";
-
-function TemplatesPageInner({ items: initialItems }: { items: TemplateItem[] }) {
+function TemplatesPageInner({
+  items: initialItems,
+  view: viewPreference,
+}: {
+  items: TemplateItem[];
+  view: ViewPreference;
+}) {
   const router = useRouter();
   const { toast } = useToast();
   const [items, setItems] = React.useState<TemplateItem[]>(initialItems);
@@ -142,7 +150,7 @@ function TemplatesPageInner({ items: initialItems }: { items: TemplateItem[] }) 
               View all
             </button>
           </div>
-          <CategoryBrowseList counts={counts} onSelect={openCategory} />
+          <CategoryBrowseGallery counts={counts} onSelect={openCategory} />
         </section>
       ) : (
         <div className="flex flex-col gap-4">
@@ -168,25 +176,38 @@ function TemplatesPageInner({ items: initialItems }: { items: TemplateItem[] }) 
                 </p>
               </div>
             </div>
-            <TemplateSortControl sort={sort} onSortChange={setSort} />
+            <div className="flex flex-wrap items-center gap-2">
+              <TemplateSortControl sort={sort} onSortChange={setSort} />
+              <ViewModeToggle
+                basePath="/templates"
+                value={viewPreference}
+                defaults={DEFAULT_TEMPLATE_VIEW}
+              />
+            </div>
           </div>
 
           {categoryItems.length === 0 ? (
             <div className="rounded-lg border border-dashed border-border bg-surface p-10 text-center text-sm text-muted-foreground">
               No templates in this category yet.
             </div>
+          ) : viewPreference.layout === "gallery" ? (
+            <TemplateGalleryView
+              items={categoryItems}
+              values={values}
+              size={viewPreference.size}
+              showCategory={activeCategory === "all"}
+              onSelect={handleSelect}
+              onAction={handleAction}
+            />
           ) : (
-            <div className="flex flex-col gap-2">
-              {categoryItems.map((item) => (
-                <TemplateListRow
-                  key={item.id}
-                  item={item}
-                  value={values[item.id]}
-                  onSelect={handleSelect}
-                  onAction={handleAction}
-                />
-              ))}
-            </div>
+            <TemplateListView
+              items={categoryItems}
+              values={values}
+              size={viewPreference.size}
+              showCategory={activeCategory === "all"}
+              onSelect={handleSelect}
+              onAction={handleAction}
+            />
           )}
         </div>
       )}
@@ -194,6 +215,12 @@ function TemplatesPageInner({ items: initialItems }: { items: TemplateItem[] }) 
   );
 }
 
-export function TemplatesPageClient({ items }: { items: TemplateItem[] }) {
-  return <TemplatesPageInner items={items} />;
+export function TemplatesPageClient({
+  items,
+  view,
+}: {
+  items: TemplateItem[];
+  view: ViewPreference;
+}) {
+  return <TemplatesPageInner items={items} view={view} />;
 }
