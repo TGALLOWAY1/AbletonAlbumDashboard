@@ -1,5 +1,5 @@
 /**
- * View preferences for the track library (`/tracks`).
+ * View preferences for the collection pages (`/tracks`, `/templates`).
  *
  * Two independent axes:
  *  - `layout` — gallery (cover-art first) vs. list (row-per-item).
@@ -34,6 +34,15 @@ export type ViewSearchParams = {
  */
 export const DEFAULT_TRACK_VIEW: ViewPreference = {
   layout: "list",
+  size: "medium",
+};
+
+/**
+ * Templates default to the gallery — the waveform thumbnails carry more
+ * identity than a text row, and a category rarely holds more than a handful.
+ */
+export const DEFAULT_TEMPLATE_VIEW: ViewPreference = {
+  layout: "gallery",
   size: "medium",
 };
 
