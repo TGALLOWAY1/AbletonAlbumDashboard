@@ -2,9 +2,9 @@ import { revalidatePath } from "next/cache";
 
 // Track-level mutations must refresh every surface that renders track data:
 // both track detail route shapes (desktop + mobile), the focus page, the
-// dashboard, the progress page (/analytics, which includes session history),
-// and the track/album listings (which show membership and status). See
-// CLAUDE.md "Feature parity rule".
+// dashboard (which includes the progress section and session history), and
+// the track/album listings (which show membership and status). See CLAUDE.md
+// "Feature parity rule".
 export function revalidateTrackSurfaces(
   trackId: string,
   opts?: { albumIds?: (string | null | undefined)[] },
@@ -13,7 +13,6 @@ export function revalidateTrackSurfaces(
   revalidatePath(`/tracks/${trackId}`);
   revalidatePath(`/focus/${trackId}`);
   revalidatePath("/");
-  revalidatePath("/analytics");
   revalidatePath("/tracks");
   revalidatePath("/albums");
   // Album detail pages list their member tracks — refresh every album the

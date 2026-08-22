@@ -1,6 +1,6 @@
 import { redirect } from "next/navigation";
 
-// Session history now lives on /analytics under the "History" tab.
+// Session history now lives on the dashboard under Progress → History.
 export default function SessionsPage() {
-  redirect("/analytics");
+  redirect("/#progress");
 }

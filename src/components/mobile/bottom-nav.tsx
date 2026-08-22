@@ -3,7 +3,6 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
-  Activity,
   Disc3,
   Home,
   ListMusic,
@@ -43,12 +42,6 @@ export const MOBILE_NAV_TABS: MobileNavTab[] = [
     match: (p) => p.startsWith("/tracks") || p.startsWith("/m/"),
   },
   {
-    label: "Progress",
-    href: "/analytics",
-    icon: Activity,
-    match: (p) => p.startsWith("/analytics"),
-  },
-  {
     label: "Settings",
     href: "/settings",
     icon: SettingsIcon,
@@ -64,7 +57,7 @@ export function MobileBottomNav() {
       className="fixed inset-x-0 bottom-0 z-40 border-t border-border bg-surface pb-[env(safe-area-inset-bottom)] shadow-[0_-1px_6px_rgba(0,0,0,0.04)] md:hidden"
       aria-label="Primary"
     >
-      <ul className="grid grid-cols-5">
+      <ul className="grid grid-cols-4">
         {MOBILE_NAV_TABS.map((tab) => {
           const active = tab.match(pathname);
           const Icon = tab.icon;

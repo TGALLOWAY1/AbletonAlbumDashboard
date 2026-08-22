@@ -47,7 +47,7 @@ function formatDuration(seconds: number | null) {
 }
 
 // Server component: the focus-session history log, rendered as the "History"
-// tab on /analytics (formerly the standalone /sessions page).
+// tab of the dashboard's Progress section.
 export async function SessionHistory() {
   const [sessions, tracks, sessionTypes] = await Promise.all([
     fetchSessions(),

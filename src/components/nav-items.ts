@@ -1,5 +1,4 @@
 import {
-  BarChart3,
   BookOpen,
   Disc3,
   Home,
@@ -21,7 +20,6 @@ export const NAV_ITEMS: NavItem[] = [
   { href: "/albums", label: "Albums", icon: Disc3 },
   { href: "/tracks", label: "Tracks", icon: ListMusic },
   { href: "/library", label: "Library", icon: Library },
-  { href: "/analytics", label: "Progress", icon: BarChart3 },
   { href: "/templates", label: "Templates", icon: LayoutTemplate },
   { href: "/resources", label: "Resources", icon: BookOpen },
   { href: "/settings", label: "Settings", icon: Settings },
