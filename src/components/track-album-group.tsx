@@ -2,9 +2,29 @@
 
 import * as React from "react";
 import Link from "next/link";
-import { ChevronDown } from "lucide-react";
+import { ChevronDown, Disc3, Star } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
+
+/**
+ * Album artwork at heading size. The library is the app's only album index
+ * now, so a shelf should still be recognisable by its cover the way the old
+ * albums page was.
+ */
+function GroupCover({ coverImageUrl }: { coverImageUrl?: string | null }) {
+  return (
+    <span className="h-6 w-6 shrink-0 overflow-hidden rounded border border-border bg-gradient-to-br from-primary/20 via-surface-2 to-accent/15">
+      {coverImageUrl ? (
+        // eslint-disable-next-line @next/next/no-img-element
+        <img src={coverImageUrl} alt="" className="h-full w-full object-cover" />
+      ) : (
+        <span className="flex h-full w-full items-center justify-center text-foreground/25">
+          <Disc3 className="h-3.5 w-3.5" />
+        </span>
+      )}
+    </span>
+  );
+}
 
 const STORAGE_KEY = "finish-five:tracks:collapsed-albums";
 
@@ -76,7 +96,10 @@ export function TrackAlbumGroup({
   label,
   href,
   genre,
+  coverImageUrl,
+  isActive = false,
   count,
+  trailing,
   children,
 }: {
   /** Album id, or the backlog sentinel — the localStorage key for this group. */
@@ -86,7 +109,16 @@ export function TrackAlbumGroup({
   href?: string | null;
   /** Album-level genre, shown beside the heading. */
   genre?: string | null;
+  /** Album artwork, shown as a thumbnail in the heading. */
+  coverImageUrl?: string | null;
+  /** Marks the one album currently set active. */
+  isActive?: boolean;
   count: number;
+  /**
+   * Server-rendered controls for this album (e.g. the "Set active" form, which
+   * binds a server action and so cannot be built inside this client component).
+   */
+  trailing?: React.ReactNode;
   children: React.ReactNode;
 }) {
   const raw = React.useSyncExternalStore(
@@ -118,11 +150,21 @@ export function TrackAlbumGroup({
               collapsed && "-rotate-90",
             )}
           />
+          {/* The backlog group has no artwork, so the thumbnail slot is
+              skipped rather than filled with a placeholder. */}
+          {href && <GroupCover coverImageUrl={coverImageUrl} />}
           <span className="truncate">{label}</span>
           <span className="shrink-0 font-medium tabular-nums text-muted-foreground/80">
             {count}
           </span>
         </button>
+        {/* Same pill the album detail header uses, so "active" reads the same
+            wherever an album is shown. */}
+        {isActive && (
+          <span className="inline-flex shrink-0 items-center gap-1 rounded-full bg-primary px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider text-primary-foreground">
+            <Star className="h-3 w-3" /> Active
+          </span>
+        )}
         {genre && <Badge variant="primary">{genre}</Badge>}
         {href && (
           <Link
@@ -132,6 +174,7 @@ export function TrackAlbumGroup({
             Open album
           </Link>
         )}
+        {trailing}
       </div>
       {/* `hidden` rather than unmounting: the server already rendered these
           rows, and keeping them mounted makes expanding instant. */}

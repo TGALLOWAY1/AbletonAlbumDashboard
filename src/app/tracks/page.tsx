@@ -1,5 +1,6 @@
 import Link from "next/link";
-import { Plus } from "lucide-react";
+import { Disc3, Plus } from "lucide-react";
+import { setActiveAlbum } from "@/app/actions/album";
 import { TrackAlbumGroup } from "@/components/track-album-group";
 import { TrackFilterPanel } from "@/components/track-filter-panel";
 import { TrackGalleryView } from "@/components/track-gallery-view";
@@ -11,6 +12,7 @@ import { getAllTracks } from "@/lib/data/tracks";
 import { listAlbums } from "@/lib/data/album";
 import { getSessionStatsByTrack } from "@/lib/data/sessions";
 import {
+  activeFilterCount,
   collectFilterOptions,
   filterTracks,
   parseTrackFilters,
@@ -27,6 +29,49 @@ import {
 import { isTrackStale } from "@/lib/types";
 
 export const dynamic = "force-dynamic";
+
+// `setActiveAlbum` takes an id rather than FormData, so each album binds its
+// own tiny server action — same pattern the album detail page uses.
+function SetActiveButton({ albumId }: { albumId: string }) {
+  return (
+    <form
+      action={async () => {
+        "use server";
+        await setActiveAlbum(albumId);
+      }}
+    >
+      <Button
+        type="submit"
+        variant="ghost"
+        size="sm"
+        className="h-auto px-1.5 py-0.5 text-xs font-medium text-muted-foreground hover:text-foreground"
+      >
+        Set active
+      </Button>
+    </form>
+  );
+}
+
+/**
+ * An album that exists but has nothing on it yet. Without this the album would
+ * have no heading at all here, and since the library replaced the albums page
+ * that would leave a newly created record unreachable outside the home page's
+ * upcoming shelf.
+ */
+function EmptyAlbumShelf({ href }: { href: string }) {
+  return (
+    <Card>
+      <CardContent className="flex flex-wrap items-center gap-3 p-4">
+        <p className="text-sm text-muted-foreground">
+          No tracks on this album yet.
+        </p>
+        <Button asChild size="sm" variant="outline">
+          <Link href={href}>Add tracks</Link>
+        </Button>
+      </CardContent>
+    </Card>
+  );
+}
 
 export default async function AllTracksPage({
   searchParams,
@@ -49,12 +94,15 @@ export default async function AllTracksPage({
   const view = parseViewPreference(params, DEFAULT_TRACK_VIEW);
   const options = collectFilterOptions(tracks);
   const filtered = filterTracks(tracks, filters);
+  const filtering = activeFilterCount(filters) > 0;
 
-  // Albums shelf order, so /tracks and /albums list records the same way.
-  const groups = groupTracksByAlbum(
-    filtered,
-    albums.map((a) => a.id),
-  );
+  // This page is the app's album shelf as well as its track library, so an
+  // unfiltered view lists every album — including the ones with no tracks yet.
+  // Under a filter, an album that matched nothing is noise rather than an
+  // entry point, so those drop out.
+  const groups = groupTracksByAlbum(filtered, albums, {
+    includeEmptyAlbums: !filtering,
+  });
 
   return (
     <div className="flex flex-col gap-6">
@@ -62,15 +110,23 @@ export default async function AllTracksPage({
         <div>
           <h1 className="text-3xl font-semibold tracking-tight">Tracks</h1>
           <p className="mt-1 text-muted-foreground">
-            Library view — beyond the active five.
+            Your whole library, shelved by album.
           </p>
         </div>
-        <Button asChild>
-          <Link href="/tracks/new">
-            <Plus className="h-4 w-4" />
-            Add Track
-          </Link>
-        </Button>
+        <div className="flex flex-wrap items-center gap-2">
+          <Button asChild variant="outline">
+            <Link href="/albums/new">
+              <Disc3 className="h-4 w-4" />
+              New album
+            </Link>
+          </Button>
+          <Button asChild>
+            <Link href="/tracks/new">
+              <Plus className="h-4 w-4" />
+              Add Track
+            </Link>
+          </Button>
+        </div>
       </header>
 
       {/* The filter panel and the view toggle each own their own query params
@@ -92,10 +148,12 @@ export default async function AllTracksPage({
         }
       />
 
-      {filtered.length === 0 ? (
+      {groups.length === 0 ? (
         <Card>
           <CardContent className="p-8 text-sm text-muted-foreground">
-            No tracks match these filters.
+            {filtering
+              ? "No tracks match these filters."
+              : "Nothing here yet. Add a track, or create an album to group them under."}
           </CardContent>
         </Card>
       ) : (
@@ -109,9 +167,20 @@ export default async function AllTracksPage({
               label={group.label}
               href={group.href}
               genre={group.genre}
+              coverImageUrl={group.coverImageUrl}
+              isActive={group.isActive}
               count={group.tracks.length}
+              trailing={
+                // Backlog has no album to promote, and the active one is
+                // already there.
+                group.href && !group.isActive ? (
+                  <SetActiveButton albumId={group.id} />
+                ) : null
+              }
             >
-              {view.layout === "gallery" ? (
+              {group.tracks.length === 0 && group.href ? (
+                <EmptyAlbumShelf href={group.href} />
+              ) : view.layout === "gallery" ? (
                 <TrackGalleryView
                   tracks={group.tracks}
                   size={view.size}

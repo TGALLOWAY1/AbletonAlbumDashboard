@@ -1,5 +1,5 @@
 /**
- * View preferences for the collection pages (`/tracks`, `/albums`).
+ * View preferences for the track library (`/tracks`).
  *
  * Two independent axes:
  *  - `layout` — gallery (cover-art first) vs. list (row-per-item).
@@ -34,12 +34,6 @@ export type ViewSearchParams = {
  */
 export const DEFAULT_TRACK_VIEW: ViewPreference = {
   layout: "list",
-  size: "medium",
-};
-
-/** Albums default to the cover grid — artwork is the point of an album shelf. */
-export const DEFAULT_ALBUM_VIEW: ViewPreference = {
-  layout: "gallery",
   size: "medium",
 };
 

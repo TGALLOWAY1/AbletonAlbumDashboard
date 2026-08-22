@@ -87,7 +87,7 @@ export function NewAlbumForm({
 
           <div className="flex justify-end gap-2 pt-2">
             <Button asChild variant="ghost">
-              <Link href="/albums">Cancel</Link>
+              <Link href="/tracks">Cancel</Link>
             </Button>
             {disabled ? (
               <Button type="submit" disabled>
