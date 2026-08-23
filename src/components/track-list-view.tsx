@@ -112,11 +112,11 @@ function MediumRow({ track }: { track: TrackWithDetails }) {
           />
           <SunoChip suno={track.sunoExperiment} />
         </div>
-        {(meta.length > 0 || track.primaryAction) && (
+        {(meta.length > 0 || track.nextTask) && (
           <p className="mt-0.5 truncate text-xs text-muted-foreground">
             {meta.join(" · ")}
-            {meta.length > 0 && track.primaryAction ? " · " : ""}
-            {track.primaryAction?.description}
+            {meta.length > 0 && track.nextTask ? " · " : ""}
+            {track.nextTask?.description}
           </p>
         )}
       </div>

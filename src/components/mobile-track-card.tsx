@@ -100,10 +100,10 @@ export function MobileTrackCard({
           className="border-y border-border"
         />
 
-        {track.primaryAction && (
+        {track.nextTask && (
           <p className="line-clamp-2 border-t border-border pt-3.5 text-[15px] leading-snug text-muted-foreground">
             <span className="font-bold text-foreground">Next:</span>{" "}
-            {track.primaryAction.description}
+            {track.nextTask.description}
           </p>
         )}
       </div>

@@ -154,15 +154,6 @@ export default async function DashboardPage({
             label="Tasks Done This Week"
             value={weeklyDelta.todosCompleted}
             icon={CheckCircle2}
-            hint={
-              weeklyDelta.bottlenecksResolved > 0
-                ? `+${weeklyDelta.bottlenecksResolved} ${
-                    weeklyDelta.bottlenecksResolved === 1
-                      ? "bottleneck"
-                      : "bottlenecks"
-                  } resolved`
-                : undefined
-            }
           />
           <LibraryStatCard
             label="Near Completion"

@@ -29,9 +29,9 @@ export async function SidebarFocusPanel() {
             {recommendation.track.name}
           </div>
           <p className="mt-1 line-clamp-2 text-xs text-muted-foreground">
-            {recommendation.primaryAction
-              ? recommendation.primaryAction.description
-              : "No primary task set yet."}
+            {recommendation.nextTask
+              ? recommendation.nextTask.description
+              : "No open tasks yet."}
           </p>
           <Button asChild size="sm" className="mt-3 w-full">
             <Link href={`/focus/${recommendation.track.id}`}>

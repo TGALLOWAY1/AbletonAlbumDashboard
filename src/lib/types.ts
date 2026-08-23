@@ -6,7 +6,6 @@ export type TrackRow = Database["public"]["Tables"]["tracks"]["Row"];
 export type StageRow = Database["public"]["Tables"]["track_stages"]["Row"];
 export type FinishingStepRow =
   Database["public"]["Tables"]["track_finishing_steps"]["Row"];
-export type BottleneckRow = Database["public"]["Tables"]["bottlenecks"]["Row"];
 export type ActionRow = Database["public"]["Tables"]["actions"]["Row"];
 export type SessionRow = Database["public"]["Tables"]["sessions"]["Row"];
 export type VersionRow = Database["public"]["Tables"]["track_versions"]["Row"];
@@ -206,29 +205,6 @@ export function finishingStepsFromRows(
   }));
 }
 
-export const BOTTLENECK_CATEGORIES = [
-  "composition",
-  "sound_design",
-  "arrangement",
-  "mixing",
-  "mastering",
-  "organization",
-  "other",
-] as const;
-export type BottleneckCategory = (typeof BOTTLENECK_CATEGORIES)[number];
-
-export const BOTTLENECK_LABELS: Record<string, string> = {
-  composition: "Composition",
-  sound_design: "Sound Design",
-  arrangement: "Arrangement",
-  mixing: "Mixing",
-  mastering: "Mastering",
-  organization: "Organization",
-  other: "Other",
-  // Legacy value kept renderable for rows stored before the enum expanded.
-  mix: "Mixing",
-};
-
 export const MAX_ACTIVE_TRACKS = 5;
 
 // A track untouched for longer than this is considered going stale and gets
@@ -265,14 +241,21 @@ export type TrackSunoSummary = {
   unreviewedCount: number;
 };
 
-// Aggregate shape used by dashboard + detail views.
+/**
+ * Aggregate shape used by dashboard + detail views.
+ *
+ * There is deliberately no "next action" field. The next thing to do on a
+ * track is the top of its open task list — an ordering, not a flag — so
+ * surfaces that need it read `nextTask` off the fetched task list rather than
+ * a second copy of a row that is already in the list.
+ */
 export type TrackWithDetails = TrackRow & {
   stages: StageRow[];
   // Always three entries (see `finishingStepsFromRows`) so the card can
   // draw the checklist without a length check.
   finishingSteps: FinishingStep[];
-  bottleneck: BottleneckRow | null;
-  primaryAction: ActionRow | null;
+  /** First open task in list order, or null when nothing is open. */
+  nextTask: ActionRow | null;
   openTaskCount: number;
   completedTaskCount: number;
   estMinutesRemaining: number;

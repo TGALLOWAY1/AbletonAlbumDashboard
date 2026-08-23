@@ -22,7 +22,6 @@ export default async function NewFocusPage({
   return (
     <FocusRunner
       track={null}
-      primaryAction={null}
       sessionType={sessionType}
       sessionTypes={sessionTypes}
       tracks={tracks}

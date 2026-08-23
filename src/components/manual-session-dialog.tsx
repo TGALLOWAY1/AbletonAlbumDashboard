@@ -16,15 +16,12 @@ import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
-import { Badge } from "@/components/ui/badge";
 import { RatingPicker } from "@/components/ui/rating-picker";
 import { TrackPicker } from "@/components/track-picker";
 import { SessionTypePicker } from "@/components/session-type-picker";
 import { completeSession } from "@/app/actions/sessions";
 import { useToast } from "@/components/toast";
 import {
-  BOTTLENECK_CATEGORIES,
-  BOTTLENECK_LABELS,
   type SessionTypeRow,
   type TrackRow,
 } from "@/lib/types";
@@ -89,9 +86,6 @@ function ManualSessionDialog({
   const [progressImpact, setProgressImpact] = useState<number | null>(null);
   const [enjoyment, setEnjoyment] = useState<number | null>(null);
   const [notesMd, setNotesMd] = useState("");
-  const [newBottleneckDescription, setNewBottleneckDescription] = useState("");
-  const [newBottleneckCategory, setNewBottleneckCategory] =
-    useState<string>("arrangement");
   const [pending, startTx] = useTransition();
   const { toast } = useToast();
 
@@ -113,8 +107,6 @@ function ManualSessionDialog({
     setProgressImpact(null);
     setEnjoyment(null);
     setNotesMd("");
-    setNewBottleneckDescription("");
-    setNewBottleneckCategory("arrangement");
   };
 
   const handleOpenChange = (next: boolean) => {
@@ -138,10 +130,6 @@ function ManualSessionDialog({
           progressImpact,
           enjoymentRating: enjoyment,
           notesMd,
-          newBottleneckDescription,
-          newBottleneckCategory: newBottleneckDescription
-            ? newBottleneckCategory
-            : undefined,
         });
         reset();
         onOpenChange(false);
@@ -245,36 +233,6 @@ function ManualSessionDialog({
             />
           </div>
 
-          <div className="grid gap-2">
-            <Label htmlFor="manual-bottleneck">New bottleneck (optional)</Label>
-            <Textarea
-              id="manual-bottleneck"
-              value={newBottleneckDescription}
-              onChange={(e) => setNewBottleneckDescription(e.target.value)}
-              rows={2}
-              placeholder="Replaces the current bottleneck if filled in."
-            />
-            {newBottleneckDescription && (
-              <div className="flex flex-wrap gap-1.5">
-                {BOTTLENECK_CATEGORIES.map((c) => (
-                  <button
-                    key={c}
-                    type="button"
-                    onClick={() => setNewBottleneckCategory(c)}
-                  >
-                    <Badge
-                      variant={
-                        newBottleneckCategory === c ? "warning" : "default"
-                      }
-                      className="cursor-pointer"
-                    >
-                      {BOTTLENECK_LABELS[c]}
-                    </Badge>
-                  </button>
-                ))}
-              </div>
-            )}
-          </div>
         </div>
 
         <DialogFooter>

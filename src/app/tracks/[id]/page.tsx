@@ -1,37 +1,5 @@
-import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
-import { format } from "date-fns";
 import { isMobileUserAgent } from "@/lib/user-agent";
-import {
-  CalendarDays,
-  Clock3,
-  Disc3,
-  Pencil,
-  Play,
-} from "lucide-react";
-import {
-  Tabs,
-  TabsContent,
-  TabsList,
-  TabsTrigger,
-} from "@/components/ui/tabs";
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
-import { BackLink } from "@/components/back-link";
-import { TrackAlbumSelect } from "@/components/track-album-select";
-import { StagesChecklist } from "@/components/stages-checklist";
-import { TrackFinishingSteps } from "@/components/track-finishing-steps";
-import { BottleneckEditor } from "@/components/bottleneck-editor";
-import { NextActionEditor } from "@/components/next-action-editor";
-import { NotesEditor } from "@/components/notes-editor";
-import { AudioVersionList } from "@/components/audio-version-list";
-import { CopyPathButton } from "@/components/copy-path-button";
-import { SunoStatusToggle } from "@/components/suno-status-toggle";
-import { TrackTodoHistory } from "@/components/mobile/track-todo-history";
-import { TrackTodoList } from "@/components/mobile/track-todo-list";
-import { ManualSessionEntry } from "@/components/manual-session-dialog";
-import { SunoPanel } from "@/components/suno/suno-panel";
 import {
   getCompletedActionsForTrack,
   getOpenActionsForTrack,
@@ -42,14 +10,26 @@ import { getSessionTypes } from "@/lib/data/session-types";
 import { getSessionsForTrack } from "@/lib/data/sessions";
 import { getOpenExperimentWithCandidates } from "@/lib/data/suno";
 import { listAlbums } from "@/lib/data/album";
-import { TrackSessionHistory } from "@/components/track-session-history";
+import { TrackHeaderBar } from "@/components/track/track-header-bar";
+import { TrackLogPane } from "@/components/track/track-log-pane";
+import { TrackTodoList } from "@/components/mobile/track-todo-list";
+import { TrackFinishingSteps } from "@/components/track-finishing-steps";
+import { NotesEditor } from "@/components/notes-editor";
+import { SunoPanel } from "@/components/suno/suno-panel";
+import { SunoStatusToggle } from "@/components/suno-status-toggle";
 import { trackSunoStatus } from "@/lib/types";
+import { paneForLegacyTab, trackPaneHref } from "@/lib/track-pane";
 
 export const dynamic = "force-dynamic";
 
-/** Values `?tab=` accepts — anything else falls back to the overview. */
-const TRACK_TABS = ["overview", "notes", "versions", "suno", "history"];
-
+/**
+ * The track workspace: three surfaces side by side in one viewport.
+ *
+ * Tasks, Notes and the track log are peers you work across, so none of them
+ * hides behind a tab and none of them scrolls the others away — the page
+ * itself does not scroll, each pane does. Identity and the production stages
+ * ride in the header bar because they are status, not work.
+ */
 export default async function TrackDetailPage({
   params,
   searchParams,
@@ -58,13 +38,12 @@ export default async function TrackDetailPage({
   searchParams: Promise<{ tab?: string }>;
 }) {
   const [{ id }, { tab }] = await Promise.all([params, searchParams]);
-  // Track cards deep-link here with `?tab=…#…`. On mobile the request is
-  // redirected to /m/[trackId], which drops the query but keeps the fragment
-  // (the browser reapplies it, the target Location carrying none), so the two
-  // surfaces answer the same link: the tab here, the section anchor there.
-  const activeTab = TRACK_TABS.includes(tab ?? "") ? tab! : "overview";
   if (await isMobileUserAgent()) {
-    redirect(`/m/${id}`);
+    // Track cards deep-link here with `?tab=…#…`. The tabs are gone, but the
+    // links still carry the old value, so translate it into the pane the
+    // mobile workspace should open on — the fragment rides along on its own
+    // and scrolls to the matching section id below.
+    redirect(trackPaneHref(id, paneForLegacyTab(tab)));
   }
   const [
     track,
@@ -87,230 +66,89 @@ export default async function TrackDetailPage({
   ]);
   if (!track) notFound();
 
-  // Genre is an album-level fact now (migration 0021), so the prompt and the
-  // header badge both read it off the album rather than off `tags[0]`.
-  const genre = track.album?.genre?.trim() || null;
   const sunoMeta = {
     trackId: track.id,
     trackName: track.name,
-    genre,
+    // Genre is an album-level fact (migration 0021).
+    genre: track.album?.genre?.trim() || null,
     bpm: track.bpm,
     songKey: track.song_key,
   };
 
-  const sunoStatus = trackSunoStatus(track);
-  // Every tag is a descriptor now — none of them stands in for the genre.
-  const descriptors = track.tags;
-  const meta = [
-    track.song_key ? track.song_key : null,
-    track.bpm ? `${track.bpm} BPM` : null,
-  ].filter(Boolean) as string[];
-
   return (
-    <div className="flex flex-col gap-6">
-      <BackLink fallback="/tracks" label="Back" className="self-start" />
+    // Cancelling `main`'s desktop gutters (APP_CHROME.mainPadding — md:px-8,
+    // md:py-7) lets the workspace run to the viewport edges, and a fixed
+    // `h-screen` is what makes the three panes scroll independently instead of
+    // the page scrolling as one. Desktop has no fixed top chrome, so once the
+    // vertical padding is cancelled the column starts at the viewport top.
+    <div className="-mx-8 -my-7 flex h-screen min-h-[36rem] flex-col">
+      <TrackHeaderBar
+        track={track}
+        albums={albums}
+        sessionTypes={sessionTypes}
+      />
 
-      <div className="flex flex-col gap-4 md:flex-row md:flex-wrap md:items-start md:justify-between md:gap-6">
-        <div className="flex flex-col items-start gap-4 sm:flex-row sm:gap-5">
-          <Link
-            href={`/tracks/${track.id}/edit`}
-            aria-label="Edit cover image"
-            className="group relative h-28 w-28 shrink-0 overflow-hidden rounded-lg bg-gradient-to-br from-primary/20 via-surface-2 to-accent/15 sm:h-36 sm:w-36"
-          >
-            {track.cover_image_url ? (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img
-                src={track.cover_image_url}
-                alt=""
-                className="h-full w-full object-cover"
-              />
-            ) : (
-              <div className="flex h-full items-center justify-center text-3xl font-bold text-foreground/30">
-                {track.name.slice(0, 2).toUpperCase()}
-              </div>
-            )}
-            <div className="pointer-events-none absolute inset-0 flex items-center justify-center bg-foreground/40 text-xs font-semibold uppercase tracking-wide text-background opacity-0 transition-opacity group-hover:opacity-100">
-              Edit cover
-            </div>
-          </Link>
-          <div className="flex flex-col gap-2">
-            <h1 className="text-2xl font-semibold tracking-tight sm:text-3xl">
-              {track.name}
-            </h1>
-            <div className="flex flex-wrap items-center gap-2">
-              {genre && (
-                <Badge variant="primary" title="Album genre">
-                  {genre}
-                </Badge>
-              )}
-              <Badge variant="default">{track.status}</Badge>
-              <SunoStatusToggle trackId={track.id} status={sunoStatus} />
-              {track.album && (
-                <Link href={`/albums/${track.album.id}`}>
-                  <Badge className="gap-1 hover:bg-surface-2/80 hover:text-foreground">
-                    <Disc3 className="h-3 w-3 shrink-0" />
-                    {track.album.title?.trim() || "Untitled album"}
-                  </Badge>
-                </Link>
-              )}
-              <TrackAlbumSelect
-                trackId={track.id}
-                albumId={track.album?.id ?? null}
-                albums={albums}
-                variant="compact"
-              />
-            </div>
-            {meta.length > 0 && (
-              <p className="text-sm font-medium text-foreground/85 tabular-nums">
-                {meta.join(" · ")}
-              </p>
-            )}
-            {descriptors.length > 0 && (
-              <p className="text-sm text-muted-foreground">
-                {descriptors.join(", ")}
-              </p>
-            )}
-            <div className="mt-1 flex flex-col gap-1 text-xs text-muted-foreground">
-              <span className="inline-flex items-center gap-1.5">
-                <CalendarDays className="h-3.5 w-3.5" />
-                Created {format(new Date(track.created_at), "MMM d, yyyy")}
-              </span>
-              <span className="inline-flex items-center gap-1.5">
-                <Clock3 className="h-3.5 w-3.5" />
-                {track.last_worked_at
-                  ? `Last worked ${format(new Date(track.last_worked_at), "MMM d, yyyy")}`
-                  : "Never worked on yet"}
-              </span>
-            </div>
-          </div>
-        </div>
-        <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
-          <Button asChild variant="outline">
-            <Link href={`/tracks/${track.id}/edit`}>
-              <Pencil className="h-4 w-4" />
-              Edit metadata
-            </Link>
-          </Button>
-          <Button asChild>
-            <Link href={`/focus/${track.id}`}>
-              <Play className="h-4 w-4" />
-              Start focus session
-            </Link>
-          </Button>
-          <ManualSessionEntry
+      <div className="grid min-h-0 flex-1 grid-cols-1 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)] xl:grid-cols-[24.5rem_minmax(0,1fr)_23.5rem]">
+        {/* Tasks — plus the finishing checklist, which is the same question
+            ("what is left on this track?") at the hand-off end. */}
+        <section
+          id="tasks"
+          className="flex min-h-0 flex-col gap-5 overflow-y-auto border-b border-border bg-surface p-5 lg:border-b-0 lg:border-r"
+        >
+          <TrackTodoList
             trackId={track.id}
-            tracks={[]}
-            sessionTypes={sessionTypes}
+            initial={openTodos}
             variant="desktop"
           />
-        </div>
-      </div>
-
-      {track.als_file_path && (
-        <div className="flex flex-wrap items-center gap-3 rounded-md border border-border bg-surface p-3 text-sm">
-          <span className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
-            Project file
-          </span>
-          <span className="truncate font-mono text-xs text-foreground">
-            {track.als_file_path}
-          </span>
-          <CopyPathButton
-            path={track.als_file_path}
-            size="sm"
-            className="ml-auto"
-          />
-        </div>
-      )}
-
-      <Tabs defaultValue={activeTab}>
-        <TabsList className="flex flex-wrap">
-          <TabsTrigger value="overview">Overview</TabsTrigger>
-          <TabsTrigger value="notes">Notes</TabsTrigger>
-          <TabsTrigger value="versions">Versions</TabsTrigger>
-          <TabsTrigger value="suno">Suno</TabsTrigger>
-          <TabsTrigger value="history">History</TabsTrigger>
-        </TabsList>
-
-        <TabsContent value="overview">
-          <div className="grid gap-4 lg:grid-cols-2">
-            <div className="flex flex-col gap-4">
-              <StagesChecklist trackId={track.id} stages={track.stages} />
-              {/* The same checklist the large track card carries, so the
-                  finishing steps are tickable on desktop too. */}
-              <Card>
-                <CardContent className="flex flex-col gap-3 p-5">
-                  <h3 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
-                    Finishing
-                  </h3>
-                  <TrackFinishingSteps
-                    trackId={track.id}
-                    steps={track.finishingSteps}
-                    variant="compact"
-                  />
-                </CardContent>
-              </Card>
-              <div id="tasks" className="scroll-mt-6">
-                <TrackTodoList
-                  trackId={track.id}
-                  initial={openTodos}
-                  variant="desktop"
-                />
-              </div>
-            </div>
-            <div className="flex flex-col gap-4">
-              <BottleneckEditor
-                trackId={track.id}
-                bottleneck={track.bottleneck}
-              />
-              <NextActionEditor
-                trackId={track.id}
-                action={track.primaryAction}
-              />
-            </div>
+          <div className="flex flex-col gap-2 border-t border-border pt-4">
+            <h3 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+              Finishing
+            </h3>
+            <TrackFinishingSteps
+              trackId={track.id}
+              steps={track.finishingSteps}
+              variant="compact"
+            />
           </div>
-        </TabsContent>
+        </section>
 
-        <TabsContent value="notes">
-          <div id="notes" className="scroll-mt-6">
-            <NotesEditor trackId={track.id} initial={track.notes} />
-          </div>
-        </TabsContent>
+        {/* Notes */}
+        <section
+          id="notes"
+          className="flex min-h-0 flex-col overflow-y-auto border-b border-border bg-surface p-5 lg:border-b-0 xl:border-r"
+        >
+          <NotesEditor trackId={track.id} initial={track.notes} />
+        </section>
 
-        <TabsContent value="versions">
-          <AudioVersionList
-            trackId={track.id}
-            versions={versions}
-            suno={{ meta: sunoMeta, open: sunoExperiment !== null }}
-          />
-        </TabsContent>
-
-        <TabsContent value="suno">
-          <div className="mb-4">
+        {/* Sound & log — spans both columns at lg, its own rail at xl */}
+        <section
+          id="history"
+          className="flex min-h-0 flex-col bg-background lg:col-span-2 xl:col-span-1"
+        >
+          <div className="shrink-0 border-b border-border px-5 py-3">
             <SunoStatusToggle
               trackId={track.id}
-              status={sunoStatus}
+              status={trackSunoStatus(track)}
               variant="field"
             />
+            <div className="mt-3">
+              <SunoPanel
+                meta={sunoMeta}
+                variant="desktop"
+                experiment={sunoExperiment}
+                versions={versions}
+              />
+            </div>
           </div>
-          <SunoPanel
-            meta={sunoMeta}
-            variant="desktop"
-            experiment={sunoExperiment}
+          <TrackLogPane
+            trackId={track.id}
             versions={versions}
+            sessions={sessions}
+            completedTasks={completedTodos}
+            suno={{ meta: sunoMeta, open: sunoExperiment !== null }}
           />
-        </TabsContent>
-
-        <TabsContent value="history">
-          <div id="history" className="flex scroll-mt-6 flex-col gap-4">
-            <TrackSessionHistory sessions={sessions} />
-            <TrackTodoHistory
-              trackId={track.id}
-              initial={completedTodos}
-              variant="panel"
-            />
-          </div>
-        </TabsContent>
-      </Tabs>
+        </section>
+      </div>
     </div>
   );
 }

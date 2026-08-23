@@ -1,6 +1,6 @@
 # Finish Five — Repo Notes for Claude
 
-An album-in-progress dashboard for tracks built in Ableton. Helps the user surface bottlenecks, run focused sessions, and finish songs.
+An album-in-progress dashboard for tracks built in Ableton. Helps the user see where each song stands, run focused sessions, and finish songs.
 
 ## Stack
 
@@ -24,8 +24,30 @@ Run `pnpm typecheck && pnpm lint && pnpm test` before committing.
 
 - Desktop track detail → `src/app/tracks/[id]/page.tsx`
 - Mobile track detail → `src/app/m/[trackId]/page.tsx`
+- Both track surfaces are the same **three-surface workspace**: Tasks, Notes and the
+  track log. Desktop shows all three side by side in one non-scrolling viewport
+  (each pane scrolls itself); mobile shows one at a time behind tabs whose state
+  lives in the URL (`src/lib/track-pane.ts`). Identity, the `.als` path, the five
+  production stages and Start-focus-session all ride in the shared header bar
+  (`src/components/track/track-header-bar.tsx`) because they are status, not work.
+- There is no "bottleneck" and no "next action". The next thing to do on a track is
+  **the top of its open task list** — an ordering, not a stored flag. `nextTask` on
+  `TrackWithDetails` is derived in `attachDetails`, and the focus session seeds its
+  goal from the same row, so the two can never disagree. Migration 0024 dropped the
+  `bottlenecks` table and `actions.is_primary`.
+- That ordering is **hand-set**: tasks carry a nullable `actions.sort_order`
+  (migration 0025) and reads sort by it with NULLs last, then `created_at`. So an
+  untouched track keeps creation order and a new task lands at the bottom, both
+  without a backfill. Drag the handle in `TrackTodoList` (Pointer Events, so mouse
+  and touch share one path; the handle is also focusable and moves with
+  arrow keys) and `reorderTrackTodos` writes an explicit 0..n-1. The list-shaped
+  move helpers live in `src/lib/task-order.ts` so the drag and keyboard paths
+  cannot drift.
+- Bounces, logged sessions and completed tasks are one timeline
+  (`src/components/track/track-log-pane.tsx`) — they all answer "what happened to
+  this track", so they are not three sections.
 - Dashboard root (`src/app/page.tsx`) is a single responsive surface using Tailwind `md:` breakpoints — no user-agent sniffing, no separate desktop/mobile route for the home page.
-- The dashboard is also the progress surface: it ends with a Progress section (`src/components/home/progress-panel.tsx`, anchor `#progress`) carrying the work heatmap, range stats, bottleneck categories and the session-history log. There is no `/analytics` or `/sessions` page — both routes redirect to `/#progress`.
+- The dashboard is also the progress surface: it ends with a Progress section (`src/components/home/progress-panel.tsx`, anchor `#progress`) carrying the work heatmap, range stats and the session-history log. There is no `/analytics` or `/sessions` page — both routes redirect to `/#progress`.
 - Library (`src/app/library/**`) is likewise a single responsive surface — the feature parity rule below is track-level and does not imply an `/m/library` route. `src/app/library/layout.tsx` mounts the preview player so playback survives navigation between Library routes without leaking an audio element onto every other page.
 - Server actions live under `src/app/actions/`.
 - Data fetchers live under `src/lib/data/`.
@@ -42,8 +64,10 @@ Reviewers should reject single-platform additions that have no platform-specific
 
 Prefer **one component with a `variant` prop** over forking files. Existing examples:
 
-- `TrackTodoHistory.variant: "panel" | "collapsible"` — `src/components/mobile/track-todo-history.tsx`
 - `TrackTodoList.variant: "desktop" | "mobile"` — `src/components/mobile/track-todo-list.tsx`
+- `TrackHeaderBar.variant: "desktop" | "mobile"` — `src/components/track/track-header-bar.tsx`
+- `TrackStageStrip.variant: "desktop" | "mobile"` — `src/components/track/track-stage-strip.tsx`
+- `TrackLogPane.variant: "desktop" | "mobile"` — `src/components/track/track-log-pane.tsx`
 
 Variant prop controls sizing (tap targets vs. compact desktop), not behavior. Server actions, optimistic reducers, and data shapes stay shared.
 
@@ -51,10 +75,13 @@ The `src/components/mobile/` directory currently holds components used on **both
 
 ### Known parity gaps (snapshot — file follow-ups under the rule above)
 
-None currently. Both `/tracks/[id]` and `/m/[trackId]` render `AudioVersionList`
-(including upload) and link to the shared metadata editor at
-`/tracks/[id]/edit`. The `.als` file-path copy renders on both but is only
-useful on desktop (documented exception).
+None currently. Both `/tracks/[id]` and `/m/[trackId]` mount the same
+`TrackHeaderBar`, `TrackTodoList`, `NotesEditor` and `TrackLogPane` (including
+bounce upload and the Suno round-trip), and link to the shared metadata editor at
+`/tracks/[id]/edit`. The only difference is arrangement — three columns vs. three
+tabs — which is a viewport constraint, not a feature gap. The `.als` file-path copy
+renders in the desktop header only; it is meaningless on a phone (documented
+exception).
 
 ## Conventions
 

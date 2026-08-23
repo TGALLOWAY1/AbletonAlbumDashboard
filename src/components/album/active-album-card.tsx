@@ -5,7 +5,6 @@ import { Badge } from "@/components/ui/badge";
 import { ProgressRing } from "@/components/ui/progress-ring";
 import { formatMinutesPlain } from "@/lib/utils";
 import {
-  BOTTLENECK_LABELS,
   isTrackStale,
   progressFromStages,
   type AlbumRow,
@@ -13,7 +12,7 @@ import {
 } from "@/lib/types";
 
 // Album-level status for the dashboard: where the record as a whole stands
-// (average progress, momentum split, queued work, dominant bottleneck).
+// (average progress, momentum split, queued work).
 // Per-track next actions live on the track cards below it — the dashboard
 // deliberately has no single "work on this song next" recommendation.
 export function ActiveAlbumCard({
@@ -34,18 +33,6 @@ export function ActiveAlbumCard({
   const inMotionCount = tracks.length - staleCount;
   const openTasks = tracks.reduce((sum, t) => sum + t.openTaskCount, 0);
   const estMinutes = tracks.reduce((sum, t) => sum + t.estMinutesRemaining, 0);
-
-  const bottleneckCounts = new Map<string, number>();
-  for (const t of tracks) {
-    if (t.bottleneck) {
-      bottleneckCounts.set(
-        t.bottleneck.category,
-        (bottleneckCounts.get(t.bottleneck.category) ?? 0) + 1,
-      );
-    }
-  }
-  const topBottleneck =
-    [...bottleneckCounts.entries()].sort((a, b) => b[1] - a[1])[0]?.[0] ?? null;
 
   const title = album.title?.trim() || "Untitled album";
 
@@ -101,14 +88,6 @@ export function ActiveAlbumCard({
                     ~{formatMinutesPlain(estMinutes)}
                   </span>{" "}
                   queued
-                </span>
-              )}
-              {topBottleneck && (
-                <span className="flex items-center gap-1.5">
-                  Top bottleneck
-                  <Badge variant="warning">
-                    {BOTTLENECK_LABELS[topBottleneck] ?? topBottleneck}
-                  </Badge>
                 </span>
               )}
             </div>

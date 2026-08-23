@@ -17,13 +17,11 @@ import type { ActionRow, SessionTypeRow, TrackRow } from "@/lib/types";
 
 export function FocusRunner({
   track,
-  primaryAction,
   sessionType,
   sessionTypes,
   trackTodos,
 }: {
   track: TrackRow | null;
-  primaryAction: ActionRow | null;
   sessionType?: SessionTypeRow | null;
   sessionTypes?: SessionTypeRow[];
   tracks?: TrackRow[];
@@ -32,6 +30,11 @@ export function FocusRunner({
   const router = useRouter();
   const ctx = useFocusSession();
   const { toast } = useToast();
+
+  // The next action is the top of the open task list — an ordering, not a
+  // stored flag — so the session goal and the track page always agree about
+  // what "next" means without a second copy of the row.
+  const nextTask = trackTodos?.[0] ?? null;
 
   // This page "owns" the running session when its track matches (track mode)
   // or when the active session has no track (track-less mode).
@@ -87,8 +90,8 @@ export function FocusRunner({
       trackName: track?.name ?? sessionType?.name ?? null,
       sessionTypeId: sessionType?.id ?? null,
       // Committing to one outcome up front; the log page asks whether you
-      // got there. Defaults to the track's primary action.
-      goal: primaryAction?.description ?? "",
+      // got there. Defaults to the top open task.
+      goal: nextTask?.description ?? "",
     });
   };
 
@@ -114,9 +117,9 @@ export function FocusRunner({
         <h1 className="text-4xl font-semibold tracking-tight">{headline}</h1>
         {track && (
           <p className="text-lg text-muted-foreground">
-            {primaryAction
-              ? primaryAction.description
-              : "No primary action — set one to anchor the session."}
+            {nextTask
+              ? nextTask.description
+              : "No open tasks — add one below to anchor the session."}
           </p>
         )}
         <div className="mx-auto mt-2 w-full max-w-md text-left">

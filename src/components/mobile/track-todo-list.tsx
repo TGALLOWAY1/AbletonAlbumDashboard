@@ -1,18 +1,21 @@
 "use client";
 
 import { useOptimistic, useRef, useState, useTransition } from "react";
-import { Check, Plus, Trash2 } from "lucide-react";
+import { Check, GripVertical, Plus, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Checkbox } from "@/components/ui/checkbox";
 import {
   addTrackTodo,
   deleteTrackTodo,
+  reorderTrackTodos,
   toggleTrackTodo,
   updateTrackTodo,
 } from "@/app/actions/track-todos";
 import { useToast } from "@/components/toast";
+import { applyOrder, moveItemTo } from "@/lib/task-order";
 import type { ActionRow } from "@/lib/types";
+import { cn } from "@/lib/utils";
 
 type TodoItem = ActionRow & { _temp?: boolean };
 
@@ -20,7 +23,8 @@ type Action =
   | { kind: "add"; item: TodoItem }
   | { kind: "toggle"; id: string; done: boolean }
   | { kind: "edit"; id: string; description: string }
-  | { kind: "delete"; id: string };
+  | { kind: "delete"; id: string }
+  | { kind: "reorder"; ids: string[] };
 
 function reducer(state: TodoItem[], action: Action): TodoItem[] {
   switch (action.kind) {
@@ -41,6 +45,8 @@ function reducer(state: TodoItem[], action: Action): TodoItem[] {
       );
     case "delete":
       return state.filter((t) => t.id !== action.id);
+    case "reorder":
+      return applyOrder(state, action.ids);
   }
 }
 
@@ -57,6 +63,8 @@ type Sizing = {
   editInput: string;
   deleteBtn: string;
   deleteIcon: string;
+  handle: string;
+  handleIcon: string;
 };
 
 const SIZING: Record<Variant, Sizing> = {
@@ -65,7 +73,7 @@ const SIZING: Record<Variant, Sizing> = {
       "h-11 border-0 bg-transparent px-1 text-base shadow-none focus-visible:ring-0",
     addBtn: "h-11 px-4",
     addIcon: "ml-1 h-5 w-5 shrink-0 text-primary",
-    row: "flex min-h-[56px] items-center gap-3 border-b border-border/60 py-2",
+    row: "flex min-h-[56px] items-center gap-2 border-b border-border/60 py-2",
     checkCell: "flex h-11 w-11 shrink-0 items-center justify-center",
     checkbox: "h-6 w-6",
     label: "min-w-0 flex-1 truncate rounded-md px-1 py-2 text-left text-base",
@@ -73,6 +81,8 @@ const SIZING: Record<Variant, Sizing> = {
       "min-w-0 flex-1 rounded-md border border-border bg-surface px-3 py-2 text-base outline-none focus:ring-2 focus:ring-primary",
     deleteBtn: "h-11 w-11 shrink-0",
     deleteIcon: "h-5 w-5",
+    handle: "h-11 w-9",
+    handleIcon: "h-5 w-5",
   },
   desktop: {
     input:
@@ -87,6 +97,8 @@ const SIZING: Record<Variant, Sizing> = {
       "min-w-0 flex-1 rounded-md border border-border bg-surface px-2 py-1 text-sm outline-none focus:ring-2 focus:ring-primary",
     deleteBtn: "h-8 w-8 shrink-0",
     deleteIcon: "h-4 w-4",
+    handle: "h-8 w-6",
+    handleIcon: "h-4 w-4",
   },
 };
 
@@ -109,6 +121,69 @@ export function TrackTodoList({
   const inputRef = useRef<HTMLInputElement | null>(null);
   const { toast } = useToast();
 
+  // Reorder state. `dragId` is the row being moved, `overId` the row whose
+  // slot it takes on release. The list deliberately does NOT reshuffle live —
+  // the dragged row dims and the target draws an insertion edge — because
+  // reordering under the pointer makes hit-testing oscillate between two rows.
+  const [dragId, setDragId] = useState<string | null>(null);
+  const [overId, setOverId] = useState<string | null>(null);
+  const rowRefs = useRef(new Map<string, HTMLLIElement>());
+
+  const commitOrder = (ordered: TodoItem[]) => {
+    // Temp rows carry client-side ids the server has never seen.
+    const ids = ordered.filter((t) => !t._temp).map((t) => t.id);
+    if (ids.length === 0) return;
+    startTransition(async () => {
+      applyOptimistic({ kind: "reorder", ids: ordered.map((t) => t.id) });
+      try {
+        await reorderTrackTodos({ trackId, orderedIds: ids });
+      } catch (e) {
+        toast((e as Error).message);
+      }
+    });
+  };
+
+  const rowIdAtPoint = (clientY: number): string | null => {
+    for (const [id, el] of rowRefs.current) {
+      const rect = el.getBoundingClientRect();
+      if (clientY >= rect.top && clientY <= rect.bottom) return id;
+    }
+    return null;
+  };
+
+  const startDrag = (
+    e: React.PointerEvent<HTMLButtonElement>,
+    item: TodoItem,
+  ) => {
+    if (item._temp) return;
+    // Capture so moves keep arriving once the pointer leaves the handle.
+    e.currentTarget.setPointerCapture(e.pointerId);
+    setDragId(item.id);
+    setOverId(item.id);
+  };
+
+  const trackDrag = (e: React.PointerEvent<HTMLButtonElement>) => {
+    if (!dragId) return;
+    const id = rowIdAtPoint(e.clientY);
+    if (id) setOverId(id);
+  };
+
+  const endDrag = () => {
+    if (dragId && overId && dragId !== overId) {
+      commitOrder(moveItemTo(optimistic, dragId, overId));
+    }
+    setDragId(null);
+    setOverId(null);
+  };
+
+  /** Keyboard equivalent: the handle is focusable and moves the row by one. */
+  const nudge = (item: TodoItem, delta: -1 | 1) => {
+    const from = optimistic.findIndex((t) => t.id === item.id);
+    const to = from + delta;
+    if (from < 0 || to < 0 || to >= optimistic.length) return;
+    commitOrder(moveItemTo(optimistic, item.id, optimistic[to].id));
+  };
+
   const submitDraft = () => {
     const description = draft.trim();
     if (!description) return;
@@ -123,7 +198,7 @@ export function TrackTodoList({
           description,
           category: null,
           estimated_minutes: null,
-          is_primary: false,
+          sort_order: null,
           completed_at: null,
           created_at: new Date().toISOString(),
           _temp: true,
@@ -176,6 +251,8 @@ export function TrackTodoList({
   };
 
   const openCount = optimistic.filter((t) => t.completed_at == null).length;
+  const dragIndex = dragId ? optimistic.findIndex((t) => t.id === dragId) : -1;
+  const overIndex = overId ? optimistic.findIndex((t) => t.id === overId) : -1;
 
   return (
     <div className="flex flex-col gap-3">
@@ -183,9 +260,7 @@ export function TrackTodoList({
         <h2 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
           Tasks
         </h2>
-        <span className="text-xs text-muted-foreground">
-          {openCount} open
-        </span>
+        <span className="text-xs text-muted-foreground">{openCount} open</span>
       </div>
 
       <form
@@ -220,18 +295,46 @@ export function TrackTodoList({
           No tasks yet. Type one above and tap Add.
         </p>
       ) : (
-        <ul className="flex flex-col gap-1">
-          {optimistic.map((item) => (
-            <TodoRow
-              key={item.id}
-              item={item}
-              sizing={sizing}
-              onToggle={(next) => onToggle(item, next)}
-              onEdit={(desc) => onEdit(item, desc)}
-              onDelete={() => onDelete(item)}
-            />
-          ))}
-        </ul>
+        <>
+          <ul className="flex flex-col gap-1">
+            {optimistic.map((item, index) => (
+              <TodoRow
+                key={item.id}
+                item={item}
+                index={index}
+                total={optimistic.length}
+                sizing={sizing}
+                dragging={dragId === item.id}
+                // The edge sits on the side the row arrives from, so the gap
+                // you see is the gap it lands in.
+                dropEdge={
+                  dragId && overId === item.id && dragId !== item.id
+                    ? dragIndex < overIndex
+                      ? "bottom"
+                      : "top"
+                    : null
+                }
+                registerRef={(el) => {
+                  if (el) rowRefs.current.set(item.id, el);
+                  else rowRefs.current.delete(item.id);
+                }}
+                onDragStart={(e) => startDrag(e, item)}
+                onDragMove={trackDrag}
+                onDragEnd={endDrag}
+                onNudge={(delta) => nudge(item, delta)}
+                onToggle={(next) => onToggle(item, next)}
+                onEdit={(desc) => onEdit(item, desc)}
+                onDelete={() => onDelete(item)}
+              />
+            ))}
+          </ul>
+          {optimistic.length > 1 && (
+            <p className="text-xs text-muted-foreground">
+              Drag the handle to reorder — the top task is the one a focus
+              session starts on.
+            </p>
+          )}
+        </>
       )}
     </div>
   );
@@ -239,13 +342,31 @@ export function TrackTodoList({
 
 function TodoRow({
   item,
+  index,
+  total,
   sizing,
+  dragging,
+  dropEdge,
+  registerRef,
+  onDragStart,
+  onDragMove,
+  onDragEnd,
+  onNudge,
   onToggle,
   onEdit,
   onDelete,
 }: {
   item: TodoItem;
+  index: number;
+  total: number;
   sizing: Sizing;
+  dragging: boolean;
+  dropEdge: "top" | "bottom" | null;
+  registerRef: (el: HTMLLIElement | null) => void;
+  onDragStart: (e: React.PointerEvent<HTMLButtonElement>) => void;
+  onDragMove: (e: React.PointerEvent<HTMLButtonElement>) => void;
+  onDragEnd: () => void;
+  onNudge: (delta: -1 | 1) => void;
   onToggle: (done: boolean) => void;
   onEdit: (description: string) => void;
   onDelete: () => void;
@@ -265,7 +386,43 @@ function TodoRow({
   };
 
   return (
-    <li className={sizing.row}>
+    <li
+      ref={registerRef}
+      className={cn(
+        sizing.row,
+        dragging && "opacity-40",
+        dropEdge === "top" && "border-t-2 border-t-primary",
+        dropEdge === "bottom" && "border-b-2 border-b-primary",
+      )}
+    >
+      <button
+        type="button"
+        disabled={item._temp}
+        onPointerDown={onDragStart}
+        onPointerMove={onDragMove}
+        onPointerUp={onDragEnd}
+        onPointerCancel={onDragEnd}
+        onKeyDown={(e) => {
+          if (e.key === "ArrowUp") {
+            e.preventDefault();
+            onNudge(-1);
+          } else if (e.key === "ArrowDown") {
+            e.preventDefault();
+            onNudge(1);
+          }
+        }}
+        aria-label={`Reorder "${item.description}", position ${index + 1} of ${total}. Use the up and down arrow keys to move it.`}
+        title="Drag to reorder"
+        // `touch-action: none` is what stops the drag from scrolling the page
+        // on a phone — without it the browser claims the gesture first.
+        className={cn(
+          sizing.handle,
+          "flex shrink-0 touch-none cursor-grab items-center justify-center rounded-md text-muted-foreground/50 outline-none hover:text-muted-foreground focus-visible:ring-2 focus-visible:ring-ring active:cursor-grabbing disabled:pointer-events-none disabled:opacity-30",
+        )}
+      >
+        <GripVertical className={sizing.handleIcon} aria-hidden />
+      </button>
+
       <label className={sizing.checkCell}>
         <Checkbox
           checked={done}
