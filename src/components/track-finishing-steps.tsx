@@ -1,6 +1,6 @@
 "use client";
 
-import { useOptimistic, useTransition } from "react";
+import { useOptimistic, useRef, useTransition } from "react";
 import { format } from "date-fns";
 import {
   Check,
@@ -92,16 +92,38 @@ export function TrackFinishingSteps({
   );
   const [, startTransition] = useTransition();
   const { toast } = useToast();
+  // One write in flight per row. Each write sends an absolute state, not a
+  // flip, so two taps in quick succession would race: nothing orders the two
+  // requests, and the first can settle last and leave the row saved opposite
+  // to what the card shows. A ref rather than state because the guard has to
+  // hold within a single tick, before React has re-rendered.
+  const inFlight = useRef<Set<FinishingStepKey>>(new Set());
 
   const toggle = (step: FinishingStep) => {
+    if (inFlight.current.has(step.key)) return;
+    inFlight.current.add(step.key);
     const complete = step.completedAt === null;
     startTransition(async () => {
       applyOptimistic({
         key: step.key,
         completedAt: complete ? new Date().toISOString() : null,
       });
-      const result = await setFinishingStep(trackId, step.key, complete);
-      if (result?.error) toast(result.error);
+      try {
+        const result = await setFinishingStep(trackId, step.key, complete);
+        if (result?.error) toast(result.error);
+      } catch (e) {
+        // `setFinishingStep` returns its own failures, so reaching here means
+        // the request never got an answer — a dropped connection, or a throw
+        // before the action's error handling. Without this the transition
+        // rejects unhandled and the tick silently rolls back with no toast.
+        toast(
+          e instanceof Error && e.message
+            ? e.message
+            : "Could not save that step. Try again.",
+        );
+      } finally {
+        inFlight.current.delete(step.key);
+      }
     });
   };
 
