@@ -93,6 +93,59 @@ async function fetchAllResources(): Promise<ResourceItem[]> {
   return items;
 }
 
+// Same first-load rule as getResourcesPageData: until the user has added
+// anything, category pages show the seed entries so they are never empty.
+function seedResources(): ResourceItem[] {
+  return [...SEED_FEATURED_RESOURCES, ...SEED_RECENT_RESOURCES];
+}
+
+export async function getResourceCategoryPageData(
+  categoryId: ResourceCategoryId,
+): Promise<{ category: ResourceCategory; topics: ResourceItem[] }> {
+  const items = await fetchAllResources();
+  const source = items.length === 0 ? seedResources() : items;
+  // "Recommended order": first-added comes first, so the list reads as a
+  // curated sequence (topic 1, topic 2, …) rather than a reverse-chron feed.
+  const topics = source
+    .filter((item) => item.categoryId === categoryId)
+    .sort((a, b) => a.addedAt.localeCompare(b.addedAt));
+  const base = RESOURCE_CATEGORIES.find((c) => c.id === categoryId)!;
+  return {
+    category: { ...base, articleCount: topics.length },
+    topics,
+  };
+}
+
+const UUID_RE =
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+export async function getResourceById(
+  id: string,
+): Promise<ResourceItem | null> {
+  if (id.startsWith("seed-")) {
+    return seedResources().find((item) => item.id === id) ?? null;
+  }
+  // A malformed id can't match a row and Postgres would reject the query, so
+  // it's a plain not-found — but any other failure (outage, permissions,
+  // schema) must propagate to the route's error boundary, not become a 404.
+  if (!UUID_RE.test(id)) return null;
+  const supabase = getServerSupabase();
+  const { data, error } = await supabase
+    .from("resources")
+    .select("*")
+    .eq("owner_id", OWNER_ID)
+    .eq("id", id)
+    .maybeSingle();
+  if (error) throw error;
+  if (!data) return null;
+  try {
+    return rowToItem(supabase, data as ResourceRow);
+  } catch (e) {
+    console.error("[resources] bad row", id, e);
+    return null;
+  }
+}
+
 export async function getResourcesPageData(): Promise<{
   categories: ResourceCategory[];
   featured: ResourceItem[];
