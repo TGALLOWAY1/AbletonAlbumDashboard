@@ -7,7 +7,6 @@ import { Input } from "@/components/ui/input";
 import {
   RESOURCE_CATEGORIES,
   type ResourceCategory,
-  type ResourceCategoryId,
   type ResourceItem,
 } from "@/lib/data/resources";
 import { ResourceCategoryGrid } from "./resource-category-grid";
@@ -33,17 +32,14 @@ export function ResourcesPageClient({
 }) {
   const [query, setQuery] = React.useState("");
   const [page, setPage] = React.useState(1);
-  const [activeCategory, setActiveCategory] =
-    React.useState<ResourceCategoryId | null>(null);
   const [selected, setSelected] = React.useState<ResourceItem | null>(null);
   const [pendingBookmark, startBookmark] = React.useTransition();
   const { toast } = useToast();
 
   const filteredRecent = React.useMemo(() => {
     const q = query.trim().toLowerCase();
+    if (!q) return recent;
     return recent.filter((item) => {
-      if (activeCategory && item.categoryId !== activeCategory) return false;
-      if (!q) return true;
       const categoryTitle = CATEGORY_TITLES.get(item.categoryId) ?? "";
       return (
         item.title.toLowerCase().includes(q) ||
@@ -51,15 +47,10 @@ export function ResourcesPageClient({
         categoryTitle.includes(q)
       );
     });
-  }, [recent, query, activeCategory]);
+  }, [recent, query]);
 
   const handleSearchChange = (next: string) => {
     setQuery(next);
-    setPage(1);
-  };
-
-  const handleCategorySelect = (category: ResourceCategory) => {
-    setActiveCategory((prev) => (prev === category.id ? null : category.id));
     setPage(1);
   };
 
@@ -113,12 +104,7 @@ export function ResourcesPageClient({
         </div>
       </header>
 
-      <ResourceCategoryGrid
-        categories={categories}
-        activeCategoryId={activeCategory}
-        onSelect={handleCategorySelect}
-        onViewAll={() => setActiveCategory(null)}
-      />
+      <ResourceCategoryGrid categories={categories} />
 
       <FeaturedResources
         resources={featured}

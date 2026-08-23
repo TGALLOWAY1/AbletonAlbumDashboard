@@ -93,6 +93,56 @@ async function fetchAllResources(): Promise<ResourceItem[]> {
   return items;
 }
 
+// Same first-load rule as getResourcesPageData: until the user has added
+// anything, category pages show the seed entries so they are never empty.
+function seedResources(): ResourceItem[] {
+  return [...SEED_FEATURED_RESOURCES, ...SEED_RECENT_RESOURCES];
+}
+
+export async function getResourceCategoryPageData(
+  categoryId: ResourceCategoryId,
+): Promise<{ category: ResourceCategory; topics: ResourceItem[] }> {
+  const items = await fetchAllResources();
+  const source = items.length === 0 ? seedResources() : items;
+  // "Recommended order": first-added comes first, so the list reads as a
+  // curated sequence (topic 1, topic 2, …) rather than a reverse-chron feed.
+  const topics = source
+    .filter((item) => item.categoryId === categoryId)
+    .sort((a, b) => a.addedAt.localeCompare(b.addedAt));
+  const base = RESOURCE_CATEGORIES.find((c) => c.id === categoryId)!;
+  return {
+    category: { ...base, articleCount: topics.length },
+    topics,
+  };
+}
+
+export async function getResourceById(
+  id: string,
+): Promise<ResourceItem | null> {
+  if (id.startsWith("seed-")) {
+    return seedResources().find((item) => item.id === id) ?? null;
+  }
+  const supabase = getServerSupabase();
+  const { data, error } = await supabase
+    .from("resources")
+    .select("*")
+    .eq("owner_id", OWNER_ID)
+    .eq("id", id)
+    .maybeSingle();
+  if (error) {
+    // A malformed id (not a uuid) also lands here — treat it as not found.
+    console.error("[resources] fetch by id failed", error);
+    return null;
+  }
+  if (!data) return null;
+  try {
+    return rowToItem(supabase, data as ResourceRow);
+  } catch (e) {
+    console.error("[resources] bad row", id, e);
+    return null;
+  }
+}
+
 export async function getResourcesPageData(): Promise<{
   categories: ResourceCategory[];
   featured: ResourceItem[];
