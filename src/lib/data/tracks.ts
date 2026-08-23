@@ -3,7 +3,6 @@ import { OWNER_ID } from "@/lib/owner";
 import type { SunoExperimentStatus } from "@/lib/suno";
 import type {
   ActionRow,
-  BottleneckRow,
   StageRow,
   TrackRow,
   TrackStatus,
@@ -69,33 +68,18 @@ async function attachDetails(tracks: TrackRow[]): Promise<TrackWithDetails[]> {
     ),
   ];
 
-  const [
-    stagesRes,
-    bottleneckRes,
-    actionRes,
-    openActionsRes,
-    completedActionsRes,
-    albumsRes,
-    sunoRes,
-  ] =
+  const [stagesRes, openActionsRes, completedActionsRes, albumsRes, sunoRes] =
     await Promise.all([
       supabase.from("track_stages").select("*").in("track_id", ids),
-      supabase
-        .from("bottlenecks")
-        .select("*")
-        .in("track_id", ids)
-        .eq("is_active", true),
+      // One query serves the open-task count, the remaining-time estimate and
+      // `nextTask`. Ordered oldest-first so the first row per track is the top
+      // of the list the detail page renders — the two must not disagree.
       supabase
         .from("actions")
         .select("*")
         .in("track_id", ids)
-        .eq("is_primary", true)
-        .is("completed_at", null),
-      supabase
-        .from("actions")
-        .select("track_id, estimated_minutes")
-        .in("track_id", ids)
-        .is("completed_at", null),
+        .is("completed_at", null)
+        .order("created_at", { ascending: true }),
       supabase
         .from("actions")
         .select("track_id")
@@ -117,13 +101,13 @@ async function attachDetails(tracks: TrackRow[]): Promise<TrackWithDetails[]> {
     list.push(s);
     stagesByTrack.set(s.track_id, list);
   });
-  const bottleneckByTrack = new Map<string, BottleneckRow>();
-  (bottleneckRes.data ?? []).forEach((b) => bottleneckByTrack.set(b.track_id, b));
-  const actionByTrack = new Map<string, ActionRow>();
-  (actionRes.data ?? []).forEach((a) => actionByTrack.set(a.track_id, a));
+  const nextTaskByTrack = new Map<string, ActionRow>();
   const openCountByTrack = new Map<string, number>();
   const estMinutesByTrack = new Map<string, number>();
   (openActionsRes.data ?? []).forEach((a) => {
+    // Rows arrive oldest-first, so the first one seen per track is the top of
+    // that track's list — i.e. its next action.
+    if (!nextTaskByTrack.has(a.track_id)) nextTaskByTrack.set(a.track_id, a);
     openCountByTrack.set(a.track_id, (openCountByTrack.get(a.track_id) ?? 0) + 1);
     if (a.estimated_minutes != null) {
       estMinutesByTrack.set(
@@ -156,8 +140,7 @@ async function attachDetails(tracks: TrackRow[]): Promise<TrackWithDetails[]> {
   return tracks.map((t) => ({
     ...t,
     stages: stagesByTrack.get(t.id) ?? [],
-    bottleneck: bottleneckByTrack.get(t.id) ?? null,
-    primaryAction: actionByTrack.get(t.id) ?? null,
+    nextTask: nextTaskByTrack.get(t.id) ?? null,
     openTaskCount: openCountByTrack.get(t.id) ?? 0,
     completedTaskCount: completedCountByTrack.get(t.id) ?? 0,
     estMinutesRemaining: estMinutesByTrack.get(t.id) ?? 0,
@@ -288,7 +271,6 @@ export async function getOpenActionsForTrack(
     .select("*")
     .eq("track_id", trackId)
     .is("completed_at", null)
-    .order("is_primary", { ascending: false })
     .order("created_at", { ascending: true });
   if (error) throw error;
   return data ?? [];

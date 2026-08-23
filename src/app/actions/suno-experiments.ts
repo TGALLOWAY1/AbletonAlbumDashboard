@@ -82,7 +82,6 @@ export async function createSunoExperiment(input: {
       description: sunoActionDescription("send", track.name, parsed.goal),
       category: "suno",
       estimated_minutes: 15,
-      is_primary: false,
     })
     .select("id")
     .single();
@@ -310,7 +309,6 @@ async function insertSunoTask(trackId: string, description: string) {
     track_id: trackId,
     description,
     category: "suno",
-    is_primary: false,
   });
   if (error) throw error;
 }
@@ -492,7 +490,7 @@ export async function closeExperiment(input: CloseExperimentInput) {
   if (experiment.action_id) {
     await supabase
       .from("actions")
-      .update({ completed_at: new Date().toISOString(), is_primary: false })
+      .update({ completed_at: new Date().toISOString() })
       .eq("id", experiment.action_id)
       .is("completed_at", null);
   }

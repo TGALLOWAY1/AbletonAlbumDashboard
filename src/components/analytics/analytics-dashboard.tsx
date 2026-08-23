@@ -3,9 +3,7 @@
 import { useMemo, useState } from "react";
 import { Info } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { BOTTLENECK_CATEGORIES, BOTTLENECK_LABELS } from "@/lib/types";
 import { WorkHeatmap, HeatmapLegend } from "@/components/analytics/work-heatmap";
 import {
   RANGE_OPTIONS,
@@ -15,15 +13,12 @@ import {
   getTotalHours,
   getLongestStreak,
   getMostActiveDay,
-  getBottleneckCounts,
   getAvgSecondsPerTrack,
   getRangeCompletionRate,
   getSessionsPerWeek,
-  getTopBottleneck,
   type RangeKey,
   type AnalyticsSession,
   type AnalyticsTrack,
-  type AnalyticsBottleneck,
 } from "@/lib/analytics";
 
 const MONTH_NAMES = [
@@ -64,11 +59,9 @@ function rangeLabel(start: Date, end: Date) {
 export function AnalyticsDashboard({
   sessions,
   tracks,
-  bottlenecks,
 }: {
   sessions: AnalyticsSession[];
   tracks: AnalyticsTrack[];
-  bottlenecks: AnalyticsBottleneck[];
 }) {
   const [range, setRange] = useState<RangeKey>("3m");
 
@@ -77,28 +70,19 @@ export function AnalyticsDashboard({
     const start = getRangeStart(range, now);
     const rangeSessions = getSessionsInRange(sessions, range, now);
     const dailyMap = getDailyDurationMap(rangeSessions);
-    const rangeBottlenecks = getSessionsInRange(
-      bottlenecks.map((b) => ({ ...b, startedAt: b.createdAt })),
-      range,
-      now,
-    );
-    const counts = getBottleneckCounts(rangeBottlenecks, BOTTLENECK_CATEGORIES);
-
     return {
       start,
       end: now,
       rangeSessions,
       dailyMap,
-      counts,
       avgSecondsPerTrack: getAvgSecondsPerTrack(rangeSessions),
       completionRate: getRangeCompletionRate(rangeSessions, tracks),
       sessionsPerWeek: getSessionsPerWeek(rangeSessions, range),
-      topBottleneck: getTopBottleneck(counts),
       totalHours: getTotalHours(rangeSessions),
       longestStreak: getLongestStreak(dailyMap),
       mostActiveDay: getMostActiveDay(dailyMap),
     };
-  }, [sessions, tracks, bottlenecks, range]);
+  }, [sessions, tracks, range]);
 
   const tiles = [
     {
@@ -116,16 +100,8 @@ export function AnalyticsDashboard({
       value: view.sessionsPerWeek.toString(),
       caption: "Avg per week in range",
     },
-    {
-      label: "Top bottleneck",
-      value: view.topBottleneck
-        ? (BOTTLENECK_LABELS[view.topBottleneck] ?? view.topBottleneck)
-        : "—",
-      caption: "Most-recurring category",
-    },
   ];
 
-  const maxCount = view.counts[0]?.count ?? 0;
   const insights = [
     { label: "Most active day", value: view.mostActiveDay ?? "—" },
     {
@@ -204,41 +180,6 @@ export function AnalyticsDashboard({
               </div>
             ))}
           </div>
-        </CardContent>
-      </Card>
-
-      <Card>
-        <CardContent className="flex flex-col gap-3 p-5">
-          <h2 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
-            Bottleneck categories
-          </h2>
-          <ul className="flex flex-col gap-2">
-            {view.counts.map(({ category, count }) => {
-              const pct = maxCount > 0 ? (count / maxCount) * 100 : 0;
-              return (
-                <li
-                  key={category}
-                  className="flex items-center gap-2 text-sm sm:gap-3"
-                >
-                  <Badge
-                    variant="warning"
-                    className="w-24 shrink-0 justify-center text-[10px] sm:w-32 sm:text-xs"
-                  >
-                    {BOTTLENECK_LABELS[category] ?? category}
-                  </Badge>
-                  <div className="h-2 flex-1 overflow-hidden rounded-full bg-surface-2">
-                    <div
-                      className="h-full bg-warning"
-                      style={{ width: `${pct}%` }}
-                    />
-                  </div>
-                  <span className="w-8 text-right text-muted-foreground">
-                    {count}
-                  </span>
-                </li>
-              );
-            })}
-          </ul>
         </CardContent>
       </Card>
 

@@ -18,7 +18,6 @@ export async function addTrackTodo(input: {
   const { error } = await supabase.from("actions").insert({
     track_id: parsed.trackId,
     description: parsed.description,
-    is_primary: false,
   });
   if (error) throw error;
   revalidateTrackSurfaces(parsed.trackId);
@@ -30,14 +29,11 @@ export async function toggleTrackTodo(
   trackId: string,
 ) {
   const supabase = getServerSupabase();
-  // Force is_primary=false on every toggle so the partial unique index
-  // (is_primary AND completed_at IS NULL) can never be violated.
   const { error } = await supabase
     .from("actions")
     .update({
       completed_at: done ? new Date().toISOString() : null,
-      is_primary: false,
-    })
+      })
     .eq("id", id);
   if (error) throw error;
   revalidateTrackSurfaces(trackId);

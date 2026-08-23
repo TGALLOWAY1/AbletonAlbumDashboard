@@ -123,7 +123,6 @@ export function TrackTodoList({
           description,
           category: null,
           estimated_minutes: null,
-          is_primary: false,
           completed_at: null,
           created_at: new Date().toISOString(),
           _temp: true,

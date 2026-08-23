@@ -20,7 +20,6 @@ export type Database = {
           description: string;
           estimated_minutes: number | null;
           id: string;
-          is_primary: boolean;
           track_id: string;
         };
         Insert: {
@@ -30,7 +29,6 @@ export type Database = {
           description: string;
           estimated_minutes?: number | null;
           id?: string;
-          is_primary?: boolean;
           track_id: string;
         };
         Update: {
@@ -40,7 +38,6 @@ export type Database = {
           description?: string;
           estimated_minutes?: number | null;
           id?: string;
-          is_primary?: boolean;
           track_id?: string;
         };
         Relationships: [
@@ -91,44 +88,6 @@ export type Database = {
           updated_at?: string;
         };
         Relationships: [];
-      };
-      bottlenecks: {
-        Row: {
-          category: string;
-          created_at: string;
-          description: string;
-          id: string;
-          is_active: boolean;
-          resolved_at: string | null;
-          track_id: string;
-        };
-        Insert: {
-          category: string;
-          created_at?: string;
-          description: string;
-          id?: string;
-          is_active?: boolean;
-          resolved_at?: string | null;
-          track_id: string;
-        };
-        Update: {
-          category?: string;
-          created_at?: string;
-          description?: string;
-          id?: string;
-          is_active?: boolean;
-          resolved_at?: string | null;
-          track_id?: string;
-        };
-        Relationships: [
-          {
-            foreignKeyName: "bottlenecks_track_id_fkey";
-            columns: ["track_id"];
-            isOneToOne: false;
-            referencedRelation: "tracks";
-            referencedColumns: ["id"];
-          },
-        ];
       };
       session_recurrences: {
         Row: {
@@ -337,7 +296,6 @@ export type Database = {
           enjoyment_rating: number | null;
           id: string;
           improved: string | null;
-          new_bottleneck: string | null;
           notes_md: string | null;
           planned_end: string | null;
           planned_start: string | null;
@@ -359,7 +317,6 @@ export type Database = {
           enjoyment_rating?: number | null;
           id?: string;
           improved?: string | null;
-          new_bottleneck?: string | null;
           notes_md?: string | null;
           planned_end?: string | null;
           planned_start?: string | null;
@@ -381,7 +338,6 @@ export type Database = {
           enjoyment_rating?: number | null;
           id?: string;
           improved?: string | null;
-          new_bottleneck?: string | null;
           notes_md?: string | null;
           planned_end?: string | null;
           planned_start?: string | null;

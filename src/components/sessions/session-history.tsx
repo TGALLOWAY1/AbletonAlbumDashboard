@@ -16,7 +16,6 @@ type SessionRow = {
   started_at: string;
   improved: string | null;
   still_broken: string | null;
-  new_bottleneck: string | null;
   track: { name: string; owner_id: string } | null;
   session_type: { name: string; color: string } | null;
 };
@@ -26,7 +25,7 @@ async function fetchSessions(): Promise<SessionRow[]> {
   const { data } = await supabase
     .from("sessions")
     .select(
-      "id, track_id, duration_seconds, started_at, improved, still_broken, new_bottleneck, track:tracks!sessions_track_id_fkey(name, owner_id), session_type:session_types(name, color)",
+      "id, track_id, duration_seconds, started_at, improved, still_broken, track:tracks!sessions_track_id_fkey(name, owner_id), session_type:session_types(name, color)",
     )
     .not("started_at", "is", null)
     .order("started_at", { ascending: false })
@@ -118,8 +117,8 @@ export async function SessionHistory() {
                     </span>
                   </div>
                 </div>
-                {(s.improved || s.still_broken || s.new_bottleneck) && (
-                  <div className="grid gap-2 text-xs sm:grid-cols-3">
+                {(s.improved || s.still_broken) && (
+                  <div className="grid gap-2 text-xs sm:grid-cols-2">
                     {s.improved && (
                       <Reflection label="Improved" tone="primary">
                         {s.improved}
@@ -128,11 +127,6 @@ export async function SessionHistory() {
                     {s.still_broken && (
                       <Reflection label="Still broken" tone="warning">
                         {s.still_broken}
-                      </Reflection>
-                    )}
-                    {s.new_bottleneck && (
-                      <Reflection label="New bottleneck" tone="danger">
-                        {s.new_bottleneck}
                       </Reflection>
                     )}
                   </div>

@@ -5,7 +5,6 @@ export type WeeklyDelta = {
   sessionCount: number;
   sessionSeconds: number;
   todosCompleted: number;
-  bottlenecksResolved: number;
 };
 
 // What actually moved since `weekStartIso` (Monday). Powers the dashboard's
@@ -14,9 +13,9 @@ export type WeeklyDelta = {
 export async function getWeeklyDelta(weekStartIso: string): Promise<WeeklyDelta> {
   const supabase = getServerSupabase();
 
-  const [sessions, todos, bottlenecks] = await Promise.all([
+  const [sessions, todos] = await Promise.all([
     // Sessions have no owner column (single-user V1) and may be track-less,
-    // so they're not scoped through the tracks join like the other two.
+    // so they're not scoped through the tracks join like completed todos.
     supabase
       .from("sessions")
       .select("duration_seconds, started_at, ended_at")
@@ -27,16 +26,10 @@ export async function getWeeklyDelta(weekStartIso: string): Promise<WeeklyDelta>
       .select("id, tracks!inner(owner_id)", { count: "exact", head: true })
       .eq("tracks.owner_id", OWNER_ID)
       .gte("completed_at", weekStartIso),
-    supabase
-      .from("bottlenecks")
-      .select("id, tracks!inner(owner_id)", { count: "exact", head: true })
-      .eq("tracks.owner_id", OWNER_ID)
-      .gte("resolved_at", weekStartIso),
   ]);
 
   if (sessions.error) throw sessions.error;
   if (todos.error) throw todos.error;
-  if (bottlenecks.error) throw bottlenecks.error;
 
   const sessionSeconds = (sessions.data ?? []).reduce((acc, s) => {
     if (s.duration_seconds != null) return acc + s.duration_seconds;
@@ -51,6 +44,5 @@ export async function getWeeklyDelta(weekStartIso: string): Promise<WeeklyDelta>
     sessionCount: (sessions.data ?? []).length,
     sessionSeconds,
     todosCompleted: todos.count ?? 0,
-    bottlenecksResolved: bottlenecks.count ?? 0,
   };
 }

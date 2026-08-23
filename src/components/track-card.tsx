@@ -91,10 +91,10 @@ export function TrackCard({
 
             <TaskBar completed={track.completedTaskCount} total={totalTasks} />
 
-            {track.primaryAction && (
+            {track.nextTask && (
               <p className="line-clamp-2 text-sm text-muted-foreground">
                 <span className="font-semibold text-foreground">Next:</span>{" "}
-                {track.primaryAction.description}
+                {track.nextTask.description}
               </p>
             )}
           </div>
@@ -191,7 +191,7 @@ export function TrackCard({
 
         <div className="flex min-w-0 items-start gap-2">
           <div className="min-w-0 flex-1">
-            <NextAction description={track.primaryAction?.description} />
+            <NextAction description={track.nextTask?.description} />
             <div className="mt-2 flex flex-wrap gap-2">
               <Button asChild size="sm">
                 <Link href={`/focus/${track.id}`}>

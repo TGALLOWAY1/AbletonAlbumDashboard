@@ -27,22 +27,13 @@ function track(
     name: id,
     last_worked_at: null,
     stages: stagesAt(0),
-    bottleneck: null,
-    primaryAction: null,
+    nextTask: null,
     openTaskCount: 0,
     completedTaskCount: 0,
     estMinutesRemaining: 0,
     ...overrides,
   } as TrackWithDetails;
 }
-
-const bottleneck = {
-  id: "b1",
-  track_id: "t",
-  description: "muddy low end",
-  category: "mixing",
-  is_active: true,
-} as TrackWithDetails["bottleneck"];
 
 describe("recommendTrack", () => {
   it("returns null with no tracks", () => {
@@ -80,14 +71,6 @@ describe("recommendTrack", () => {
     expect(rec?.reason).not.toBe("High momentum");
   });
 
-  it("penalizes an active bottleneck", () => {
-    const rec = recommendTrack([
-      track("blocked", { stages: stagesAt(50), bottleneck }),
-      track("clear", { stages: stagesAt(50) }),
-    ]);
-    expect(rec?.track.id).toBe("clear");
-  });
-
   it("rewards recently worked tracks via freshness", () => {
     const rec = recommendTrack([
       track("fresh", {
@@ -104,13 +87,12 @@ describe("recommendTrack", () => {
     // must be one of the positive score contributors.
     const rec = recommendTrack([
       track("a", { stages: stagesAt(10) }),
-      track("b", { stages: stagesAt(5), bottleneck }),
+      track("b", { stages: stagesAt(5) }),
     ]);
     expect([
       "Closest to done",
       "High momentum",
       "Fresh in your mind",
-      "Quick win — no active bottleneck",
     ]).toContain(rec?.reason);
   });
 

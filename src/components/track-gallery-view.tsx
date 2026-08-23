@@ -143,7 +143,7 @@ function LargeTile({
             total={track.openTaskCount + track.completedTaskCount}
           />
 
-          <NextAction description={track.primaryAction?.description} />
+          <NextAction description={track.nextTask?.description} />
 
           <div className="mt-auto flex flex-wrap gap-2 pt-1">
             <Button asChild size="sm">
@@ -207,10 +207,10 @@ function MediumTile({ track }: { track: TrackWithDetails }) {
           <SunoChip suno={track.sunoExperiment} />
         </div>
 
-        {track.primaryAction && (
+        {track.nextTask && (
           <p className="line-clamp-2 text-xs text-muted-foreground">
             <span className="font-semibold text-foreground">Next:</span>{" "}
-            {track.primaryAction.description}
+            {track.nextTask.description}
           </p>
         )}
 

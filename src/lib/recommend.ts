@@ -4,7 +4,8 @@ import { progressFromStages } from "@/lib/types";
 
 export type Recommendation = {
   track: TrackWithDetails;
-  primaryAction: TrackWithDetails["primaryAction"];
+  /** Top of the track's open task list — what a session would start on. */
+  nextTask: TrackWithDetails["nextTask"];
   reason: string;
   score: number;
 };
@@ -13,7 +14,6 @@ const WEIGHTS = {
   progress: 0.45,
   momentum: 0.3,
   freshness: 0.15, // 1 - staleness
-  bottleneck: -0.1,
   // Suno round-trip nudges: unreviewed variations are momentum-friendly
   // ten-minute wins, and a selected keeper is one step from a finished
   // decision. Both are 0 for tracks without an open experiment.
@@ -46,7 +46,6 @@ export function recommendTrack(
     );
     const staleness = clamp01(daysSince(t.last_worked_at) / HORIZON_DAYS);
     const freshness = 1 - staleness;
-    const hasBottleneck = t.bottleneck ? 1 : 0;
     // Optional chaining: test factories build partial tracks via `as` casts.
     const suno = t.sunoExperiment ?? null;
     const sunoUnreviewed = suno?.unreviewedCount ?? 0;
@@ -57,7 +56,6 @@ export function recommendTrack(
       WEIGHTS.progress * progress +
       WEIGHTS.momentum * momentum +
       WEIGHTS.freshness * freshness +
-      WEIGHTS.bottleneck * hasBottleneck +
       WEIGHTS.sunoReview * sunoReview +
       WEIGHTS.sunoIntegrate * sunoIntegrate;
 
@@ -68,10 +66,6 @@ export function recommendTrack(
       ["Closest to done", WEIGHTS.progress * progress],
       ["High momentum", WEIGHTS.momentum * momentum],
       ["Fresh in your mind", WEIGHTS.freshness * freshness],
-      [
-        "Quick win — no active bottleneck",
-        hasBottleneck ? -Infinity : -WEIGHTS.bottleneck,
-      ],
     ];
     const [topContrib] = contribs.sort((a, b) => b[1] - a[1])[0];
 
@@ -88,7 +82,7 @@ export function recommendTrack(
 
     return {
       track: t,
-      primaryAction: t.primaryAction,
+      nextTask: t.nextTask,
       reason,
       score,
     } satisfies Recommendation;

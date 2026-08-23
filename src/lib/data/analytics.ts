@@ -1,10 +1,6 @@
 import { getServerSupabase } from "@/lib/supabase/server";
 import { OWNER_ID } from "@/lib/owner";
-import type {
-  AnalyticsSession,
-  AnalyticsTrack,
-  AnalyticsBottleneck,
-} from "@/lib/analytics";
+import type { AnalyticsSession, AnalyticsTrack } from "@/lib/analytics";
 
 type SessionSlim = {
   track_id: string | null;
@@ -15,27 +11,20 @@ type SessionSlim = {
 };
 
 type TrackSlim = { id: string; status: string };
-type BottleneckSlim = { category: string; created_at: string };
 
 export async function fetchAnalyticsData() {
   const supabase = getServerSupabase();
-  const [tracksRes, sessionsRes, bottlenecksRes] = await Promise.all([
+  const [tracksRes, sessionsRes] = await Promise.all([
     supabase.from("tracks").select("id, status").eq("owner_id", OWNER_ID),
     supabase
       .from("sessions")
       .select(
         "track_id, duration_seconds, started_at, status, track:tracks!sessions_track_id_fkey(owner_id)",
       ),
-    supabase
-      .from("bottlenecks")
-      .select("category, created_at, tracks!inner(owner_id)")
-      .eq("tracks.owner_id", OWNER_ID),
   ]);
 
   const tracks = (tracksRes.data ?? []) as TrackSlim[];
   const sessionRows = (sessionsRes.data ?? []) as unknown as SessionSlim[];
-  const bottleneckRows = (bottlenecksRes.data ??
-    []) as unknown as BottleneckSlim[];
 
   const sessions: AnalyticsSession[] = sessionRows
     // Left join: keep track-less rows, and (single-user) only the owner's tracks.
@@ -53,9 +42,5 @@ export async function fetchAnalyticsData() {
     status: t.status,
   }));
 
-  const analyticsBottlenecks: AnalyticsBottleneck[] = bottleneckRows.map(
-    (b) => ({ category: b.category, createdAt: b.created_at }),
-  );
-
-  return { sessions, tracks: analyticsTracks, bottlenecks: analyticsBottlenecks };
+  return { sessions, tracks: analyticsTracks };
 }

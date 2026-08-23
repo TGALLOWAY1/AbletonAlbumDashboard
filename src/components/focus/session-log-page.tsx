@@ -17,8 +17,6 @@ import {
   type ProductionActivityKey,
 } from "@/lib/production-activities";
 import {
-  BOTTLENECK_CATEGORIES,
-  BOTTLENECK_LABELS,
   type SessionTypeRow,
   type TrackRow,
 } from "@/lib/types";
@@ -60,8 +58,6 @@ export function SessionLogPage({
   const [progressImpact, setProgressImpact] = useState<number | null>(null);
   const [enjoyment, setEnjoyment] = useState<number | null>(null);
   const [generalNote, setGeneralNote] = useState(() => ctx.notes ?? "");
-  const [bottleneckDesc, setBottleneckDesc] = useState("");
-  const [bottleneckCat, setBottleneckCat] = useState<string>("arrangement");
 
   // Give sessionStorage a tick to hydrate before deciding there's no session
   // (covers a hard reload landing directly on /focus/log).
@@ -182,9 +178,6 @@ export function SessionLogPage({
             minutes: activities[a.key].minutes,
             note: activities[a.key].note,
           })),
-          newBottleneckDescription: track ? bottleneckDesc : undefined,
-          newBottleneckCategory:
-            track && bottleneckDesc ? bottleneckCat : undefined,
           // Track sessions own their to-dos via the track itself; only the
           // track-less flow carries an ephemeral checklist worth persisting.
           todos: track
@@ -338,40 +331,6 @@ export function SessionLogPage({
         className="bg-surface"
       />
 
-      {/* Bottleneck — secondary, track sessions only */}
-      {track && (
-        <details className="rounded-lg border border-border bg-surface px-4 py-3 text-sm [&_summary]:cursor-pointer">
-          <summary className="font-medium text-muted-foreground">
-            Update bottleneck (optional)
-          </summary>
-          <div className="mt-3 flex flex-col gap-2">
-            <Textarea
-              value={bottleneckDesc}
-              onChange={(e) => setBottleneckDesc(e.target.value)}
-              rows={2}
-              placeholder="Replaces the current bottleneck if filled in."
-            />
-            {bottleneckDesc && (
-              <div className="flex flex-wrap gap-1.5">
-                {BOTTLENECK_CATEGORIES.map((c) => (
-                  <button
-                    key={c}
-                    type="button"
-                    onClick={() => setBottleneckCat(c)}
-                  >
-                    <Badge
-                      variant={bottleneckCat === c ? "warning" : "default"}
-                      className="cursor-pointer"
-                    >
-                      {BOTTLENECK_LABELS[c]}
-                    </Badge>
-                  </button>
-                ))}
-              </div>
-            )}
-          </div>
-        </details>
-      )}
 
       <SessionCompletionSummary
         totalTracked={totalTracked}

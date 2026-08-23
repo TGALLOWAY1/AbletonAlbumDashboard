@@ -3,10 +3,8 @@
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { getServerSupabase } from "@/lib/supabase/server";
-import { setActiveBottleneck } from "@/app/actions/bottlenecks";
 import { completeAction } from "@/app/actions/actions";
 import { revalidateTrackSurfaces } from "@/lib/revalidate-track";
-import { BOTTLENECK_CATEGORIES } from "@/lib/types";
 import { PRODUCTION_ACTIVITY_KEYS } from "@/lib/production-activities";
 
 // Session history and analytics both render on the dashboard now.
@@ -40,10 +38,6 @@ const completeSchema = z.object({
       }),
     )
     .optional(),
-  newBottleneckDescription: z.string().max(500).optional().or(z.literal("")),
-  newBottleneckCategory: z
-    .enum(BOTTLENECK_CATEGORIES as unknown as [string, ...string[]])
-    .optional(),
   completeAction: z.boolean().optional().default(false),
   todos: z
     .array(
@@ -72,8 +66,6 @@ export async function completeSession(input: {
     minutes: number;
     note?: string;
   }>;
-  newBottleneckDescription?: string;
-  newBottleneckCategory?: string;
   completeAction?: boolean;
   todos?: Array<{ description: string; done: boolean }>;
 }) {
@@ -89,7 +81,6 @@ export async function completeSession(input: {
     improved: parsed.improved || null,
     still_broken: parsed.stillBroken || null,
     notes_md: parsed.notesMd || null,
-    new_bottleneck: parsed.newBottleneckDescription || null,
     energy_rating: parsed.energyRating ?? null,
     enjoyment_rating: parsed.enjoymentRating ?? null,
     progress_impact_rating: parsed.progressImpact ?? null,
@@ -133,19 +124,6 @@ export async function completeSession(input: {
       .from("session_todos")
       .insert(todoRows);
     if (todoErr) throw todoErr;
-  }
-
-  if (
-    parsed.newBottleneckDescription &&
-    parsed.newBottleneckCategory &&
-    parsed.newBottleneckDescription.trim().length > 0 &&
-    parsed.trackId
-  ) {
-    await setActiveBottleneck({
-      trackId: parsed.trackId,
-      description: parsed.newBottleneckDescription.trim(),
-      category: parsed.newBottleneckCategory,
-    });
   }
 
   if (parsed.completeAction && parsed.actionId) {

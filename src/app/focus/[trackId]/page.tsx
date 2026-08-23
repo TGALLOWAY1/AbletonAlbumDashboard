@@ -24,7 +24,6 @@ export default async function FocusPage({
   return (
     <FocusRunner
       track={track}
-      primaryAction={track.primaryAction}
       sessionTypes={sessionTypes}
       tracks={tracks}
       trackTodos={trackTodos}

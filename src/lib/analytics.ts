@@ -20,11 +20,6 @@ export type AnalyticsTrack = {
   status: string;
 };
 
-export type AnalyticsBottleneck = {
-  category: string;
-  createdAt: string;
-};
-
 export function rangeToDays(range: RangeKey): number {
   switch (range) {
     case "7d":
@@ -148,20 +143,6 @@ export function getMostActiveDay(
   return best > 0 ? WEEKDAY_NAMES[bestIdx] : null;
 }
 
-export function getBottleneckCounts(
-  bottlenecks: AnalyticsBottleneck[],
-  presets: readonly string[],
-): { category: string; count: number }[] {
-  const counts = new Map<string, number>();
-  for (const p of presets) counts.set(p, 0);
-  for (const b of bottlenecks) {
-    counts.set(b.category, (counts.get(b.category) ?? 0) + 1);
-  }
-  return Array.from(counts.entries())
-    .map(([category, count]) => ({ category, count }))
-    .sort((a, b) => b.count - a.count);
-}
-
 export function getAvgSecondsPerTrack(sessions: AnalyticsSession[]): number {
   const trackIds = new Set(
     sessions.map((s) => s.trackId).filter((id): id is string => Boolean(id)),
@@ -194,9 +175,3 @@ export function getSessionsPerWeek(
   return Math.round(sessions.length / weeks);
 }
 
-export function getTopBottleneck(
-  counts: { category: string; count: number }[],
-): string | null {
-  const top = counts.find((c) => c.count > 0);
-  return top ? top.category : null;
-}

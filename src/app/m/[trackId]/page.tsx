@@ -1,6 +1,5 @@
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
-import { Disc3, Pencil, Play } from "lucide-react";
 import { isMobileUserAgent } from "@/lib/user-agent";
 import {
   getCompletedActionsForTrack,
@@ -12,43 +11,45 @@ import { getSessionTypes } from "@/lib/data/session-types";
 import { getSessionsForTrack } from "@/lib/data/sessions";
 import { getOpenExperimentWithCandidates } from "@/lib/data/suno";
 import { listAlbums } from "@/lib/data/album";
-import { TrackSessionHistory } from "@/components/track-session-history";
-import { SunoPanel } from "@/components/suno/suno-panel";
-import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
-import { BackLink } from "@/components/back-link";
-import { TrackAlbumSelect } from "@/components/track-album-select";
+import { TrackHeaderBar } from "@/components/track/track-header-bar";
+import { TrackLogPane } from "@/components/track/track-log-pane";
 import { TrackTodoList } from "@/components/mobile/track-todo-list";
-import { TrackTodoHistory } from "@/components/mobile/track-todo-history";
-import { StagesChecklist } from "@/components/stages-checklist";
-import { BottleneckEditor } from "@/components/bottleneck-editor";
-import { NextActionEditor } from "@/components/next-action-editor";
 import { NotesEditor } from "@/components/notes-editor";
-import { AudioVersionList } from "@/components/audio-version-list";
-import { CopyPathButton } from "@/components/copy-path-button";
+import { SunoPanel } from "@/components/suno/suno-panel";
 import { SunoStatusToggle } from "@/components/suno-status-toggle";
-import { ManualSessionEntry } from "@/components/manual-session-dialog";
 import { trackSunoStatus } from "@/lib/types";
+import {
+  TRACK_PANES,
+  TRACK_PANE_LABELS,
+  parseTrackPane,
+  trackPaneHref,
+  type TrackPaneSearchParams,
+} from "@/lib/track-pane";
+import { cn } from "@/lib/utils";
 
 export const dynamic = "force-dynamic";
 
-function SectionHeading({ children }: { children: React.ReactNode }) {
-  return (
-    <h2 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-      {children}
-    </h2>
-  );
-}
-
+/**
+ * The mobile track workspace.
+ *
+ * Same three surfaces as `/tracks/[id]` and the same header chrome — a phone
+ * just can't show Tasks, Notes and the log at once, so they become tabs. The
+ * selected pane lives in the URL so the page stays a server component and only
+ * the visible surface renders (see `src/lib/track-pane.ts`).
+ */
 export default async function MobileTrackPage({
   params,
+  searchParams,
 }: {
   params: Promise<{ trackId: string }>;
+  searchParams: Promise<TrackPaneSearchParams>;
 }) {
-  const { trackId } = await params;
+  const [{ trackId }, paneParams] = await Promise.all([params, searchParams]);
   if (!(await isMobileUserAgent())) {
     redirect(`/tracks/${trackId}`);
   }
+  const pane = parseTrackPane(paneParams);
+
   const [
     track,
     versions,
@@ -71,185 +72,101 @@ export default async function MobileTrackPage({
 
   if (!track) notFound();
 
-  // Genre is an album-level fact now (migration 0021), so the prompt and the
-  // header badge both read it off the album rather than off `tags[0]`.
-  const genre = track.album?.genre?.trim() || null;
-  // Every tag is a descriptor now — none of them stands in for the genre.
-  const descriptors = track.tags;
-  const meta = [
-    track.song_key ? track.song_key : null,
-    track.bpm ? `${track.bpm} BPM` : null,
-  ].filter(Boolean) as string[];
-  const sunoStatus = trackSunoStatus(track);
   const sunoMeta = {
     trackId: track.id,
     trackName: track.name,
-    genre,
+    genre: track.album?.genre?.trim() || null,
     bpm: track.bpm,
     songKey: track.song_key,
   };
 
   return (
-    <div className="mx-auto flex max-w-md flex-col gap-5 pb-4">
-      <div className="flex items-center justify-between">
-        <BackLink
-          fallback="/"
-          label="Back to Home"
-          variant="icon"
-          className="-ml-2"
-        />
-        <Button asChild variant="ghost" size="sm" className="-mr-2">
-          <Link
-            href={`/tracks/${track.id}/edit`}
-            aria-label="Edit track metadata"
-          >
-            <Pencil className="h-4 w-4" />
-            Edit
-          </Link>
-        </Button>
+    // Cancels the mobile side gutters so the header bar and tab strip run edge
+    // to edge like the app's other chrome. Only 1rem comes off the top:
+    // `main`'s pt-16 is 4rem, of which 3rem is clearance for the fixed header
+    // (APP_CHROME.mobileHeader, h-12) and 1rem is the gutter. The bottom
+    // padding is left alone — it clears the fixed bottom nav.
+    <div className="-mx-4 -mt-4 flex min-h-[calc(100vh-9rem)] flex-col">
+      <TrackHeaderBar
+        track={track}
+        albums={albums}
+        sessionTypes={sessionTypes}
+        variant="mobile"
+      />
+
+      <div
+        role="tablist"
+        aria-label="Track surfaces"
+        className="sticky top-12 z-10 flex gap-1 border-b border-border bg-surface px-4 py-2"
+      >
+        {TRACK_PANES.map((value) => {
+          const active = value === pane;
+          return (
+            <Link
+              key={value}
+              href={trackPaneHref(track.id, value)}
+              role="tab"
+              aria-selected={active}
+              scroll={false}
+              className={cn(
+                "flex h-11 flex-1 items-center justify-center gap-1.5 rounded-lg text-sm font-medium transition-colors",
+                active
+                  ? "bg-surface-2 font-semibold text-foreground"
+                  : "text-muted-foreground",
+              )}
+            >
+              {TRACK_PANE_LABELS[value]}
+              {value === "tasks" && todos.length > 0 && (
+                <span className="tabular-nums text-muted-foreground">
+                  {todos.length}
+                </span>
+              )}
+            </Link>
+          );
+        })}
       </div>
 
-      <header className="flex items-start gap-3">
-        {track.cover_image_url ? (
-          // eslint-disable-next-line @next/next/no-img-element
-          <img
-            src={track.cover_image_url}
-            alt=""
-            className="h-20 w-20 shrink-0 rounded-md object-cover"
-          />
-        ) : (
-          <div className="h-20 w-20 shrink-0 rounded-md bg-surface-2" />
+      <div className="flex min-h-0 flex-1 flex-col">
+        {pane === "tasks" && (
+          <div className="p-4">
+            <TrackTodoList trackId={track.id} initial={todos} />
+          </div>
         )}
-        <div className="min-w-0 flex-1">
-          <h1 className="truncate text-xl font-semibold leading-tight">
-            {track.name}
-          </h1>
-          <div className="mt-1.5 flex flex-wrap items-center gap-x-1.5 gap-y-1">
-            {genre && (
-              <Badge variant="primary" title="Album genre">
-                {genre}
-              </Badge>
-            )}
-            <SunoStatusToggle trackId={track.id} status={sunoStatus} />
-            {/* py-3/-my-3 pads the tap target to ~44px without adding
-                visual height to the header. */}
-            {track.album && (
-              <Link
-                href={`/albums/${track.album.id}`}
-                className="-my-3 inline-flex max-w-full items-center py-3"
-              >
-                <Badge className="max-w-full gap-1">
-                  <Disc3 className="h-3 w-3 shrink-0" />
-                  <span className="truncate">
-                    {track.album.title?.trim() || "Untitled album"}
-                  </span>
-                </Badge>
-              </Link>
-            )}
-            <TrackAlbumSelect
+
+        {pane === "notes" && (
+          <div className="p-4">
+            <NotesEditor trackId={track.id} initial={track.notes} />
+          </div>
+        )}
+
+        {pane === "log" && (
+          <>
+            <div className="shrink-0 border-b border-border px-4 py-3">
+              <SunoStatusToggle
+                trackId={track.id}
+                status={trackSunoStatus(track)}
+                variant="field"
+              />
+              <div className="mt-3">
+                <SunoPanel
+                  meta={sunoMeta}
+                  variant="mobile"
+                  experiment={sunoExperiment}
+                  versions={versions}
+                />
+              </div>
+            </div>
+            <TrackLogPane
               trackId={track.id}
-              albumId={track.album?.id ?? null}
-              albums={albums}
-              variant="compact"
+              versions={versions}
+              sessions={sessions}
+              completedTasks={completedTodos}
+              suno={{ meta: sunoMeta, open: sunoExperiment !== null }}
+              variant="mobile"
             />
-          </div>
-          {meta.length > 0 && (
-            <p className="mt-1.5 text-xs font-medium tabular-nums text-foreground/80">
-              {meta.join(" · ")}
-            </p>
-          )}
-          {descriptors.length > 0 && (
-            <p className="mt-1 truncate text-xs text-muted-foreground">
-              {descriptors.join(", ")}
-            </p>
-          )}
-        </div>
-      </header>
-
-      <div className="flex flex-col gap-2">
-        <Button asChild size="lg" className="w-full">
-          <Link href={`/focus/${track.id}`}>
-            <Play className="h-4 w-4" />
-            Start focus session
-          </Link>
-        </Button>
-        <ManualSessionEntry
-          trackId={track.id}
-          tracks={[]}
-          sessionTypes={sessionTypes}
-          variant="mobile"
-        />
+          </>
+        )}
       </div>
-
-      <section className="flex flex-col gap-2">
-        <SectionHeading>Tasks</SectionHeading>
-        <TrackTodoList trackId={track.id} initial={todos} />
-      </section>
-
-      <section className="flex flex-col gap-2">
-        <SectionHeading>Stages</SectionHeading>
-        <StagesChecklist trackId={track.id} stages={track.stages} />
-      </section>
-
-      <section className="flex flex-col gap-2">
-        <SectionHeading>Bottleneck</SectionHeading>
-        <BottleneckEditor trackId={track.id} bottleneck={track.bottleneck} />
-      </section>
-
-      <section className="flex flex-col gap-2">
-        <SectionHeading>Next action</SectionHeading>
-        <NextActionEditor trackId={track.id} action={track.primaryAction} />
-      </section>
-
-      <section className="flex flex-col gap-2">
-        <SectionHeading>Suno</SectionHeading>
-        <SunoStatusToggle
-          trackId={track.id}
-          status={sunoStatus}
-          variant="field"
-        />
-        <SunoPanel
-          meta={sunoMeta}
-          variant="mobile"
-          experiment={sunoExperiment}
-          versions={versions}
-        />
-      </section>
-
-      <section className="flex flex-col gap-2">
-        <SectionHeading>Versions</SectionHeading>
-        <AudioVersionList
-          trackId={track.id}
-          versions={versions}
-          suno={{ meta: sunoMeta, open: sunoExperiment !== null }}
-        />
-      </section>
-
-      <section className="flex flex-col gap-2">
-        <SectionHeading>Notes</SectionHeading>
-        <NotesEditor trackId={track.id} initial={track.notes} />
-      </section>
-
-      {track.als_file_path && (
-        <section className="flex flex-col gap-2">
-          <SectionHeading>Project file</SectionHeading>
-          <div className="flex items-center gap-2 rounded-md border border-border bg-surface p-3">
-            <span className="min-w-0 flex-1 truncate font-mono text-xs text-foreground">
-              {track.als_file_path}
-            </span>
-            <CopyPathButton path={track.als_file_path} size="sm" />
-          </div>
-        </section>
-      )}
-
-      <section className="flex flex-col gap-2">
-        <SectionHeading>Sessions</SectionHeading>
-        <TrackSessionHistory sessions={sessions} />
-      </section>
-
-      <section>
-        <TrackTodoHistory trackId={track.id} initial={completedTodos} />
-      </section>
     </div>
   );
 }

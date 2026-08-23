@@ -29,10 +29,10 @@ const TAB_LABELS: Record<ProgressTab, string> = {
 // the URL instead, which keeps that cost on the requests that ask for it and
 // makes the view linkable. See `src/lib/progress-tab.ts`.
 export async function ProgressPanel({ tab }: { tab: ProgressTab }) {
-  const { sessions, tracks, bottlenecks } =
+  const { sessions, tracks } =
     tab === "overview"
       ? await fetchAnalyticsData()
-      : { sessions: [], tracks: [], bottlenecks: [] };
+      : { sessions: [], tracks: [] };
 
   return (
     <section id="progress" className="flex flex-col gap-3">
@@ -69,11 +69,7 @@ export async function ProgressPanel({ tab }: { tab: ProgressTab }) {
 
         <div className="mt-4">
           {tab === "overview" ? (
-            <AnalyticsDashboard
-              sessions={sessions}
-              tracks={tracks}
-              bottlenecks={bottlenecks}
-            />
+            <AnalyticsDashboard sessions={sessions} tracks={tracks} />
           ) : (
             <SessionHistory />
           )}
