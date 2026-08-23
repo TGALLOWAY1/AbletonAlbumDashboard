@@ -1,9 +1,18 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useMemo, useOptimistic, useState, useTransition } from "react";
 import { format } from "date-fns";
 import ReactMarkdown from "react-markdown";
-import { AudioLines, Check, Sparkles, Star, TrendingUp, Upload } from "lucide-react";
+import {
+  AudioLines,
+  Check,
+  RotateCcw,
+  Sparkles,
+  Star,
+  TrendingUp,
+  Trash2,
+  Upload,
+} from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -15,6 +24,10 @@ import {
 } from "@/components/suno/suno-experiment-dialog";
 import { getBrowserSupabase } from "@/lib/supabase/browser";
 import { addVersionRecord } from "@/app/actions/versions";
+import {
+  deleteTrackTodo,
+  toggleTrackTodo,
+} from "@/app/actions/track-todos";
 import { useToast } from "@/components/toast";
 import { PRODUCTION_ACTIVITIES } from "@/lib/production-activities";
 import type { TrackSessionWithActivities } from "@/lib/data/sessions";
@@ -79,6 +92,39 @@ export function TrackLogPane({
   const [sunoSourceId, setSunoSourceId] = useState<string | null>(null);
   const { toast } = useToast();
 
+  // A finished task is still editable from here: this timeline is the only
+  // place completed tasks appear, so ticking one by mistake has to be
+  // undoable without a trip to the database. Both actions drop the row from
+  // the log — restore sends it back to the open list, delete removes it.
+  const [tasks, applyTaskAction] = useOptimistic<ActionRow[], string>(
+    completedTasks,
+    (state, removedId) => state.filter((t) => t.id !== removedId),
+  );
+  const [, startTaskTransition] = useTransition();
+
+  const restoreTask = (task: ActionRow) => {
+    startTaskTransition(async () => {
+      applyTaskAction(task.id);
+      try {
+        await toggleTrackTodo(task.id, false, trackId);
+      } catch (e) {
+        toast((e as Error).message);
+      }
+    });
+  };
+
+  const removeTask = (task: ActionRow) => {
+    if (!confirm("Permanently delete this task from the log?")) return;
+    startTaskTransition(async () => {
+      applyTaskAction(task.id);
+      try {
+        await deleteTrackTodo(task.id, trackId);
+      } catch (e) {
+        toast((e as Error).message);
+      }
+    });
+  };
+
   const labelById = useMemo(
     () => new Map(versions.map((v) => [v.id, v.label])),
     [versions],
@@ -96,14 +142,14 @@ export function TrackLogPane({
         at: s.started_at ? new Date(s.started_at).getTime() : 0,
         session: s,
       })),
-      ...completedTasks.map((t) => ({
+      ...tasks.map((t) => ({
         kind: "task" as const,
         at: t.completed_at ? new Date(t.completed_at).getTime() : 0,
         task: t,
       })),
     ];
     return all.sort((a, b) => b.at - a.at);
-  }, [versions, sessions, completedTasks]);
+  }, [versions, sessions, tasks]);
 
   const visible = entries.filter((e) => {
     if (filter === "bounces") return e.kind === "version";
@@ -240,7 +286,7 @@ export function TrackLogPane({
                 ) : entry.kind === "session" ? (
                   <SessionEntry session={entry.session} />
                 ) : (
-                  <div className="flex items-center gap-2 py-1 text-xs">
+                  <div className="flex items-center gap-2 text-xs">
                     <Check className="h-3.5 w-3.5 shrink-0 text-primary" />
                     <span className="min-w-0 flex-1 truncate text-muted-foreground line-through">
                       {entry.task.description}
@@ -250,6 +296,34 @@ export function TrackLogPane({
                         ? format(new Date(entry.task.completed_at), "MMM d")
                         : ""}
                     </span>
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="icon"
+                      className={cn(
+                        "shrink-0",
+                        variant === "mobile" ? "h-11 w-11" : "h-7 w-7",
+                      )}
+                      onClick={() => restoreTask(entry.task)}
+                      aria-label={`Reopen "${entry.task.description}"`}
+                      title="Reopen this task"
+                    >
+                      <RotateCcw className="h-3.5 w-3.5" />
+                    </Button>
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="icon"
+                      className={cn(
+                        "shrink-0",
+                        variant === "mobile" ? "h-11 w-11" : "h-7 w-7",
+                      )}
+                      onClick={() => removeTask(entry.task)}
+                      aria-label={`Delete "${entry.task.description}"`}
+                      title="Delete this task"
+                    >
+                      <Trash2 className="h-3.5 w-3.5" />
+                    </Button>
                   </div>
                 )}
               </li>
