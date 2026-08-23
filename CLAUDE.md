@@ -33,7 +33,7 @@ Run `pnpm typecheck && pnpm lint && pnpm test` before committing.
 - There is no "bottleneck" and no "next action". The next thing to do on a track is
   **the top of its open task list** — an ordering, not a stored flag. `nextTask` on
   `TrackWithDetails` is derived in `attachDetails`, and the focus session seeds its
-  goal from the same row, so the two can never disagree. Migration 0023 dropped the
+  goal from the same row, so the two can never disagree. Migration 0024 dropped the
   `bottlenecks` table and `actions.is_primary`.
 - Bounces, logged sessions and completed tasks are one timeline
   (`src/components/track/track-log-pane.tsx`) — they all answer "what happened to

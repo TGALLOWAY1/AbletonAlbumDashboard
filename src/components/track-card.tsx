@@ -1,17 +1,11 @@
 import Link from "next/link";
 import { format } from "date-fns";
-import {
-  CheckCircle2,
-  MessageSquare,
-  MoreHorizontal,
-  MoreVertical,
-  Play,
-} from "lucide-react";
+import { MoreVertical, Play } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { ProgressRing } from "@/components/ui/progress-ring";
-import { AddNoteDialog } from "@/components/add-note-dialog";
 import { CopyPathButton } from "@/components/copy-path-button";
+import { MobileTrackCard } from "@/components/mobile-track-card";
 import { SunoStatusToggle } from "@/components/suno-status-toggle";
 import {
   MetaRow,
@@ -50,103 +44,19 @@ export function TrackCard({
   ].filter(Boolean) as string[];
 
   return (
-    <Card>
-      {/* Mobile layout (<md) */}
-      <div className="md:hidden">
-        <div className="flex flex-col gap-3 p-4">
-          <div className="flex items-start gap-4">
-            <Link
-              href={`/tracks/${track.id}`}
-              aria-label={`Open ${track.name}`}
-              className="h-24 w-24 shrink-0"
-            >
-              <TrackCover
-                track={track}
-                className="h-full w-full rounded-2xl"
-                textClassName="text-2xl"
-              />
-            </Link>
-
-            <Link href={`/tracks/${track.id}`} className="min-w-0 flex-1">
-              <h3 className="text-xl font-semibold leading-tight line-clamp-2">
-                {track.name}
-              </h3>
-            </Link>
-
-            <ProgressRing value={progress} size={56} stroke={5} />
-          </div>
-
-          <div className="flex flex-col gap-2">
-            <div className="flex flex-wrap items-center gap-1.5">
-              <SunoStatusToggle trackId={track.id} status={sunoStatus} />
-              <SunoChip suno={track.sunoExperiment} />
-            </div>
-
-            <MetaRow
-              stats={sessionStats}
-              lastWorked={lastWorked}
-              stale={stale}
-              estMinutes={track.estMinutesRemaining}
-            />
-
-            <TaskBar completed={track.completedTaskCount} total={totalTasks} />
-
-            {track.nextTask && (
-              <p className="line-clamp-2 text-sm text-muted-foreground">
-                <span className="font-semibold text-foreground">Next:</span>{" "}
-                {track.nextTask.description}
-              </p>
-            )}
-          </div>
-        </div>
-
-        <div className="flex items-stretch border-t border-border">
-          <Link
-            href={`/focus/${track.id}`}
-            className="flex flex-1 items-center justify-center gap-1.5 px-2 py-3 text-sm font-medium text-primary"
-          >
-            <Play className="h-4 w-4" />
-            <span>Focus</span>
-          </Link>
-          <Link
-            href={`/tracks/${track.id}`}
-            className="flex flex-1 items-center justify-center gap-1.5 border-l border-border px-2 py-3 text-sm font-medium text-foreground"
-          >
-            <CheckCircle2 className="h-4 w-4" />
-            <span>
-              Tasks
-              {track.openTaskCount > 0 ? ` (${track.openTaskCount})` : ""}
-            </span>
-          </Link>
-
-          <AddNoteDialog
-            trackId={track.id}
-            trackName={track.name}
-            currentNotes={track.notes}
-          >
-            <button
-              type="button"
-              className="flex flex-1 items-center justify-center gap-1.5 border-l border-border px-2 py-3 text-sm font-medium text-foreground"
-            >
-              <MessageSquare className="h-4 w-4" />
-              <span>Note</span>
-            </button>
-          </AddNoteDialog>
-
-          <TrackActionsMenu track={track}>
-            <button
-              type="button"
-              className="flex w-12 shrink-0 items-center justify-center border-l border-border text-muted-foreground"
-              aria-label="Track actions"
-            >
-              <MoreHorizontal className="h-5 w-5" />
-            </button>
-          </TrackActionsMenu>
-        </div>
-      </div>
+    <>
+      {/* Mobile (<md) — the redesigned card, see `MobileTrackCard`. It brings
+          its own <Card> chrome, so the two layouts are siblings rather than
+          one card wrapping both. */}
+      <MobileTrackCard
+        track={track}
+        sessionStats={sessionStats}
+        stale={stale}
+        className="md:hidden"
+      />
 
       {/* Desktop layout (>=md) */}
-      <div className="hidden md:grid md:grid-cols-[88px_minmax(0,2fr)_auto_minmax(0,1.4fr)] md:items-start md:gap-5 md:p-4">
+      <Card className="hidden md:grid md:grid-cols-[88px_minmax(0,2fr)_auto_minmax(0,1.4fr)] md:items-start md:gap-5 md:p-4">
         <TrackCover
           track={track}
           className="h-20 w-20 rounded-md"
@@ -215,7 +125,7 @@ export function TrackCard({
             </Button>
           </TrackActionsMenu>
         </div>
-      </div>
-    </Card>
+      </Card>
+    </>
   );
 }

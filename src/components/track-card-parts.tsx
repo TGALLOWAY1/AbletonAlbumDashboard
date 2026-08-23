@@ -73,21 +73,47 @@ export function TrackCover({
   );
 }
 
+/**
+ * Density for the shared meta pieces. `sm` is the long-standing card/row
+ * treatment; `md` is the roomier one the large mobile card uses, where the
+ * meta line is a primary read rather than a footnote. Sizing only — the same
+ * stats, in the same order, either way.
+ */
+export type MetaSize = "sm" | "md";
+
+const META_SIZING: Record<
+  MetaSize,
+  { row: string; icon: string; iconGap: string }
+> = {
+  sm: { row: "gap-x-3 gap-y-1 text-xs", icon: "h-3.5 w-3.5", iconGap: "gap-1.5" },
+  // Four stats have to share one line on a phone, so `md` buys its larger
+  // type back out of the gaps. It still wraps gracefully on narrow handsets.
+  md: {
+    row: "gap-x-2 gap-y-1.5 text-[12.5px]",
+    icon: "h-[15px] w-[15px]",
+    iconGap: "gap-1",
+  },
+
+};
+
 export function MetaStat({
   icon: Icon,
   value,
   emphasis = false,
   warn = false,
+  size = "sm",
 }: {
   icon: LucideIcon;
   value: string;
   emphasis?: boolean;
   warn?: boolean;
+  size?: MetaSize;
 }) {
   return (
     <span
       className={cn(
-        "flex items-center gap-1.5",
+        "flex items-center",
+        META_SIZING[size].iconGap,
         warn
           ? "text-warning"
           : emphasis
@@ -95,7 +121,7 @@ export function MetaStat({
             : "text-muted-foreground",
       )}
     >
-      <Icon className="h-3.5 w-3.5 shrink-0" />
+      <Icon className={cn("shrink-0", META_SIZING[size].icon)} />
       <span className="font-medium tabular-nums">{value}</span>
     </span>
   );
@@ -106,6 +132,7 @@ export function MetaRow({
   lastWorked,
   stale,
   estMinutes,
+  size = "sm",
 }: {
   /** Omitted when the caller has not loaded session aggregates — the logged
    *  time and session count are then left out rather than shown as zeroes. */
@@ -113,24 +140,41 @@ export function MetaRow({
   lastWorked: string;
   stale: boolean;
   estMinutes: number;
+  size?: MetaSize;
 }) {
   return (
-    <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs">
+    <div
+      className={cn(
+        "flex flex-wrap items-center",
+        META_SIZING[size].row,
+      )}
+    >
       {stats && (
         <>
-          <MetaStat icon={Clock} value={formatDuration(stats.seconds)} />
+          <MetaStat
+            icon={Clock}
+            value={formatDuration(stats.seconds)}
+            size={size}
+          />
           <MetaStat
             icon={AudioLines}
             value={`${stats.count} ${stats.count === 1 ? "session" : "sessions"}`}
+            size={size}
           />
         </>
       )}
-      <MetaStat icon={CalendarDays} value={lastWorked} warn={stale} />
+      <MetaStat
+        icon={CalendarDays}
+        value={lastWorked}
+        warn={stale}
+        size={size}
+      />
       {estMinutes > 0 && (
         <MetaStat
           icon={Hourglass}
           value={`${formatMinutes(estMinutes)} left`}
           emphasis
+          size={size}
         />
       )}
     </div>
@@ -153,19 +197,32 @@ export function TaskBar({
   completed,
   total,
   className,
+  size = "sm",
 }: {
   completed: number;
   total: number;
   className?: string;
+  size?: MetaSize;
 }) {
   if (total === 0) return null;
   const pct = Math.round((completed / total) * 100);
+  const md = size === "md";
   return (
-    <div className={cn("flex items-center gap-2", className)}>
-      <div className="h-1.5 flex-1 overflow-hidden rounded-full bg-surface-2">
+    <div className={cn("flex items-center", md ? "gap-3" : "gap-2", className)}>
+      <div
+        className={cn(
+          "flex-1 overflow-hidden rounded-full bg-surface-2",
+          md ? "h-2" : "h-1.5",
+        )}
+      >
         <div className="h-full bg-primary" style={{ width: `${pct}%` }} />
       </div>
-      <span className="shrink-0 text-xs font-medium tabular-nums text-muted-foreground">
+      <span
+        className={cn(
+          "shrink-0 font-medium tabular-nums text-muted-foreground",
+          md ? "text-[13px]" : "text-xs",
+        )}
+      >
         {completed} of {total}
       </span>
     </div>

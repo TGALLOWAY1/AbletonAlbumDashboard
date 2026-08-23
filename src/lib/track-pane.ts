@@ -38,3 +38,25 @@ export function trackPaneHref(trackId: string, pane: TrackPane): string {
     ? `/m/${trackId}`
     : `/m/${trackId}?pane=${pane}`;
 }
+
+/**
+ * Which pane an old `?tab=` deep link should open.
+ *
+ * The desktop page used to be five tabs and track cards still link with
+ * `?tab=history#history`. The tabs are gone, but the links are out there (and
+ * in the card components), so the desktop redirect to `/m/[trackId]`
+ * translates the old value rather than dropping the reader on the default
+ * pane. Versions, Suno and history all folded into the one log pane.
+ */
+export function paneForLegacyTab(tab: string | undefined): TrackPane {
+  switch (tab) {
+    case "notes":
+      return "notes";
+    case "versions":
+    case "suno":
+    case "history":
+      return "log";
+    default:
+      return DEFAULT_TRACK_PANE;
+  }
+}

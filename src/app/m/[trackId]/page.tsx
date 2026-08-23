@@ -14,6 +14,7 @@ import { listAlbums } from "@/lib/data/album";
 import { TrackHeaderBar } from "@/components/track/track-header-bar";
 import { TrackLogPane } from "@/components/track/track-log-pane";
 import { TrackTodoList } from "@/components/mobile/track-todo-list";
+import { TrackFinishingSteps } from "@/components/track-finishing-steps";
 import { NotesEditor } from "@/components/notes-editor";
 import { SunoPanel } from "@/components/suno/suno-panel";
 import { SunoStatusToggle } from "@/components/suno-status-toggle";
@@ -128,8 +129,19 @@ export default async function MobileTrackPage({
 
       <div className="flex min-h-0 flex-1 flex-col">
         {pane === "tasks" && (
-          <div className="p-4">
+          // `#tasks` is where the large track card's bottom action lands; the
+          // desktop route keeps the fragment across its redirect here.
+          <div id="tasks" className="flex scroll-mt-24 flex-col gap-5 p-4">
             <TrackTodoList trackId={track.id} initial={todos} />
+            <div className="flex flex-col gap-2 border-t border-border pt-4">
+              <h3 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                Finishing
+              </h3>
+              <TrackFinishingSteps
+                trackId={track.id}
+                steps={track.finishingSteps}
+              />
+            </div>
           </div>
         )}
 
@@ -140,7 +152,7 @@ export default async function MobileTrackPage({
         )}
 
         {pane === "log" && (
-          <>
+          <div id="history" className="flex min-h-0 flex-1 scroll-mt-24 flex-col">
             <div className="shrink-0 border-b border-border px-4 py-3">
               <SunoStatusToggle
                 trackId={track.id}
@@ -164,7 +176,7 @@ export default async function MobileTrackPage({
               suno={{ meta: sunoMeta, open: sunoExperiment !== null }}
               variant="mobile"
             />
-          </>
+          </div>
         )}
       </div>
     </div>

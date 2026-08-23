@@ -13,10 +13,12 @@ import { listAlbums } from "@/lib/data/album";
 import { TrackHeaderBar } from "@/components/track/track-header-bar";
 import { TrackLogPane } from "@/components/track/track-log-pane";
 import { TrackTodoList } from "@/components/mobile/track-todo-list";
+import { TrackFinishingSteps } from "@/components/track-finishing-steps";
 import { NotesEditor } from "@/components/notes-editor";
 import { SunoPanel } from "@/components/suno/suno-panel";
 import { SunoStatusToggle } from "@/components/suno-status-toggle";
 import { trackSunoStatus } from "@/lib/types";
+import { paneForLegacyTab, trackPaneHref } from "@/lib/track-pane";
 
 export const dynamic = "force-dynamic";
 
@@ -30,12 +32,18 @@ export const dynamic = "force-dynamic";
  */
 export default async function TrackDetailPage({
   params,
+  searchParams,
 }: {
   params: Promise<{ id: string }>;
+  searchParams: Promise<{ tab?: string }>;
 }) {
-  const { id } = await params;
+  const [{ id }, { tab }] = await Promise.all([params, searchParams]);
   if (await isMobileUserAgent()) {
-    redirect(`/m/${id}`);
+    // Track cards deep-link here with `?tab=…#…`. The tabs are gone, but the
+    // links still carry the old value, so translate it into the pane the
+    // mobile workspace should open on — the fragment rides along on its own
+    // and scrolls to the matching section id below.
+    redirect(trackPaneHref(id, paneForLegacyTab(tab)));
   }
   const [
     track,
@@ -81,22 +89,42 @@ export default async function TrackDetailPage({
       />
 
       <div className="grid min-h-0 flex-1 grid-cols-1 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)] xl:grid-cols-[24.5rem_minmax(0,1fr)_23.5rem]">
-        {/* Tasks */}
-        <section className="flex min-h-0 flex-col overflow-y-auto border-b border-border bg-surface p-5 lg:border-b-0 lg:border-r">
+        {/* Tasks — plus the finishing checklist, which is the same question
+            ("what is left on this track?") at the hand-off end. */}
+        <section
+          id="tasks"
+          className="flex min-h-0 flex-col gap-5 overflow-y-auto border-b border-border bg-surface p-5 lg:border-b-0 lg:border-r"
+        >
           <TrackTodoList
             trackId={track.id}
             initial={openTodos}
             variant="desktop"
           />
+          <div className="flex flex-col gap-2 border-t border-border pt-4">
+            <h3 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+              Finishing
+            </h3>
+            <TrackFinishingSteps
+              trackId={track.id}
+              steps={track.finishingSteps}
+              variant="compact"
+            />
+          </div>
         </section>
 
         {/* Notes */}
-        <section className="flex min-h-0 flex-col overflow-y-auto border-b border-border bg-surface p-5 lg:border-b-0 xl:border-r">
+        <section
+          id="notes"
+          className="flex min-h-0 flex-col overflow-y-auto border-b border-border bg-surface p-5 lg:border-b-0 xl:border-r"
+        >
           <NotesEditor trackId={track.id} initial={track.notes} />
         </section>
 
         {/* Sound & log — spans both columns at lg, its own rail at xl */}
-        <section className="flex min-h-0 flex-col bg-background lg:col-span-2 xl:col-span-1">
+        <section
+          id="history"
+          className="flex min-h-0 flex-col bg-background lg:col-span-2 xl:col-span-1"
+        >
           <div className="shrink-0 border-b border-border px-5 py-3">
             <SunoStatusToggle
               trackId={track.id}
