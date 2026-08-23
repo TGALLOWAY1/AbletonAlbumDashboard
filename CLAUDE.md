@@ -35,6 +35,14 @@ Run `pnpm typecheck && pnpm lint && pnpm test` before committing.
   `TrackWithDetails` is derived in `attachDetails`, and the focus session seeds its
   goal from the same row, so the two can never disagree. Migration 0024 dropped the
   `bottlenecks` table and `actions.is_primary`.
+- That ordering is **hand-set**: tasks carry a nullable `actions.sort_order`
+  (migration 0025) and reads sort by it with NULLs last, then `created_at`. So an
+  untouched track keeps creation order and a new task lands at the bottom, both
+  without a backfill. Drag the handle in `TrackTodoList` (Pointer Events, so mouse
+  and touch share one path; the handle is also focusable and moves with
+  arrow keys) and `reorderTrackTodos` writes an explicit 0..n-1. The list-shaped
+  move helpers live in `src/lib/task-order.ts` so the drag and keyboard paths
+  cannot drift.
 - Bounces, logged sessions and completed tasks are one timeline
   (`src/components/track/track-log-pane.tsx`) — they all answer "what happened to
   this track", so they are not three sections.

@@ -20,6 +20,7 @@ export type Database = {
           description: string;
           estimated_minutes: number | null;
           id: string;
+          sort_order: number | null;
           track_id: string;
         };
         Insert: {
@@ -29,6 +30,7 @@ export type Database = {
           description: string;
           estimated_minutes?: number | null;
           id?: string;
+          sort_order?: number | null;
           track_id: string;
         };
         Update: {
@@ -38,6 +40,7 @@ export type Database = {
           description?: string;
           estimated_minutes?: number | null;
           id?: string;
+          sort_order?: number | null;
           track_id?: string;
         };
         Relationships: [
