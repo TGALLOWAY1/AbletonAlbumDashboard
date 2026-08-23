@@ -4,6 +4,8 @@ import type { SunoExperimentStatus } from "@/lib/suno";
 
 export type TrackRow = Database["public"]["Tables"]["tracks"]["Row"];
 export type StageRow = Database["public"]["Tables"]["track_stages"]["Row"];
+export type FinishingStepRow =
+  Database["public"]["Tables"]["track_finishing_steps"]["Row"];
 export type BottleneckRow = Database["public"]["Tables"]["bottlenecks"]["Row"];
 export type ActionRow = Database["public"]["Tables"]["actions"]["Row"];
 export type SessionRow = Database["public"]["Tables"]["sessions"]["Row"];
@@ -157,6 +159,53 @@ export const STAGE_LABELS: Record<StageKey, string> = {
   mastering: "Mastering",
 };
 
+/**
+ * The hand-off checklist every track goes through once the music is done —
+ * three fixed jobs, same three for every track, shown straight on the large
+ * track card so the last mile is visible without opening the track.
+ *
+ * Separate from `STAGE_KEYS`: stages are the creative arc and their average is
+ * the track's progress percentage, while these are housekeeping that says
+ * nothing about how finished the music is. Array order is the order they are
+ * rendered and the order they are done in. Keep in sync with the check
+ * constraint in supabase/migrations/0023_track_finishing_steps.sql
+ * (finishing-steps.test.ts asserts it).
+ */
+export const FINISHING_STEP_KEYS = [
+  "suno_variations",
+  "stems_midi",
+  "ableton_cleanup",
+] as const;
+export type FinishingStepKey = (typeof FINISHING_STEP_KEYS)[number];
+
+export const FINISHING_STEP_LABELS: Record<FinishingStepKey, string> = {
+  suno_variations: "Create Suno variations",
+  stems_midi: "Save stems and MIDI",
+  ableton_cleanup: "Cleanup in Ableton",
+};
+
+/** One checklist row as the card draws it — always three, always in order. */
+export type FinishingStep = {
+  key: FinishingStepKey;
+  /** ISO timestamp of the tick, or null while the step is outstanding. */
+  completedAt: string | null;
+};
+
+/**
+ * The three steps in render order. A track with no rows yet (never ticked, or
+ * a database without migration 0023) reads as three outstanding steps rather
+ * than as an empty checklist, so the card never renders a hole.
+ */
+export function finishingStepsFromRows(
+  rows: FinishingStepRow[] = [],
+): FinishingStep[] {
+  const byKey = new Map(rows.map((r) => [r.step_key, r]));
+  return FINISHING_STEP_KEYS.map((key) => ({
+    key,
+    completedAt: byKey.get(key)?.completed_at ?? null,
+  }));
+}
+
 export const BOTTLENECK_CATEGORIES = [
   "composition",
   "sound_design",
@@ -219,6 +268,9 @@ export type TrackSunoSummary = {
 // Aggregate shape used by dashboard + detail views.
 export type TrackWithDetails = TrackRow & {
   stages: StageRow[];
+  // Always three entries (see `finishingStepsFromRows`) so the card can
+  // draw the checklist without a length check.
+  finishingSteps: FinishingStep[];
   bottleneck: BottleneckRow | null;
   primaryAction: ActionRow | null;
   openTaskCount: number;

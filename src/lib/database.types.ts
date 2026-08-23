@@ -411,6 +411,32 @@ export type Database = {
           },
         ];
       };
+      track_finishing_steps: {
+        Row: {
+          completed_at: string | null;
+          step_key: string;
+          track_id: string;
+        };
+        Insert: {
+          completed_at?: string | null;
+          step_key: string;
+          track_id: string;
+        };
+        Update: {
+          completed_at?: string | null;
+          step_key?: string;
+          track_id?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "track_finishing_steps_track_id_fkey";
+            columns: ["track_id"];
+            isOneToOne: false;
+            referencedRelation: "tracks";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
       track_stages: {
         Row: {
           complete: boolean;

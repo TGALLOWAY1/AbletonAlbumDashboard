@@ -21,6 +21,7 @@ import { TrackAlbumSelect } from "@/components/track-album-select";
 import { TrackTodoList } from "@/components/mobile/track-todo-list";
 import { TrackTodoHistory } from "@/components/mobile/track-todo-history";
 import { StagesChecklist } from "@/components/stages-checklist";
+import { TrackFinishingSteps } from "@/components/track-finishing-steps";
 import { BottleneckEditor } from "@/components/bottleneck-editor";
 import { NextActionEditor } from "@/components/next-action-editor";
 import { NotesEditor } from "@/components/notes-editor";
@@ -181,7 +182,9 @@ export default async function MobileTrackPage({
         />
       </div>
 
-      <section className="flex flex-col gap-2">
+      {/* Anchors for the large track card's bottom actions, which link to
+          /tracks/[id]#… — the redirect to this route keeps the fragment. */}
+      <section id="tasks" className="flex scroll-mt-20 flex-col gap-2">
         <SectionHeading>Tasks</SectionHeading>
         <TrackTodoList trackId={track.id} initial={todos} />
       </section>
@@ -189,6 +192,16 @@ export default async function MobileTrackPage({
       <section className="flex flex-col gap-2">
         <SectionHeading>Stages</SectionHeading>
         <StagesChecklist trackId={track.id} stages={track.stages} />
+      </section>
+
+      <section className="flex flex-col gap-2">
+        <SectionHeading>Finishing</SectionHeading>
+        <div className="rounded-md border border-border bg-surface px-4">
+          <TrackFinishingSteps
+            trackId={track.id}
+            steps={track.finishingSteps}
+          />
+        </div>
       </section>
 
       <section className="flex flex-col gap-2">
@@ -225,7 +238,7 @@ export default async function MobileTrackPage({
         />
       </section>
 
-      <section className="flex flex-col gap-2">
+      <section id="notes" className="flex scroll-mt-20 flex-col gap-2">
         <SectionHeading>Notes</SectionHeading>
         <NotesEditor trackId={track.id} initial={track.notes} />
       </section>
@@ -242,7 +255,7 @@ export default async function MobileTrackPage({
         </section>
       )}
 
-      <section className="flex flex-col gap-2">
+      <section id="history" className="flex scroll-mt-20 flex-col gap-2">
         <SectionHeading>Sessions</SectionHeading>
         <TrackSessionHistory sessions={sessions} />
       </section>

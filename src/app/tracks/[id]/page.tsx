@@ -17,9 +17,11 @@ import {
 } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Card, CardContent } from "@/components/ui/card";
 import { BackLink } from "@/components/back-link";
 import { TrackAlbumSelect } from "@/components/track-album-select";
 import { StagesChecklist } from "@/components/stages-checklist";
+import { TrackFinishingSteps } from "@/components/track-finishing-steps";
 import { BottleneckEditor } from "@/components/bottleneck-editor";
 import { NextActionEditor } from "@/components/next-action-editor";
 import { NotesEditor } from "@/components/notes-editor";
@@ -45,6 +47,9 @@ import { trackSunoStatus } from "@/lib/types";
 
 export const dynamic = "force-dynamic";
 
+/** Values `?tab=` accepts — anything else falls back to the overview. */
+const TRACK_TABS = ["overview", "notes", "versions", "suno", "history"];
+
 export default async function TrackDetailPage({
   params,
   searchParams,
@@ -53,6 +58,11 @@ export default async function TrackDetailPage({
   searchParams: Promise<{ tab?: string }>;
 }) {
   const [{ id }, { tab }] = await Promise.all([params, searchParams]);
+  // Track cards deep-link here with `?tab=…#…`. On mobile the request is
+  // redirected to /m/[trackId], which drops the query but keeps the fragment
+  // (the browser reapplies it, the target Location carrying none), so the two
+  // surfaces answer the same link: the tab here, the section anchor there.
+  const activeTab = TRACK_TABS.includes(tab ?? "") ? tab! : "overview";
   if (await isMobileUserAgent()) {
     redirect(`/m/${id}`);
   }
@@ -212,7 +222,7 @@ export default async function TrackDetailPage({
         </div>
       )}
 
-      <Tabs defaultValue={tab === "suno" ? "suno" : "overview"}>
+      <Tabs defaultValue={activeTab}>
         <TabsList className="flex flex-wrap">
           <TabsTrigger value="overview">Overview</TabsTrigger>
           <TabsTrigger value="notes">Notes</TabsTrigger>
@@ -225,11 +235,27 @@ export default async function TrackDetailPage({
           <div className="grid gap-4 lg:grid-cols-2">
             <div className="flex flex-col gap-4">
               <StagesChecklist trackId={track.id} stages={track.stages} />
-              <TrackTodoList
-                trackId={track.id}
-                initial={openTodos}
-                variant="desktop"
-              />
+              {/* The same checklist the large track card carries, so the
+                  finishing steps are tickable on desktop too. */}
+              <Card>
+                <CardContent className="flex flex-col gap-3 p-5">
+                  <h3 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
+                    Finishing
+                  </h3>
+                  <TrackFinishingSteps
+                    trackId={track.id}
+                    steps={track.finishingSteps}
+                    variant="compact"
+                  />
+                </CardContent>
+              </Card>
+              <div id="tasks" className="scroll-mt-6">
+                <TrackTodoList
+                  trackId={track.id}
+                  initial={openTodos}
+                  variant="desktop"
+                />
+              </div>
             </div>
             <div className="flex flex-col gap-4">
               <BottleneckEditor
@@ -245,7 +271,9 @@ export default async function TrackDetailPage({
         </TabsContent>
 
         <TabsContent value="notes">
-          <NotesEditor trackId={track.id} initial={track.notes} />
+          <div id="notes" className="scroll-mt-6">
+            <NotesEditor trackId={track.id} initial={track.notes} />
+          </div>
         </TabsContent>
 
         <TabsContent value="versions">
@@ -273,7 +301,7 @@ export default async function TrackDetailPage({
         </TabsContent>
 
         <TabsContent value="history">
-          <div className="flex flex-col gap-4">
+          <div id="history" className="flex scroll-mt-6 flex-col gap-4">
             <TrackSessionHistory sessions={sessions} />
             <TrackTodoHistory
               trackId={track.id}

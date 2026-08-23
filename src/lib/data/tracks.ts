@@ -1,14 +1,16 @@
 import { getServerSupabase } from "@/lib/supabase/server";
 import { OWNER_ID } from "@/lib/owner";
 import type { SunoExperimentStatus } from "@/lib/suno";
-import type {
-  ActionRow,
-  BottleneckRow,
-  StageRow,
-  TrackRow,
-  TrackStatus,
-  TrackSunoSummary,
-  TrackWithDetails,
+import {
+  finishingStepsFromRows,
+  type ActionRow,
+  type BottleneckRow,
+  type FinishingStepRow,
+  type StageRow,
+  type TrackRow,
+  type TrackStatus,
+  type TrackSunoSummary,
+  type TrackWithDetails,
 } from "@/lib/types";
 
 type TrackAlbum = { id: string; title: string | null; genre: string | null };
@@ -77,6 +79,7 @@ async function attachDetails(tracks: TrackRow[]): Promise<TrackWithDetails[]> {
     completedActionsRes,
     albumsRes,
     sunoRes,
+    finishingRes,
   ] =
     await Promise.all([
       supabase.from("track_stages").select("*").in("track_id", ids),
@@ -109,6 +112,10 @@ async function attachDetails(tracks: TrackRow[]): Promise<TrackWithDetails[]> {
         .select("id, track_id, status, goal, suno_candidates(decision)")
         .in("track_id", ids)
         .not("status", "in", "(integrated,discarded)"),
+      // Migration 0023. A project that has not applied it yet still gets its
+      // cards: every step reads as outstanding (see below) rather than the
+      // whole track query failing on `42P01 undefined_table`.
+      supabase.from("track_finishing_steps").select("*").in("track_id", ids),
     ]);
 
   const stagesByTrack = new Map<string, StageRow[]>();
@@ -141,6 +148,19 @@ async function attachDetails(tracks: TrackRow[]): Promise<TrackWithDetails[]> {
   });
   const albumById = new Map<string, TrackAlbum>();
   albumsRes.forEach((a) => albumById.set(a.id, a));
+  const finishingByTrack = new Map<string, FinishingStepRow[]>();
+  if (finishingRes.error) {
+    console.warn(
+      "[tracks] could not load finishing steps — apply supabase/migrations/" +
+        "0023_track_finishing_steps.sql to enable the finishing checklist: " +
+        finishingRes.error.message,
+    );
+  }
+  (finishingRes.data ?? []).forEach((row) => {
+    const list = finishingByTrack.get(row.track_id) ?? [];
+    list.push(row);
+    finishingByTrack.set(row.track_id, list);
+  });
   const sunoByTrack = new Map<string, TrackSunoSummary>();
   (sunoRes.data ?? []).forEach((e) => {
     sunoByTrack.set(e.track_id, {
@@ -156,6 +176,7 @@ async function attachDetails(tracks: TrackRow[]): Promise<TrackWithDetails[]> {
   return tracks.map((t) => ({
     ...t,
     stages: stagesByTrack.get(t.id) ?? [],
+    finishingSteps: finishingStepsFromRows(finishingByTrack.get(t.id) ?? []),
     bottleneck: bottleneckByTrack.get(t.id) ?? null,
     primaryAction: actionByTrack.get(t.id) ?? null,
     openTaskCount: openCountByTrack.get(t.id) ?? 0,
