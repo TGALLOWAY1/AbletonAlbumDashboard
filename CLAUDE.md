@@ -62,6 +62,15 @@ useful on desktop (documented exception).
 - Server actions that mutate track-level data must call `revalidateTrackSurfaces(trackId)` from `src/lib/revalidate-track.ts`, which revalidates **both** route shapes plus the dashboard/focus/session surfaces. Do not hand-roll `revalidatePath` lists.
 - User-facing errors in client components go through `useToast()` (`src/components/toast.tsx`, provider mounted in the root layout) — never `window.alert()`.
 - Optimistic UI uses React 19's `useOptimistic` (see `TrackTodoList`).
+- Persistent chrome (sidebar, mobile header, mobile bottom nav, library
+  mini-player) is pinned with `position: fixed`, **never** `sticky`, and its
+  positioning classes live in `src/lib/layout-chrome.ts` (`APP_CHROME`).
+  `sticky` keeps regressing into "the nav bar moves when I scroll" — an
+  ancestor gaining `overflow`, a parent that stops being taller than the bar,
+  or horizontal page overflow all unpin it silently. Because fixed chrome is
+  out of flow, the scrolling column reserves its space via
+  `APP_CHROME.contentColumn` / `.mainPadding`; `layout-chrome.test.ts` asserts
+  those offsets still match the chrome's dimensions.
 - Styling: Tailwind utility classes, no CSS modules. Use `cn()` / `tailwind-merge` for conditional classes.
 - The track library (`/tracks`) keeps its gallery/list + large/medium/small
   view preference in the URL (`src/lib/view-mode.ts`), so the page stays a server

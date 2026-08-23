@@ -1,10 +1,17 @@
 import { AudioLines } from "lucide-react";
 import Link from "next/link";
 import { MobileNavDrawer } from "@/components/mobile/mobile-nav-drawer";
+import { APP_CHROME } from "@/lib/layout-chrome";
+import { cn } from "@/lib/utils";
 
 export function MobileHeader() {
   return (
-    <header className="sticky top-0 z-30 flex h-12 items-center justify-between border-b border-border bg-surface/95 px-2 backdrop-blur supports-[backdrop-filter]:bg-surface/80 md:hidden">
+    <header
+      className={cn(
+        APP_CHROME.mobileHeader,
+        "flex items-center justify-between border-b border-border bg-surface/95 px-2 backdrop-blur supports-[backdrop-filter]:bg-surface/80 md:hidden",
+      )}
+    >
       <MobileNavDrawer />
       <Link
         href="/"

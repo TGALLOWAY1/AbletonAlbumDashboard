@@ -8,6 +8,8 @@ import { FocusSessionProvider } from "@/components/focus-session-provider";
 import { FloatingFocusBar } from "@/components/floating-focus-bar";
 import { NavigationTracker } from "@/components/navigation-tracker";
 import { ToastProvider } from "@/components/toast";
+import { APP_CHROME } from "@/lib/layout-chrome";
+import { cn } from "@/lib/utils";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -60,14 +62,15 @@ export default function RootLayout({
       <body className="min-h-full">
         <ToastProvider>
           <FocusSessionProvider>
-            <div className="flex min-h-screen">
-              <Sidebar />
-              <div className="flex min-w-0 flex-1 flex-col">
-                <MobileHeader />
-                <main className="flex-1 px-4 pb-24 pt-4 md:px-8 md:pb-7 md:pt-7">
-                  {children}
-                </main>
-              </div>
+            {/* Sidebar, header and bottom nav are all `fixed`, so they sit
+                outside flow and the scrolling column reserves their space via
+                APP_CHROME.contentColumn / .mainPadding. See lib/layout-chrome. */}
+            <Sidebar />
+            <div className={cn(APP_CHROME.contentColumn, "flex flex-col")}>
+              <MobileHeader />
+              <main className={cn("flex-1", APP_CHROME.mainPadding)}>
+                {children}
+              </main>
             </div>
             <MobileBottomNav />
             <FloatingFocusBar />

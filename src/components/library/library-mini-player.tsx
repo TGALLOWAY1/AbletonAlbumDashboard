@@ -3,6 +3,7 @@
 import { Pause, Play, SkipBack, SkipForward, X } from "lucide-react";
 import { LibraryArtwork } from "@/components/library/library-artwork";
 import { useLibraryPlayer } from "@/components/library/library-player-provider";
+import { APP_CHROME } from "@/lib/layout-chrome";
 import { cn } from "@/lib/utils";
 
 /**
@@ -22,11 +23,12 @@ export function LibraryMiniPlayer() {
   return (
     <div
       className={cn(
-        "fixed inset-x-0 z-40 border-t border-border bg-surface/95 backdrop-blur",
+        // Pinned above the mobile bottom nav, and past the sidebar on md+.
+        // The offsets live in layout-chrome so they stay in step with the
+        // chrome they clear.
+        APP_CHROME.libraryMiniPlayer,
+        "border-t border-border bg-surface/95 backdrop-blur",
         "supports-[backdrop-filter]:bg-surface/85 shadow-[0_-2px_10px_rgba(0,0,0,0.06)]",
-        // Clears the mobile bottom nav (~3.75rem plus the safe-area inset);
-        // on md+ that nav is hidden, so the bar sits flush with the viewport.
-        "bottom-[calc(3.75rem+env(safe-area-inset-bottom))] md:bottom-0 md:left-64",
       )}
       role="region"
       aria-label="Library preview player"
