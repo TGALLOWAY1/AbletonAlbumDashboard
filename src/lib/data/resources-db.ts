@@ -116,12 +116,19 @@ export async function getResourceCategoryPageData(
   };
 }
 
+const UUID_RE =
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
 export async function getResourceById(
   id: string,
 ): Promise<ResourceItem | null> {
   if (id.startsWith("seed-")) {
     return seedResources().find((item) => item.id === id) ?? null;
   }
+  // A malformed id can't match a row and Postgres would reject the query, so
+  // it's a plain not-found — but any other failure (outage, permissions,
+  // schema) must propagate to the route's error boundary, not become a 404.
+  if (!UUID_RE.test(id)) return null;
   const supabase = getServerSupabase();
   const { data, error } = await supabase
     .from("resources")
@@ -129,11 +136,7 @@ export async function getResourceById(
     .eq("owner_id", OWNER_ID)
     .eq("id", id)
     .maybeSingle();
-  if (error) {
-    // A malformed id (not a uuid) also lands here — treat it as not found.
-    console.error("[resources] fetch by id failed", error);
-    return null;
-  }
+  if (error) throw error;
   if (!data) return null;
   try {
     return rowToItem(supabase, data as ResourceRow);
