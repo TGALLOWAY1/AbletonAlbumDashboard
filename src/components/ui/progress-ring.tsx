@@ -5,12 +5,15 @@ export function ProgressRing({
   size = 64,
   stroke = 6,
   className,
+  labelClassName,
   showLabel = true,
 }: {
   value: number;
   size?: number;
   stroke?: number;
   className?: string;
+  /** Overrides the default label type scale (e.g. a bolder read on a card). */
+  labelClassName?: string;
   showLabel?: boolean;
 }) {
   const clamped = Math.max(0, Math.min(100, Math.round(value)));
@@ -60,7 +63,12 @@ export function ProgressRing({
         />
       </svg>
       {showLabel && (
-        <span className="absolute text-xs font-semibold text-foreground tabular-nums">
+        <span
+          className={cn(
+            "absolute text-xs font-semibold text-foreground tabular-nums",
+            labelClassName,
+          )}
+        >
           {clamped}%
         </span>
       )}

@@ -35,3 +35,14 @@ export const MIGRATION_0022_MISSING_MESSAGE =
   "This needs supabase/migrations/0022_suno_status_error.sql applied to your " +
   "Supabase project — the database still only accepts the old two Suno " +
   "states. Run it, then try again.";
+
+/** PostgREST reports an unknown *table* as 42P01; PGRST205 from its schema cache. */
+export function isMissingTable(error: unknown): boolean {
+  const code = (error as { code?: string } | null)?.code;
+  return code === "42P01" || code === "PGRST205";
+}
+
+export const MIGRATION_0023_MISSING_MESSAGE =
+  "This needs supabase/migrations/0023_track_finishing_steps.sql applied to " +
+  "your Supabase project — the finishing checklist has nowhere to save yet. " +
+  "Run it, then try again.";
