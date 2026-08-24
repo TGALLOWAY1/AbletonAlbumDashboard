@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import { format } from "date-fns";
 import { Card, CardContent } from "@/components/ui/card";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { WorkHeatmap, HeatmapLegend } from "@/components/analytics/work-heatmap";
@@ -16,34 +17,16 @@ import {
   type RangeStats,
 } from "@/lib/analytics";
 
-const MONTH_NAMES = [
-  "Jan",
-  "Feb",
-  "Mar",
-  "Apr",
-  "May",
-  "Jun",
-  "Jul",
-  "Aug",
-  "Sep",
-  "Oct",
-  "Nov",
-  "Dec",
-];
-
+/**
+ * The window, as the two dates it actually runs between.
+ *
+ * It used to name months only ("Jul – Aug 2026"), which read as if the grid
+ * covered both months in full when it covered the last 30 days of them. The
+ * heatmap's first and last squares are these two dates.
+ */
 function rangeLabel(start: Date, end: Date) {
-  const startStr = `${MONTH_NAMES[start.getMonth()]}`;
-  const endStr = `${MONTH_NAMES[end.getMonth()]} ${end.getFullYear()}`;
-  if (
-    start.getMonth() === end.getMonth() &&
-    start.getFullYear() === end.getFullYear()
-  ) {
-    return endStr;
-  }
-  if (start.getFullYear() !== end.getFullYear()) {
-    return `${startStr} ${start.getFullYear()} – ${endStr}`;
-  }
-  return `${startStr} – ${endStr}`;
+  const sameYear = start.getFullYear() === end.getFullYear();
+  return `${format(start, sameYear ? "d MMM" : "d MMM yyyy")} – ${format(end, "d MMM yyyy")}`;
 }
 
 function formatHours(seconds: number) {
@@ -109,6 +92,7 @@ export function AnalyticsDashboard({
             dailyMap={stats.dailyMap}
             startDate={stats.start}
             endDate={stats.end}
+            range={range}
           />
 
           <RangeHeadline stats={stats} tracks={tracks} />

@@ -108,6 +108,19 @@ export function toDayKey(date: Date): string {
   return `${y}-${m}-${d}`;
 }
 
+/**
+ * The inverse of `toDayKey`: a day key back to *local* midnight.
+ *
+ * It has to be spelled out because `new Date("2026-08-24")` is parsed as UTC
+ * by spec while `toDayKey` writes local calendar days. West of Greenwich the
+ * round trip therefore lands on the previous day, which is how the weekday
+ * arithmetic below could name the wrong day of the week for its own keys.
+ */
+export function parseDayKey(key: string): Date {
+  const [y, m, d] = key.split("-").map(Number);
+  return new Date(y, (m ?? 1) - 1, d ?? 1);
+}
+
 export function getDailyDurationMap(
   sessions: AnalyticsSession[],
 ): Map<string, number> {
@@ -152,8 +165,8 @@ export function getLongestStreak(dailyMap: Map<string, number>): number {
   let longest = 1;
   let current = 1;
   for (let i = 1; i < days.length; i++) {
-    const prev = new Date(days[i - 1]);
-    const cur = new Date(days[i]);
+    const prev = parseDayKey(days[i - 1]);
+    const cur = parseDayKey(days[i]);
     const diffDays = Math.round(
       (cur.getTime() - prev.getTime()) / (1000 * 60 * 60 * 24),
     );
@@ -174,7 +187,9 @@ export function getMostActiveDay(
 ): string | null {
   const totals = new Array(7).fill(0);
   for (const [key, secs] of dailyMap.entries()) {
-    const day = new Date(key).getDay();
+    // `parseDayKey`, not `new Date(key)` — see the note on that helper. This
+    // used to name the wrong weekday for every user west of Greenwich.
+    const day = parseDayKey(key).getDay();
     totals[day] += secs;
   }
   let best = -1;
