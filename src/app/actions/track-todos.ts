@@ -3,7 +3,7 @@
 import { z } from "zod";
 import { getServerSupabase } from "@/lib/supabase/server";
 import { OWNER_ID } from "@/lib/owner";
-import { isMissingColumn, MIGRATION_0029_MISSING_MESSAGE } from "@/lib/migration-errors";
+import { isMissingColumn, MIGRATION_0028_MISSING_MESSAGE } from "@/lib/migration-errors";
 import {
   revalidateGeneralTasks,
   revalidateTrackSurfaces,
@@ -13,7 +13,7 @@ import {
  * Task-list writes for both kinds of list.
  *
  * `trackId` is nullable: a string is a task on that song, `null` is a studio
- * task that belongs to no track (migration 0029). Everything else — the
+ * task that belongs to no track (migration 0028). Everything else — the
  * table, the completion timestamp, the hand-set `sort_order` from 0025, the
  * list component — is shared, because the two lists differ only in what they
  * are about. Keeping one set of actions is what stops the studio list from
@@ -59,13 +59,13 @@ export async function addTrackTodo(input: {
   const { error } = await supabase.from("actions").insert({
     track_id: parsed.trackId,
     // Track tasks reach their owner through the track. Studio tasks have no
-    // track to join, so they carry it (migration 0029); writing it on both
+    // track to join, so they carry it (migration 0028); writing it on both
     // keeps one row shape.
     owner_id: OWNER_ID,
     description: parsed.description,
   });
   if (error) {
-    if (isMissingColumn(error)) throw new Error(MIGRATION_0029_MISSING_MESSAGE);
+    if (isMissingColumn(error)) throw new Error(MIGRATION_0028_MISSING_MESSAGE);
     throw error;
   }
   revalidateList(parsed.trackId);

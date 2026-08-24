@@ -21,7 +21,7 @@ import {
   isMissingColumn,
   MIGRATION_0021_MISSING_MESSAGE,
   MIGRATION_0022_MISSING_MESSAGE,
-  MIGRATION_0028_MISSING_MESSAGE,
+  MIGRATION_0027_MISSING_MESSAGE,
 } from "@/lib/migration-errors";
 
 const optionalTrimmed = z
@@ -97,7 +97,7 @@ export async function createTrack(formData: FormData) {
   // No cap here any more. `status` says where a track is in its life, and
   // there is no reason to be limited in how many songs are alive; the cap that
   // matters — how many you are working on right now — moved to the pin
-  // (migration 0028, `setTrackPinned`).
+  // (migration 0027, `setTrackPinned`).
   const supabase = getServerSupabase();
 
   const album_id = await resolveAlbumId(supabase, parsed.album_id);
@@ -194,7 +194,7 @@ export async function setTrackStatus(id: string, status: string) {
     .eq("owner_id", OWNER_ID)
     .eq("id", id);
 
-  // A database without 0028 has no pin columns to clear — the status change
+  // A database without 0027 has no pin columns to clear — the status change
   // is the part that matters, so retry without them rather than blocking it.
   if (error && leavesShortlist && isMissingColumn(error)) {
     const retry = await supabase
@@ -217,7 +217,7 @@ export type SetTrackPinnedResult = { error: string | null };
  * Pin or unpin a track — the dashboard shortlist.
  *
  * Pinning is capped at `MAX_PINNED_TRACKS`. The count is read immediately
- * before the write rather than enforced by a constraint (see migration 0028),
+ * before the write rather than enforced by a constraint (see migration 0027),
  * so the cap is advisory against a concurrent second pin; for a single-user
  * app with one writer that is the right trade against a statement trigger
  * firing on every bulk update.
@@ -270,7 +270,7 @@ export async function setTrackPinned(
       .not("pinned_at", "is", null);
     if (countError) {
       if (isMissingColumn(countError)) {
-        return { error: MIGRATION_0028_MISSING_MESSAGE };
+        return { error: MIGRATION_0027_MISSING_MESSAGE };
       }
       logSupabaseError("[setTrackPinned] count failed", countError);
       return { error: "Could not read your pinned tracks. Please try again." };
@@ -296,7 +296,7 @@ export async function setTrackPinned(
     .maybeSingle();
   if (error) {
     if (isMissingColumn(error)) {
-      return { error: MIGRATION_0028_MISSING_MESSAGE };
+      return { error: MIGRATION_0027_MISSING_MESSAGE };
     }
     logSupabaseError("[setTrackPinned] failed", error);
     return { error: "Could not save the pin. Please try again." };
@@ -348,7 +348,7 @@ export async function reorderPinnedTracks(input: {
   const failed = results.find((r) => r.error);
   if (failed?.error) {
     if (isMissingColumn(failed.error)) {
-      return { error: MIGRATION_0028_MISSING_MESSAGE };
+      return { error: MIGRATION_0027_MISSING_MESSAGE };
     }
     logSupabaseError("[reorderPinnedTracks] failed", failed.error);
     return { error: "Could not save the new order. Please try again." };

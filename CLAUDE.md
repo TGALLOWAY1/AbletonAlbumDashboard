@@ -48,14 +48,14 @@ Run `pnpm typecheck && pnpm lint && pnpm test` before committing.
   this track", so they are not three sections.
 - Dashboard root (`src/app/page.tsx`) is a single responsive surface using Tailwind `md:` breakpoints — no user-agent sniffing, no separate desktop/mobile route for the home page.
 - **What the dashboard shows is the pinned shortlist** — up to `MAX_PINNED_TRACKS`
-  (5) tracks carrying `tracks.pinned_at` + `pin_order` (migration 0028), in an
+  (5) tracks carrying `tracks.pinned_at` + `pin_order` (migration 0027), in an
   order you drag. It is deliberately *not* derived from album membership or
   `status`: it used to be the intersection of "in the active album" and
   "status = active" under a hard cap, so changing your mind meant archiving a
   song. The cap now lives on the pin (`setTrackPinned`, the only writer — it is
-  not a database constraint, see 0028) and finishing or archiving a track
+  not a database constraint, see 0027) and finishing or archiving a track
   unpins it automatically in `setTrackStatus`. `status` means only where a
-  track is in its life; nothing caps how many are active. Migration 0028 also
+  track is in its life; nothing caps how many are active. Migration 0027 also
   dropped the never-wired one-track `is_focus` flag from 0012.
 - Pinned rows are **collapsed by default** (`src/components/home/pinned-tracks.tsx`).
   The expanded body is the existing `TrackCard`, rendered on the server and
@@ -70,7 +70,7 @@ Run `pnpm typecheck && pnpm lint && pnpm test` before committing.
   the home page shows. Album-less tracks are not called out here either; the
   `/tracks` shelf already files them under `BACKLOG_GROUP_LABEL`.
 - **Tasks do not have to belong to a track.** `actions.track_id` is nullable
-  (migration 0029); a row with no track and an `owner_id` is a studio task
+  (migration 0028); a row with no track and an `owner_id` is a studio task
   ("back up the drive", "sort the sample folder") and renders in
   `src/components/home/studio-tasks.tsx`. It is the *same* `TrackTodoList` and
   the *same* server actions in `src/app/actions/track-todos.ts`, which all take

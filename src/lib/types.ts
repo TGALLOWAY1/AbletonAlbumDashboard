@@ -216,7 +216,7 @@ export function finishingStepsFromRows(
  * asked for a commitment to five specific tracks. Now you unpin one, or you
  * finish it and it unpins itself (`setTrackStatus`).
  *
- * Enforced in `setTrackPinned`, the only writer — see migration 0028 for why
+ * Enforced in `setTrackPinned`, the only writer — see migration 0027 for why
  * it is not a database constraint.
  */
 export const MAX_PINNED_TRACKS = 5;

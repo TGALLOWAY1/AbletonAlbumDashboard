@@ -149,7 +149,7 @@ async function attachDetails(tracks: TrackRow[]): Promise<TrackWithDetails[]> {
   const nextTaskByTrack = new Map<string, ActionRow>();
   const openCountByTrack = new Map<string, number>();
   const estMinutesByTrack = new Map<string, number>();
-  // `actions.track_id` is nullable since migration 0029 (studio tasks own no
+  // `actions.track_id` is nullable since migration 0028 (studio tasks own no
   // track), but both queries above filter `.in("track_id", ids)`, so a null
   // here is impossible. The guard is for the type system, not for the data.
   (openActionsRes.data ?? []).forEach((a) => {
@@ -235,11 +235,11 @@ export async function getTracksByStatus(
  *
  * This is what the dashboard shows. Deliberately not filtered by status or by
  * album — a pin is the whole answer to "is this on my list right now", and
- * scoping it again by either would resurrect the coupling migration 0028 set
+ * scoping it again by either would resurrect the coupling migration 0027 set
  * out to remove.
  *
  * Ordering by `pin_order` fails the whole query with `42703 undefined_column`
- * on a database that has not applied 0028, which would take the dashboard
+ * on a database that has not applied 0027, which would take the dashboard
  * down rather than degrade it. Same posture as `selectOpenActions` above:
  * retry without the order and sort in memory, where `comparePinPosition`
  * gives the same answer. A database missing the columns entirely returns no
@@ -264,7 +264,7 @@ export async function getPinnedTracks(): Promise<TrackWithDetails[]> {
     if (isMissingColumn(res.error)) {
       console.warn(
         "[tracks] tracks.pinned_at is missing — apply supabase/migrations/" +
-          "0028_track_pins.sql to enable the pinned shortlist.",
+          "0027_track_pins.sql to enable the pinned shortlist.",
       );
       return [];
     }
@@ -333,7 +333,7 @@ export async function listTrackOptions(): Promise<TrackOption[]> {
     }));
   }
 
-  // Pre-0028 database: still list the tracks, just with nothing pinned.
+  // Pre-0027 database: still list the tracks, just with nothing pinned.
   const base = await supabase
     .from("tracks")
     .select("id, name, status, last_worked_at, cover_image_url")
