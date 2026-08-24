@@ -1,7 +1,14 @@
 import { describe, expect, it } from "vitest";
 import { readFileSync } from "node:fs";
 import path from "node:path";
-import { comparePinPosition, isTrackPinned, MAX_PINNED_TRACKS } from "@/lib/types";
+import {
+  comparePinPosition,
+  isPinnableStatus,
+  isTrackPinned,
+  MAX_PINNED_TRACKS,
+  PINNABLE_TRACK_STATUSES,
+  TRACK_STATUSES,
+} from "@/lib/types";
 import { moveItemTo } from "@/lib/task-order";
 
 type Pin = { id: string; pin_order: number | null; pinned_at: string | null };
@@ -86,6 +93,35 @@ describe("reordering the shortlist", () => {
   });
 });
 
+describe("isPinnableStatus", () => {
+  it("allows active and backlog only", () => {
+    expect(isPinnableStatus("active")).toBe(true);
+    expect(isPinnableStatus("backlog")).toBe(true);
+  });
+
+  it("rejects the statuses that auto-unpin", () => {
+    // `setTrackStatus` clears the pin on these two. If they were pinnable
+    // again, a finished song could reclaim a slot immediately and hold it,
+    // which is the stall the cap exists to prevent.
+    expect(isPinnableStatus("completed")).toBe(false);
+    expect(isPinnableStatus("archived")).toBe(false);
+  });
+
+  it("covers every known status, so a new one has to be classified", () => {
+    for (const status of TRACK_STATUSES) {
+      expect(typeof isPinnableStatus(status)).toBe("boolean");
+    }
+    expect(PINNABLE_TRACK_STATUSES.every((s) => TRACK_STATUSES.includes(s))).toBe(
+      true,
+    );
+  });
+
+  it("rejects an unknown status rather than defaulting it open", () => {
+    expect(isPinnableStatus("")).toBe(false);
+    expect(isPinnableStatus("deleted")).toBe(false);
+  });
+});
+
 describe("0026 migration ↔ src/lib sync", () => {
   it("backfills at most MAX_PINNED_TRACKS tracks", () => {
     // The backfill's own cap has to match the constant the app enforces, or a
@@ -97,5 +133,19 @@ describe("0026 migration ↔ src/lib sync", () => {
   it("drops the single-focus column it replaces", () => {
     expect(MIGRATION).toContain("drop column if exists is_focus");
     expect(MIGRATION).toContain("drop index if exists tracks_one_focus_per_owner");
+  });
+
+  it("scopes the backfill to the active album, as the old dashboard did", () => {
+    // The pre-0026 dashboard showed the active album's active tracks, falling
+    // back to all active tracks only when no album was flagged active. A
+    // backfill that just ranked every active track would pin songs filed under
+    // a different record — ones the user had never seen on that page.
+    const backfill = MIGRATION.slice(
+      MIGRATION.indexOf("with shortlist as ("),
+      MIGRATION.indexOf("t.pinned_at is null;"),
+    );
+    expect(backfill).toContain("a.is_active");
+    expect(backfill).toContain("not exists");
+    expect(backfill).toContain("t.album_id in");
   });
 });

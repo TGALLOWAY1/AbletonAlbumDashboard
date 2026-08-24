@@ -24,6 +24,61 @@ type CompletionSlim = {
 };
 
 /**
+ * Completed tasks, owner-scoped, in a shape the range stats can count.
+ *
+ * Two queries, because this has to survive the deploy-before-migration window.
+ * The first reads both kinds of task: track-scoped (owned through the track)
+ * and studio (owned directly, migration 0027). On a database without 0027 the
+ * `owner_id` column does not exist, which fails the whole select — and
+ * returning nothing there would print "0 tasks done" over a history of real,
+ * still-queryable completions. So the fallback re-reads the track-scoped ones
+ * through the join `getWeeklyDelta` used before this change. Nothing is lost
+ * by dropping the studio half in that branch: without 0027 there are no
+ * track-less tasks to count.
+ */
+async function fetchTaskCompletions(
+  supabase: ReturnType<typeof getServerSupabase>,
+): Promise<AnalyticsTaskCompletion[]> {
+  const withOwner = await supabase
+    .from("actions")
+    .select("completed_at, owner_id, track:tracks!actions_track_id_fkey(owner_id)")
+    .not("completed_at", "is", null);
+
+  if (!withOwner.error) {
+    const rows = (withOwner.data ?? []) as unknown as CompletionSlim[];
+    return rows
+      // Left join: keep track-less rows, and only this owner's tracks.
+      .filter((a) =>
+        a.track ? a.track.owner_id === OWNER_ID : a.owner_id === OWNER_ID,
+      )
+      .filter((a): a is CompletionSlim & { completed_at: string } =>
+        Boolean(a.completed_at),
+      )
+      .map((a) => ({ completedAt: a.completed_at }));
+  }
+
+  if (!isMissingColumn(withOwner.error)) throw withOwner.error;
+
+  console.warn(
+    "[analytics] actions.owner_id is missing — counting track tasks only. " +
+      "Apply supabase/migrations/0027_general_tasks.sql to include studio tasks.",
+  );
+
+  const legacy = await supabase
+    .from("actions")
+    .select("completed_at, tracks!inner(owner_id)")
+    .eq("tracks.owner_id", OWNER_ID)
+    .not("completed_at", "is", null);
+  if (legacy.error) throw legacy.error;
+
+  return (legacy.data ?? [])
+    .filter((a): a is typeof a & { completed_at: string } =>
+      Boolean(a.completed_at),
+    )
+    .map((a) => ({ completedAt: a.completed_at }));
+}
+
+/**
  * Everything the Progress panel measures, unfiltered by range.
  *
  * The range lives in client state (the 7D/30D/… control), so the server
@@ -35,22 +90,14 @@ type CompletionSlim = {
  */
 export async function fetchAnalyticsData() {
   const supabase = getServerSupabase();
-  const [tracksRes, sessionsRes, completionsRes] = await Promise.all([
+  const [tracksRes, sessionsRes, taskCompletions] = await Promise.all([
     supabase.from("tracks").select("id, status").eq("owner_id", OWNER_ID),
     supabase
       .from("sessions")
       .select(
         "track_id, duration_seconds, started_at, status, track:tracks!sessions_track_id_fkey(owner_id)",
       ),
-    // Both kinds of task: a track's (owned through the track) and the studio's
-    // (owned directly — migration 0027). Left join so the track-less ones
-    // survive it.
-    supabase
-      .from("actions")
-      .select(
-        "completed_at, owner_id, track:tracks!actions_track_id_fkey(owner_id)",
-      )
-      .not("completed_at", "is", null),
+    fetchTaskCompletions(supabase),
   ]);
 
   const tracks = (tracksRes.data ?? []) as TrackSlim[];
@@ -66,26 +113,6 @@ export async function fetchAnalyticsData() {
       durationSeconds: s.duration_seconds ?? 0,
       status: s.status,
     }));
-
-  // A database without 0027 has no `actions.owner_id`, which fails the whole
-  // select. Tasks-done then reads as zero rather than taking the panel down.
-  if (completionsRes.error && isMissingColumn(completionsRes.error)) {
-    console.warn(
-      "[analytics] actions.owner_id is missing — apply supabase/migrations/" +
-        "0027_general_tasks.sql to count completed tasks.",
-    );
-  }
-  const completionRows = (completionsRes.data ??
-    []) as unknown as CompletionSlim[];
-
-  const taskCompletions: AnalyticsTaskCompletion[] = completionRows
-    .filter((a) =>
-      a.track ? a.track.owner_id === OWNER_ID : a.owner_id === OWNER_ID,
-    )
-    .filter((a): a is CompletionSlim & { completed_at: string } =>
-      Boolean(a.completed_at),
-    )
-    .map((a) => ({ completedAt: a.completed_at }));
 
   const analyticsTracks: AnalyticsTrack[] = tracks.map((t) => ({
     id: t.id,

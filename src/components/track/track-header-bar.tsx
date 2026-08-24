@@ -10,6 +10,7 @@ import { ManualSessionEntry } from "@/components/manual-session-dialog";
 import { PinTrackButton } from "@/components/track/pin-track-button";
 import { TrackStageStrip } from "@/components/track/track-stage-strip";
 import {
+  isPinnableStatus,
   isTrackPinned,
   trackSunoStatus,
   type AlbumRow,
@@ -40,6 +41,9 @@ export function TrackHeaderBar({
   const genre = track.album?.genre?.trim() || null;
   const sunoStatus = trackSunoStatus(track);
   const pinned = isTrackPinned(track);
+  // Completed and archived tracks cannot be pinned (`setTrackPinned` rejects
+  // them), so the control is not offered rather than shown and refused.
+  const canPin = isPinnableStatus(track.status);
   const meta = [
     track.song_key ? track.song_key : null,
     track.bpm ? `${track.bpm} BPM` : null,
@@ -136,11 +140,13 @@ export function TrackHeaderBar({
         <div className="flex shrink-0 items-center gap-2">
           {!mobile && (
             <>
-              <PinTrackButton
-                trackId={track.id}
-                trackName={track.name}
-                pinned={pinned}
-              />
+              {canPin && (
+                <PinTrackButton
+                  trackId={track.id}
+                  trackName={track.name}
+                  pinned={pinned}
+                />
+              )}
               <ManualSessionEntry
                 trackId={track.id}
                 tracks={[]}
@@ -186,12 +192,14 @@ export function TrackHeaderBar({
               variant="compact"
             />
           </div>
-          <PinTrackButton
-            trackId={track.id}
-            trackName={track.name}
-            pinned={pinned}
-            variant="mobile"
-          />
+          {canPin && (
+            <PinTrackButton
+              trackId={track.id}
+              trackName={track.name}
+              pinned={pinned}
+              variant="mobile"
+            />
+          )}
           <ManualSessionEntry
             trackId={track.id}
             tracks={[]}

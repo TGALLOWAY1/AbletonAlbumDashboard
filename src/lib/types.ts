@@ -221,6 +221,25 @@ export function finishingStepsFromRows(
  */
 export const MAX_PINNED_TRACKS = 5;
 
+/**
+ * Statuses a track can be pinned in.
+ *
+ * `setTrackStatus` unpins on complete/archive, so allowing those to be pinned
+ * again would make that a suggestion rather than an invariant: a finished song
+ * could sit in one of the five slots forever, which is the exact stall the cap
+ * exists to prevent. Shared by the server action that enforces it and the UI
+ * that decides whether to offer the control, so the two cannot disagree about
+ * what is pinnable.
+ */
+export const PINNABLE_TRACK_STATUSES: readonly TrackStatus[] = [
+  "active",
+  "backlog",
+];
+
+export function isPinnableStatus(status: string): boolean {
+  return PINNABLE_TRACK_STATUSES.includes(status as TrackStatus);
+}
+
 /** Is this track on the shortlist? */
 export function isTrackPinned(
   track: Pick<TrackRow, "pinned_at">,

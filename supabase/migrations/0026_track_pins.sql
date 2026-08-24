@@ -44,19 +44,44 @@ create index if not exists tracks_pinned_idx
 -- ---------------------------------------------------------------------------
 -- Backfill: keep today's dashboard
 -- ---------------------------------------------------------------------------
--- Before this migration the dashboard showed active tracks (capped at five).
--- Pin exactly those, most-recently-worked first, so the page looks the same
--- the moment this lands. `pin_order` is written explicitly so the list is
--- fully ordered from the start rather than falling back to `pinned_at`.
+-- Pin exactly what the old dashboard showed, so the page looks the same the
+-- moment this lands. That set was NOT simply "every active track": when the
+-- owner had an album flagged `is_active`, the dashboard scoped to that album's
+-- active tracks and fell back to all active tracks only when no active album
+-- existed (see the pre-0026 src/app/page.tsx). Ranking every active track
+-- across the library would quietly pin songs that were active but filed under
+-- a different record — tracks the user had never seen on this page.
+--
+-- `albums (owner_id) where is_active` is a partial unique index (0010), so
+-- "the active album" is at most one row per owner and the EXISTS/IN pair below
+-- cannot fan out. A track with `album_id is null` yields NULL from the IN and
+-- is therefore excluded while an active album exists — correct, since the old
+-- dashboard listed those separately rather than as cards.
+--
+-- `pin_order` is written explicitly so the list is fully ordered from the
+-- start rather than falling back to `pinned_at`.
 with shortlist as (
-  select id,
-         owner_id,
+  select t.id,
          row_number() over (
-           partition by owner_id
-           order by last_worked_at desc nulls last, created_at desc
+           partition by t.owner_id
+           order by t.last_worked_at desc nulls last, t.created_at desc
          ) - 1 as rank
-    from tracks
-   where status = 'active'
+    from tracks t
+   where t.status = 'active'
+     and (
+       not exists (
+         select 1
+           from albums a
+          where a.owner_id = t.owner_id
+            and a.is_active
+       )
+       or t.album_id in (
+         select a.id
+           from albums a
+          where a.owner_id = t.owner_id
+            and a.is_active
+       )
+     )
 )
 update tracks t
    set pinned_at = now(),

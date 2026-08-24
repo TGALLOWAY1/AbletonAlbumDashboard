@@ -7,6 +7,7 @@ import { logSupabaseError } from "@/lib/supabase/log-error";
 import { OWNER_ID } from "@/lib/owner";
 import {
   assignTracksToAlbumSchema,
+  isPinnableStatus,
   MAX_PINNED_TRACKS,
   SUNO_STATUSES,
   TRACK_STATUSES,
@@ -237,6 +238,31 @@ export async function setTrackPinned(
   const supabase = getServerSupabase();
 
   if (pinned) {
+    // A finished or shelved track cannot go back on the shortlist. Enforced
+    // here rather than left to the callers: `PinTrackButton` renders on every
+    // track detail page, so without this a user could re-pin a track the
+    // instant `setTrackStatus` unpinned it and hold a slot indefinitely.
+    const { data: track, error: statusError } = await supabase
+      .from("tracks")
+      .select("status")
+      .eq("owner_id", OWNER_ID)
+      .eq("id", trackId)
+      .maybeSingle();
+    if (statusError) {
+      logSupabaseError("[setTrackPinned] status read failed", statusError);
+      return { error: "Could not read the track. Please try again." };
+    }
+    if (!track) {
+      return { error: "Track not found, or the update was blocked." };
+    }
+    if (!isPinnableStatus(track.status)) {
+      return {
+        error:
+          `A ${track.status} track can't be pinned. Move it back to active or ` +
+          `backlog first.`,
+      };
+    }
+
     const { count, error: countError } = await supabase
       .from("tracks")
       .select("*", { count: "exact", head: true })

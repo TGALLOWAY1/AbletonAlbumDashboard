@@ -22,7 +22,7 @@ import {
   parseProgressTab,
   type ProgressSearchParams,
 } from "@/lib/progress-tab";
-import { isTrackStale, progressFromStages } from "@/lib/types";
+import { isPinnableStatus, isTrackStale, progressFromStages } from "@/lib/types";
 
 export const dynamic = "force-dynamic";
 
@@ -95,8 +95,10 @@ export default async function DashboardPage({
   }));
 
   const pinnedIds = new Set(pinnedTracks.map((t) => t.id));
+  // Same predicate the server action enforces, so the picker never offers a
+  // pin that `setTrackPinned` would refuse.
   const pinnable = trackOptions.filter(
-    (t) => !pinnedIds.has(t.id) && t.status !== "completed",
+    (t) => !pinnedIds.has(t.id) && isPinnableStatus(t.status),
   );
 
   const greeting = greetingForHour(now.getHours());
