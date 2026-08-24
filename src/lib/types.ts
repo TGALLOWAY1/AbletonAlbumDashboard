@@ -159,6 +159,22 @@ export const STAGE_LABELS: Record<StageKey, string> = {
 };
 
 /**
+ * The same five stages, named to survive a phone.
+ *
+ * Five columns across a 390px screen leave roughly 55px each, which the full
+ * labels overflow — the mobile stage strip used to render "Arrangement…" and
+ * lose the word it was abbreviating. These are picked to fit whole; the long
+ * form still goes to the accessible name.
+ */
+export const STAGE_SHORT_LABELS: Record<StageKey, string> = {
+  idea: "Idea",
+  sound_design: "Sound",
+  arrangement: "Arrange",
+  mixing: "Mix",
+  mastering: "Master",
+};
+
+/**
  * The hand-off checklist every track goes through once the music is done —
  * three fixed jobs, same three for every track, shown straight on the large
  * track card so the last mile is visible without opening the track.

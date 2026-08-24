@@ -76,7 +76,8 @@ const SIZING: Record<Variant, Sizing> = {
     row: "flex min-h-[56px] items-center gap-2 border-b border-border/60 py-2",
     checkCell: "flex h-11 w-11 shrink-0 items-center justify-center",
     checkbox: "h-6 w-6",
-    label: "min-w-0 flex-1 truncate rounded-md px-1 py-2 text-left text-base",
+    label:
+      "min-w-0 flex-1 rounded-md px-1 py-2 text-left text-base leading-snug break-words",
     editInput:
       "min-w-0 flex-1 rounded-md border border-border bg-surface px-3 py-2 text-base outline-none focus:ring-2 focus:ring-primary",
     deleteBtn: "h-11 w-11 shrink-0",
@@ -92,7 +93,8 @@ const SIZING: Record<Variant, Sizing> = {
     row: "flex min-h-[40px] items-center gap-2 border-b border-border/60 py-1.5",
     checkCell: "flex h-8 w-8 shrink-0 items-center justify-center",
     checkbox: "h-4 w-4",
-    label: "min-w-0 flex-1 truncate rounded-md px-1 py-1 text-left text-sm",
+    label:
+      "min-w-0 flex-1 rounded-md px-1 py-1 text-left text-sm leading-snug break-words",
     editInput:
       "min-w-0 flex-1 rounded-md border border-border bg-surface px-2 py-1 text-sm outline-none focus:ring-2 focus:ring-primary",
     deleteBtn: "h-8 w-8 shrink-0",

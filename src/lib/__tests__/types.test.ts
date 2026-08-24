@@ -5,6 +5,7 @@ import {
   isTrackStale,
   progressFromStages,
   STAGE_KEYS,
+  STAGE_SHORT_LABELS,
   STALE_AFTER_DAYS,
   type StageKey,
   type StageRow,
@@ -27,6 +28,23 @@ function allStages(
 ): StageRow[] {
   return STAGE_KEYS.map((k) => stage(k, opts(k)));
 }
+
+describe("STAGE_SHORT_LABELS", () => {
+  it("names every stage", () => {
+    for (const key of STAGE_KEYS) {
+      expect(STAGE_SHORT_LABELS[key]).toBeTruthy();
+    }
+  });
+
+  it("stays short enough for five columns on a phone", () => {
+    // The mobile stage strip gives each label roughly 55px at 10px type, which
+    // is about eight characters. Longer than that and it truncates — which is
+    // how the strip ended up rendering "Arrangement…" and losing the word.
+    for (const key of STAGE_KEYS) {
+      expect(STAGE_SHORT_LABELS[key].length).toBeLessThanOrEqual(8);
+    }
+  });
+});
 
 describe("progressFromStages", () => {
   it("returns 0 for no stages", () => {
