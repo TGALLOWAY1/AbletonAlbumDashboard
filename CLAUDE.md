@@ -47,7 +47,54 @@ Run `pnpm typecheck && pnpm lint && pnpm test` before committing.
   (`src/components/track/track-log-pane.tsx`) — they all answer "what happened to
   this track", so they are not three sections.
 - Dashboard root (`src/app/page.tsx`) is a single responsive surface using Tailwind `md:` breakpoints — no user-agent sniffing, no separate desktop/mobile route for the home page.
-- The dashboard is also the progress surface: it ends with a Progress section (`src/components/home/progress-panel.tsx`, anchor `#progress`) carrying the work heatmap, range stats and the session-history log. There is no `/analytics` or `/sessions` page — both routes redirect to `/#progress`.
+- **What the dashboard shows is the pinned shortlist** — up to `MAX_PINNED_TRACKS`
+  (5) tracks carrying `tracks.pinned_at` + `pin_order` (migration 0026), in an
+  order you drag. It is deliberately *not* derived from album membership or
+  `status`: it used to be the intersection of "in the active album" and
+  "status = active" under a hard cap, so changing your mind meant archiving a
+  song. The cap now lives on the pin (`setTrackPinned`, the only writer — it is
+  not a database constraint, see 0026) and finishing or archiving a track
+  unpins it automatically in `setTrackStatus`. `status` means only where a
+  track is in its life; nothing caps how many are active. Migration 0026 also
+  dropped the never-wired one-track `is_focus` flag from 0012.
+- Pinned rows are **collapsed by default** (`src/components/home/pinned-tracks.tsx`).
+  The expanded body is the existing `TrackCard`, rendered on the server and
+  passed down as a `ReactNode` — that is what keeps the drag/collapse wrapper a
+  client component without pulling the whole card into the browser bundle.
+  Pinning is reachable from three places: the dashboard row, the pin picker
+  underneath it, and `PinTrackButton` in the shared `TrackHeaderBar` (so both
+  track surfaces get it — parity rule below).
+- There is no active-album card on the dashboard. `albums.is_active` still
+  exists and still means "the album a new track defaults into"
+  (`resolveAlbumId`, `/tracks/new`, settings) — it just no longer decides what
+  the home page shows. Album-less tracks are not called out here either; the
+  `/tracks` shelf already files them under `BACKLOG_GROUP_LABEL`.
+- **Tasks do not have to belong to a track.** `actions.track_id` is nullable
+  (migration 0027); a row with no track and an `owner_id` is a studio task
+  ("back up the drive", "sort the sample folder") and renders in
+  `src/components/home/studio-tasks.tsx`. It is the *same* `TrackTodoList` and
+  the *same* server actions in `src/app/actions/track-todos.ts`, which all take
+  `trackId: string | null` — never fork the list. Note `scopeToList` there:
+  narrow a studio-task query with `.is("track_id", null)`, never
+  `.eq("track_id", null)`, which PostgREST renders as `track_id=eq.null` and
+  matches nothing.
+- The dashboard is also the progress surface: it ends with a Progress section
+  (`src/components/home/progress-panel.tsx`, anchor `#progress`) carrying the
+  work heatmap and every figure measured over it. There is no `/analytics` or
+  `/sessions` page — both routes redirect to `/#progress`.
+- **One range control, one window.** The 7D/30D/3M/6M/1Y tabs govern the
+  heatmap *and* the time, session count, tasks-done and streak figures printed
+  under it — all read off a single `getRangeStats()` (`src/lib/analytics.ts`).
+  Do not reintroduce a fixed-window stat row: the page used to carry "this
+  week" tiles above a heatmap defaulting to three months, and the two halves
+  routinely disagreed about what "now" meant. `getWeeklyDelta` is gone for the
+  same reason. Tasks-done needs completion timestamps, so `fetchAnalyticsData`
+  ships `taskCompletions` alongside sessions and the client filters by range.
+- Time gets recorded two ways and both are in the dashboard header: "Start
+  session" (`/focus/new`, the timer) and `ManualSessionEntry` (backfill).
+  Logging used to sit at the bottom of the page behind the Progress → History
+  tab, which is the wrong place for the one control that keeps every number on
+  the page true.
 - Library (`src/app/library/**`) is likewise a single responsive surface — the feature parity rule below is track-level and does not imply an `/m/library` route. `src/app/library/layout.tsx` mounts the preview player so playback survives navigation between Library routes without leaking an audio element onto every other page.
 - Server actions live under `src/app/actions/`.
 - Data fetchers live under `src/lib/data/`.
@@ -68,6 +115,7 @@ Prefer **one component with a `variant` prop** over forking files. Existing exam
 - `TrackHeaderBar.variant: "desktop" | "mobile"` — `src/components/track/track-header-bar.tsx`
 - `TrackStageStrip.variant: "desktop" | "mobile"` — `src/components/track/track-stage-strip.tsx`
 - `TrackLogPane.variant: "desktop" | "mobile"` — `src/components/track/track-log-pane.tsx`
+- `PinTrackButton.variant: "desktop" | "mobile"` — `src/components/track/pin-track-button.tsx`
 
 Variant prop controls sizing (tap targets vs. compact desktop), not behavior. Server actions, optimistic reducers, and data shapes stay shared.
 

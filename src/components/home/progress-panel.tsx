@@ -29,10 +29,10 @@ const TAB_LABELS: Record<ProgressTab, string> = {
 // the URL instead, which keeps that cost on the requests that ask for it and
 // makes the view linkable. See `src/lib/progress-tab.ts`.
 export async function ProgressPanel({ tab }: { tab: ProgressTab }) {
-  const { sessions, tracks } =
+  const { sessions, tracks, taskCompletions } =
     tab === "overview"
       ? await fetchAnalyticsData()
-      : { sessions: [], tracks: [] };
+      : { sessions: [], tracks: [], taskCompletions: [] };
 
   return (
     <section id="progress" className="flex flex-col gap-3">
@@ -41,7 +41,7 @@ export async function ProgressPanel({ tab }: { tab: ProgressTab }) {
           Progress
         </h2>
         <p className="mt-1 text-sm text-muted-foreground">
-          The patterns underneath the work.
+          Pick a window — every figure below is measured over it.
         </p>
       </div>
 
@@ -69,7 +69,11 @@ export async function ProgressPanel({ tab }: { tab: ProgressTab }) {
 
         <div className="mt-4">
           {tab === "overview" ? (
-            <AnalyticsDashboard sessions={sessions} tracks={tracks} />
+            <AnalyticsDashboard
+              sessions={sessions}
+              tracks={tracks}
+              taskCompletions={taskCompletions}
+            />
           ) : (
             <SessionHistory />
           )}

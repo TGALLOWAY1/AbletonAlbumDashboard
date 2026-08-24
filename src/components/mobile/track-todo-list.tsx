@@ -102,14 +102,26 @@ const SIZING: Record<Variant, Sizing> = {
   },
 };
 
+/**
+ * A task list, for a track or for the studio.
+ *
+ * `trackId` is nullable in the same way the server actions are: a string is a
+ * song's task list, `null` is the studio list that belongs to no track
+ * (migration 0027). The component does not branch on it beyond the heading and
+ * the reorder hint — both lists add, tick, edit, delete and reorder
+ * identically, which is the point of them being one component.
+ */
 export function TrackTodoList({
   trackId,
   initial,
   variant = "mobile",
+  heading = "Tasks",
 }: {
-  trackId: string;
+  trackId: string | null;
   initial: ActionRow[];
   variant?: Variant;
+  /** Overridden by the studio list, which is not "Tasks" on a track. */
+  heading?: string;
 }) {
   const sizing = SIZING[variant];
   const [optimistic, applyOptimistic] = useOptimistic<TodoItem[], Action>(
@@ -195,6 +207,7 @@ export function TrackTodoList({
         item: {
           id: tempId,
           track_id: trackId,
+          owner_id: null,
           description,
           category: null,
           estimated_minutes: null,
@@ -258,7 +271,7 @@ export function TrackTodoList({
     <div className="flex flex-col gap-3">
       <div className="flex items-baseline justify-between">
         <h2 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
-          Tasks
+          {heading}
         </h2>
         <span className="text-xs text-muted-foreground">{openCount} open</span>
       </div>
@@ -330,8 +343,9 @@ export function TrackTodoList({
           </ul>
           {optimistic.length > 1 && (
             <p className="text-xs text-muted-foreground">
-              Drag the handle to reorder — the top task is the one a focus
-              session starts on.
+              {trackId
+                ? "Drag the handle to reorder — the top task is the one a focus session starts on."
+                : "Drag the handle to reorder."}
             </p>
           )}
         </>

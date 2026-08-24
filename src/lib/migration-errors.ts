@@ -46,3 +46,13 @@ export const MIGRATION_0023_MISSING_MESSAGE =
   "This needs supabase/migrations/0023_track_finishing_steps.sql applied to " +
   "your Supabase project — the finishing checklist has nowhere to save yet. " +
   "Run it, then try again.";
+
+export const MIGRATION_0026_MISSING_MESSAGE =
+  "This needs supabase/migrations/0026_track_pins.sql applied to your " +
+  "Supabase project — tracks have nowhere to record a pin yet. Run it, then " +
+  "try again.";
+
+export const MIGRATION_0027_MISSING_MESSAGE =
+  "This needs supabase/migrations/0027_general_tasks.sql applied to your " +
+  "Supabase project — every task still has to belong to a track. Run it, " +
+  "then try again.";

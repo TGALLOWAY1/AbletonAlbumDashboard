@@ -1,42 +1,28 @@
 import Link from "next/link";
 import { format } from "date-fns";
-import {
-  CheckCircle2,
-  Clock,
-  ListMusic,
-  Plus,
-  Sun,
-  TrendingUp,
-} from "lucide-react";
+import { Play, Plus, Sun } from "lucide-react";
 import { TrackCard } from "@/components/track-card";
 import { SunoWorkStrip } from "@/components/suno/suno-work-strip";
-import { ActiveAlbumCard } from "@/components/album/active-album-card";
-import { AssignTracksDialog } from "@/components/album/assign-tracks-dialog";
-import { ProgressPanel } from "@/components/home/progress-panel";
-import { LibraryStatCard } from "@/components/library/library-stat-card";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
+import { ManualSessionEntry } from "@/components/manual-session-dialog";
 import {
-  getTracksByAlbum,
-  getTracksByStatus,
-  getTracksWithoutAlbum,
-} from "@/lib/data/tracks";
-import { getActiveAlbum, listAlbums } from "@/lib/data/album";
+  PinnedTracks,
+  PinnedTracksEmpty,
+  type PinnedTrackItem,
+} from "@/components/home/pinned-tracks";
+import { PinPicker } from "@/components/home/pin-picker";
+import { StudioTasks } from "@/components/home/studio-tasks";
+import { ProgressPanel } from "@/components/home/progress-panel";
+import { Button } from "@/components/ui/button";
+import { getPinnedTracks, listTrackOptions } from "@/lib/data/tracks";
+import { getGeneralTasks } from "@/lib/data/general-tasks";
 import { getSessionStatsByTrack } from "@/lib/data/sessions";
+import { getSessionTypes } from "@/lib/data/session-types";
 import { getSunoWorkSummary } from "@/lib/data/suno";
-import { getWeeklyDelta } from "@/lib/data/weekly-delta";
-import { startOfWeekMonday } from "@/lib/dates";
-import { formatDuration } from "@/lib/utils";
 import {
   parseProgressTab,
   type ProgressSearchParams,
 } from "@/lib/progress-tab";
-import {
-  daysSinceWorked,
-  isTrackStale,
-  progressFromStages,
-  type TrackWithDetails,
-} from "@/lib/types";
+import { isTrackStale, progressFromStages } from "@/lib/types";
 
 export const dynamic = "force-dynamic";
 
@@ -46,19 +32,22 @@ function greetingForHour(hour: number) {
   return "Good evening";
 }
 
-// Opinionated triage order instead of a sort control: tracks being worked
-// ("in motion", closest to done first) vs. tracks going stale ("needs
-// attention", stalest first).
-function triageTracks(tracks: TrackWithDetails[], nowMs: number) {
-  const inMotion = tracks
-    .filter((t) => !isTrackStale(t, nowMs))
-    .sort((a, b) => progressFromStages(b.stages) - progressFromStages(a.stages));
-  const needsAttention = tracks
-    .filter((t) => isTrackStale(t, nowMs))
-    .sort((a, b) => daysSinceWorked(b, nowMs) - daysSinceWorked(a, nowMs));
-  return { inMotion, needsAttention };
-}
-
+/**
+ * The dashboard.
+ *
+ * One question, asked once: what am I working on right now, and what has
+ * actually been happening. It answers it with the pinned shortlist (migration
+ * 0026) — up to five tracks in an order you set — rather than by intersecting
+ * album membership, track status and a hard cap, which is what it used to do.
+ * Pinning is reversible in one click, so the page can stay honest without
+ * anybody having to archive a song to change their mind.
+ *
+ * The three things you do here — start working, write something down, record
+ * time — are all reachable without scrolling: focus from any pinned row,
+ * studio tasks in the middle, and "Log session" in the header. Logging used to
+ * be at the bottom of the page behind a tab, which is a strange place to put
+ * the one control that keeps every number on the page true.
+ */
 export default async function DashboardPage({
   searchParams,
 }: {
@@ -66,42 +55,52 @@ export default async function DashboardPage({
 }) {
   const progressTab = parseProgressTab(await searchParams);
   const now = new Date();
-  const weekStart = startOfWeekMonday(now);
+  const nowMs = now.getTime();
 
-  const [activeAlbum, sessionStats, weeklyDelta, sunoSummary] =
+  const [pinnedTracks, trackOptions, generalTasks, sessionStats, sessionTypes, sunoSummary] =
     await Promise.all([
-      getActiveAlbum(),
+      getPinnedTracks(),
+      listTrackOptions(),
+      getGeneralTasks(),
       getSessionStatsByTrack(),
-      getWeeklyDelta(weekStart.toISOString()),
+      getSessionTypes(),
       getSunoWorkSummary(),
     ]);
 
-  // Active tracks live in the active album. If no album is set up yet (fresh
-  // install, or every album deleted), fall back to all status=active tracks so
-  // the dashboard never goes empty before the user creates their first album.
-  const activeTracks: TrackWithDetails[] = activeAlbum
-    ? (await getTracksByAlbum(activeAlbum.id)).filter(
-        (t) => t.status === "active",
-      )
-    : await getTracksByStatus("active");
+  // Rows are collapsed by default, so the summary is what the page actually
+  // draws; the full card is passed down already rendered and only mounts when
+  // a row is expanded.
+  const pinnedItems: PinnedTrackItem[] = pinnedTracks.map((track) => ({
+    id: track.id,
+    summary: {
+      id: track.id,
+      name: track.name,
+      coverImageUrl: track.cover_image_url,
+      progress: progressFromStages(track.stages),
+      openTaskCount: track.openTaskCount,
+      nextTask: track.nextTask?.description ?? null,
+      lastWorkedLabel: track.last_worked_at
+        ? format(new Date(track.last_worked_at), "MMM d")
+        : "Never worked",
+      // Computed here, on the server — the card must stay pure of Date.now().
+      stale: isTrackStale(track, nowMs),
+    },
+    card: (
+      <TrackCard
+        track={track}
+        sessionStats={sessionStats.get(track.id)}
+        stale={isTrackStale(track, nowMs)}
+      />
+    ),
+  }));
 
-  // Tracks without an album: surface them so they don't get lost. The full
-  // album list is only needed as assignment destinations for that section.
-  const orphanTracks = activeAlbum ? await getTracksWithoutAlbum() : [];
-  const allAlbums = orphanTracks.length > 0 ? await listAlbums() : [];
-
-  // No single "next up" pick — the process isn't one-song-at-a-time. The album
-  // card summarizes the record; each track card carries its own next action.
-  const { inMotion, needsAttention } = triageTracks(activeTracks, now.getTime());
-
-  const nearCompletion = activeTracks.filter(
-    (t) => progressFromStages(t.stages) > 60,
-  ).length;
+  const pinnedIds = new Set(pinnedTracks.map((t) => t.id));
+  const pinnable = trackOptions.filter(
+    (t) => !pinnedIds.has(t.id) && t.status !== "completed",
+  );
 
   const greeting = greetingForHour(now.getHours());
   const dateLabel = format(now, "MMMM d, yyyy");
-
-  const albumTitle = activeAlbum?.title?.trim() || null;
 
   return (
     <div className="flex flex-col gap-6">
@@ -111,16 +110,26 @@ export default async function DashboardPage({
             {greeting}, producer.
           </h1>
           <p className="mt-1 text-sm text-muted-foreground md:text-base">
-            {albumTitle
-              ? `Working on “${albumTitle}”.`
-              : "Focus on finishing, not starting."}
+            Focus on finishing, not starting.
           </p>
         </div>
-        <div className="flex items-center gap-3">
-          <span className="hidden items-center gap-1.5 rounded-full border border-border bg-surface px-3 py-1.5 text-xs font-medium text-muted-foreground md:inline-flex">
+        <div className="flex flex-wrap items-center gap-2">
+          <span className="hidden items-center gap-1.5 rounded-full border border-border bg-surface px-3 py-1.5 text-xs font-medium text-muted-foreground lg:inline-flex">
             <Sun className="h-3.5 w-3.5 text-warning" />
             {dateLabel}
           </span>
+          {/* The two ways time gets recorded, side by side and above the fold:
+              run the timer now, or backfill the session you already did. */}
+          <Button asChild variant="outline" size="sm">
+            <Link href="/focus/new">
+              <Play className="h-4 w-4" />
+              Start session
+            </Link>
+          </Button>
+          <ManualSessionEntry
+            tracks={trackOptions}
+            sessionTypes={sessionTypes}
+          />
           <Button asChild size="sm">
             <Link href="/tracks/new">
               <Plus className="h-4 w-4" />
@@ -130,163 +139,17 @@ export default async function DashboardPage({
         </div>
       </header>
 
-      {activeAlbum && (
-        <ActiveAlbumCard
-          album={activeAlbum}
-          tracks={activeTracks}
-          nowMs={now.getTime()}
-        />
+      {pinnedItems.length > 0 ? (
+        <PinnedTracks items={pinnedItems} />
+      ) : (
+        <PinnedTracksEmpty hasTracks={trackOptions.length > 0} />
       )}
 
-      {activeTracks.length > 0 && (
-        <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
-          <LibraryStatCard
-            label="Sessions This Week"
-            value={weeklyDelta.sessionCount}
-            icon={ListMusic}
-          />
-          <LibraryStatCard
-            label="Time This Week"
-            value={formatDuration(weeklyDelta.sessionSeconds)}
-            icon={Clock}
-          />
-          <LibraryStatCard
-            label="Tasks Done This Week"
-            value={weeklyDelta.todosCompleted}
-            icon={CheckCircle2}
-          />
-          <LibraryStatCard
-            label="Near Completion"
-            value={nearCompletion}
-            icon={TrendingUp}
-            hint="Tracks over 60% done"
-          />
-        </div>
-      )}
+      <PinPicker tracks={pinnable} pinnedCount={pinnedItems.length} />
 
       <SunoWorkStrip summary={sunoSummary} />
 
-
-      {activeTracks.length === 0 ? (
-        <section>
-          <Card>
-            <CardContent className="flex flex-col items-start gap-3 p-8">
-              <h3 className="text-lg font-semibold">
-                Your five slots are empty
-              </h3>
-              <p className="text-sm text-muted-foreground">
-                Add up to five tracks to focus on. Anything else lives in the
-                backlog until you&apos;re ready.
-              </p>
-              <Button asChild>
-                <Link href="/tracks/new">
-                  <Plus className="h-4 w-4" />
-                  Add your first track
-                </Link>
-              </Button>
-            </CardContent>
-          </Card>
-        </section>
-      ) : (
-        <>
-          {inMotion.length > 0 && (
-            <section>
-              <div className="mb-3">
-                <h2 className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
-                  In motion · {inMotion.length}{" "}
-                  {inMotion.length === 1 ? "track" : "tracks"}
-                </h2>
-              </div>
-              <div className="flex flex-col gap-3">
-                {inMotion.map((track) => (
-                  <TrackCard
-                    key={track.id}
-                    track={track}
-                    sessionStats={sessionStats.get(track.id)}
-                  />
-                ))}
-              </div>
-            </section>
-          )}
-
-          {needsAttention.length > 0 && (
-            <section>
-              <div className="mb-3">
-                <h2 className="text-[11px] font-semibold uppercase tracking-wider text-warning">
-                  Needs attention · {needsAttention.length}{" "}
-                  {needsAttention.length === 1 ? "track" : "tracks"}
-                </h2>
-              </div>
-              <div className="flex flex-col gap-3">
-                {needsAttention.map((track) => (
-                  <TrackCard
-                    key={track.id}
-                    track={track}
-                    sessionStats={sessionStats.get(track.id)}
-                    stale
-                  />
-                ))}
-              </div>
-            </section>
-          )}
-        </>
-      )}
-
-      {orphanTracks.length > 0 && (
-        <section>
-          <div className="mb-3 flex items-center justify-between gap-3">
-            <h2 className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
-              Unassigned tracks · {orphanTracks.length}
-            </h2>
-            <AssignTracksDialog
-              album={null}
-              albums={allAlbums.map((a) => ({ id: a.id, title: a.title }))}
-              candidates={orphanTracks.map((t) => ({
-                id: t.id,
-                name: t.name,
-                albumId: null,
-                albumTitle: null,
-              }))}
-              trigger={
-                <Button variant="outline" size="sm">
-                  Assign to album…
-                </Button>
-              }
-            />
-          </div>
-          <Card>
-            <CardContent className="flex flex-col gap-2 p-4 text-sm">
-              <p className="text-muted-foreground">
-                {orphanTracks.length}{" "}
-                {orphanTracks.length === 1 ? "track is" : "tracks are"} not in
-                any album, so {orphanTracks.length === 1 ? "it" : "they"}{" "}
-                won&apos;t show up in an album&apos;s plan:
-              </p>
-              <ul className="flex flex-wrap gap-x-3 gap-y-1">
-                {orphanTracks.slice(0, 5).map((t) => (
-                  <li key={t.id} className="min-w-0">
-                    <Link
-                      href={`/tracks/${t.id}`}
-                      className="block max-w-56 truncate font-medium hover:underline"
-                    >
-                      {t.name}
-                    </Link>
-                  </li>
-                ))}
-                {orphanTracks.length > 5 && (
-                  <li className="text-muted-foreground">
-                    and {orphanTracks.length - 5} more
-                  </li>
-                )}
-              </ul>
-              <p className="text-muted-foreground">
-                Use &ldquo;Assign to album…&rdquo; above to move them in bulk,
-                or open a track&apos;s metadata editor to set its album.
-              </p>
-            </CardContent>
-          </Card>
-        </section>
-      )}
+      <StudioTasks tasks={generalTasks} />
 
       <ProgressPanel tab={progressTab} />
     </div>

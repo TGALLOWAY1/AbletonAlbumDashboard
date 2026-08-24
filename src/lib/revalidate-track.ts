@@ -33,3 +33,14 @@ export function revalidateAlbumSurfaces(albumId?: string | null) {
   revalidatePath("/tracks");
   if (albumId) revalidatePath(`/albums/${albumId}`);
 }
+
+/**
+ * Studio tasks (`actions` rows with no track — migration 0027) live on the
+ * dashboard and nowhere else, so they refresh only it. Split out from
+ * `revalidateTrackSurfaces` rather than folded into it: that function's whole
+ * job is "this track changed, refresh every surface that draws it", and a task
+ * with no track has none of those.
+ */
+export function revalidateGeneralTasks() {
+  revalidatePath("/");
+}

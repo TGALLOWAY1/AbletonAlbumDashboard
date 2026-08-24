@@ -3,6 +3,7 @@ import { OWNER_ID } from "@/lib/owner";
 import { isMissingColumn } from "@/lib/migration-errors";
 import type { SunoExperimentStatus } from "@/lib/suno";
 import {
+  comparePinPosition,
   finishingStepsFromRows,
   type ActionRow,
   type FinishingStepRow,
@@ -148,23 +149,30 @@ async function attachDetails(tracks: TrackRow[]): Promise<TrackWithDetails[]> {
   const nextTaskByTrack = new Map<string, ActionRow>();
   const openCountByTrack = new Map<string, number>();
   const estMinutesByTrack = new Map<string, number>();
+  // `actions.track_id` is nullable since migration 0027 (studio tasks own no
+  // track), but both queries above filter `.in("track_id", ids)`, so a null
+  // here is impossible. The guard is for the type system, not for the data.
   (openActionsRes.data ?? []).forEach((a) => {
+    const trackId = a.track_id;
+    if (!trackId) return;
     // Rows arrive in list order, so the first one seen per track is the top of
     // that track's list — i.e. its next action.
-    if (!nextTaskByTrack.has(a.track_id)) nextTaskByTrack.set(a.track_id, a);
-    openCountByTrack.set(a.track_id, (openCountByTrack.get(a.track_id) ?? 0) + 1);
+    if (!nextTaskByTrack.has(trackId)) nextTaskByTrack.set(trackId, a);
+    openCountByTrack.set(trackId, (openCountByTrack.get(trackId) ?? 0) + 1);
     if (a.estimated_minutes != null) {
       estMinutesByTrack.set(
-        a.track_id,
-        (estMinutesByTrack.get(a.track_id) ?? 0) + a.estimated_minutes,
+        trackId,
+        (estMinutesByTrack.get(trackId) ?? 0) + a.estimated_minutes,
       );
     }
   });
   const completedCountByTrack = new Map<string, number>();
   (completedActionsRes.data ?? []).forEach((a) => {
+    const trackId = a.track_id;
+    if (!trackId) return;
     completedCountByTrack.set(
-      a.track_id,
-      (completedCountByTrack.get(a.track_id) ?? 0) + 1,
+      trackId,
+      (completedCountByTrack.get(trackId) ?? 0) + 1,
     );
   });
   const albumById = new Map<string, TrackAlbum>();
@@ -220,6 +228,128 @@ export async function getTracksByStatus(
     .order("created_at", { ascending: false });
   if (error) throw error;
   return attachDetails(data ?? []);
+}
+
+/**
+ * The shortlist: pinned tracks in priority order.
+ *
+ * This is what the dashboard shows. Deliberately not filtered by status or by
+ * album — a pin is the whole answer to "is this on my list right now", and
+ * scoping it again by either would resurrect the coupling migration 0026 set
+ * out to remove.
+ *
+ * Ordering by `pin_order` fails the whole query with `42703 undefined_column`
+ * on a database that has not applied 0026, which would take the dashboard
+ * down rather than degrade it. Same posture as `selectOpenActions` above:
+ * retry without the order and sort in memory, where `comparePinPosition`
+ * gives the same answer. A database missing the columns entirely returns no
+ * pinned rows, and the dashboard says the shortlist is empty — which, without
+ * the migration, it is.
+ */
+export async function getPinnedTracks(): Promise<TrackWithDetails[]> {
+  const supabase = getServerSupabase();
+  const pinned = () =>
+    supabase
+      .from("tracks")
+      .select("*")
+      .eq("owner_id", OWNER_ID)
+      .not("pinned_at", "is", null);
+
+  const ordered = await pinned()
+    .order("pin_order", { ascending: true, nullsFirst: false })
+    .order("pinned_at", { ascending: true });
+  const res = isMissingColumn(ordered.error) ? await pinned() : ordered;
+
+  if (res.error) {
+    if (isMissingColumn(res.error)) {
+      console.warn(
+        "[tracks] tracks.pinned_at is missing — apply supabase/migrations/" +
+          "0026_track_pins.sql to enable the pinned shortlist.",
+      );
+      return [];
+    }
+    throw res.error;
+  }
+
+  const rows = [...(res.data ?? [])].sort(comparePinPosition);
+  return attachDetails(rows);
+}
+
+/** How many tracks are pinned — the cap check in `setTrackPinned`. */
+export async function countPinnedTracks(): Promise<number> {
+  const supabase = getServerSupabase();
+  const { count, error } = await supabase
+    .from("tracks")
+    .select("*", { count: "exact", head: true })
+    .eq("owner_id", OWNER_ID)
+    .not("pinned_at", "is", null);
+  if (error) {
+    if (isMissingColumn(error)) return 0;
+    throw error;
+  }
+  return count ?? 0;
+}
+
+export type TrackOption = {
+  id: string;
+  name: string;
+  status: string;
+  pinned: boolean;
+  lastWorkedAt: string | null;
+  coverImageUrl: string | null;
+};
+
+/**
+ * Lean rows for the pickers: every non-archived track, name and status only.
+ *
+ * The manual "log a session" dialog and the dashboard's pin shortlist both
+ * need a list of tracks to choose from, and neither draws a track card. Going
+ * through `getAllTracks` for that ran the whole `attachDetails` fan-out —
+ * stages, both task queries, albums, Suno experiments and finishing steps for
+ * every track in the library — to render a name in a dropdown.
+ */
+export async function listTrackOptions(): Promise<TrackOption[]> {
+  const supabase = getServerSupabase();
+  const columns = "id, name, status, last_worked_at, cover_image_url, pinned_at";
+  const query = () =>
+    supabase
+      .from("tracks")
+      .select(columns)
+      .eq("owner_id", OWNER_ID)
+      .neq("status", "archived")
+      .order("last_worked_at", { ascending: false, nullsFirst: false })
+      .order("created_at", { ascending: false });
+
+  const withPin = await query();
+  if (!isMissingColumn(withPin.error)) {
+    if (withPin.error) throw withPin.error;
+    return (withPin.data ?? []).map((t) => ({
+      id: t.id,
+      name: t.name,
+      status: t.status,
+      pinned: t.pinned_at != null,
+      lastWorkedAt: t.last_worked_at,
+      coverImageUrl: t.cover_image_url,
+    }));
+  }
+
+  // Pre-0026 database: still list the tracks, just with nothing pinned.
+  const base = await supabase
+    .from("tracks")
+    .select("id, name, status, last_worked_at, cover_image_url")
+    .eq("owner_id", OWNER_ID)
+    .neq("status", "archived")
+    .order("last_worked_at", { ascending: false, nullsFirst: false })
+    .order("created_at", { ascending: false });
+  if (base.error) throw base.error;
+  return (base.data ?? []).map((t) => ({
+    id: t.id,
+    name: t.name,
+    status: t.status,
+    pinned: false,
+    lastWorkedAt: t.last_worked_at,
+    coverImageUrl: t.cover_image_url,
+  }));
 }
 
 export async function getTracksByAlbum(
@@ -345,13 +475,3 @@ export async function getCompletedActionsForTrack(
   return data ?? [];
 }
 
-export async function countActiveTracks(): Promise<number> {
-  const supabase = getServerSupabase();
-  const { count, error } = await supabase
-    .from("tracks")
-    .select("*", { count: "exact", head: true })
-    .eq("owner_id", OWNER_ID)
-    .eq("status", "active");
-  if (error) throw error;
-  return count ?? 0;
-}
