@@ -1,7 +1,7 @@
 "use client";
 
 import * as React from "react";
-import { useRouter } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { Bookmark, FolderOpen, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -12,6 +12,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { useToast } from "@/components/toast";
+import { readNavStack, replaceTop, writeNavStack } from "@/lib/nav-stack";
 import { cn } from "@/lib/utils";
 import {
   RESOURCE_CATEGORIES,
@@ -34,6 +35,7 @@ export function ResourceDetailActions({
   resource: ResourceItem;
 }) {
   const router = useRouter();
+  const pathname = usePathname();
   const { toast } = useToast();
   const [pending, startTransition] = React.useTransition();
   // The picker shows the new category while the move is in flight; React drops
@@ -46,6 +48,16 @@ export function ResourceDetailActions({
 
   const bookmarked = resource.bookmarked ?? false;
 
+  // Both actions below navigate off a page that no longer resolves, so they
+  // replace rather than push. `router.replace` leaves browser history alone,
+  // so the nav stack has to swap the dead entry out instead of letting the
+  // tracker append one — an appended entry would tell the destination's
+  // BackLink there is history to return to when the browser has none.
+  function replaceWith(destination: string) {
+    writeNavStack(replaceTop(readNavStack(), pathname, destination));
+    router.replace(destination);
+  }
+
   function handleCategoryChange(next: string) {
     if (next === resource.categoryId) return;
     startTransition(async () => {
@@ -55,11 +67,9 @@ export function ResourceDetailActions({
         toast(result.error);
         return;
       }
-      // The category is part of this page's path, so the URL the user is on no
-      // longer resolves — replace it rather than leaving a dead entry behind.
-      router.replace(
-        result.destination ?? `/resources/${next}/${resource.id}`,
-      );
+      // The category is part of this page's path, so the URL the user is on
+      // no longer resolves.
+      replaceWith(result.destination ?? `/resources/${next}/${resource.id}`);
     });
   }
 
@@ -79,7 +89,7 @@ export function ResourceDetailActions({
         return;
       }
       // The row is gone — this page would 404 on refresh.
-      router.replace(`/resources/${resource.categoryId}`);
+      replaceWith(`/resources/${resource.categoryId}`);
     });
   }
 
