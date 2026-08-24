@@ -98,8 +98,21 @@ function ManualSessionDialog({
 
   const startValid = !Number.isNaN(new Date(start).getTime());
   // Track is optional; a track-less session must be anchored by a session type.
+  // Four hours of general studio work is a real session, but "4 hours of
+  // something" is not — the type is what makes it legible later.
+  const hasTrack = !!trackId || !!fixedTrackId;
   const hasAnchor = !!trackId || !!sessionTypeId;
   const canSave = hasAnchor && startValid && durationSec > 0 && !!start;
+
+  // Why Save is greyed out. The dialog used to disable the button silently,
+  // which read as "you must pick a track" — the one thing that is not true.
+  const blockedReason = !startValid || !start
+    ? "Pick when the session started."
+    : durationSec <= 0
+      ? "Enter how many minutes it lasted."
+      : !hasAnchor
+        ? "Pick a session type — a session with no track needs one to mean anything later."
+        : null;
 
   const reset = () => {
     setTrackId(fixedTrackId);
@@ -156,8 +169,12 @@ function ManualSessionDialog({
         <div className="flex flex-col gap-4">
           {!fixedTrackId && (
             <div className="grid gap-2">
-              <Label>Track</Label>
+              <Label>Track (optional)</Label>
               <TrackPicker tracks={tracks} value={trackId} onChange={setTrackId} />
+              <p className="text-xs text-muted-foreground">
+                Leave this empty for general studio work — time that didn’t move
+                one song but set up the next session on all of them.
+              </p>
             </div>
           )}
 
@@ -197,7 +214,7 @@ function ManualSessionDialog({
           {sessionTypes.length > 0 && (
             <div className="grid gap-2">
               <Label>
-                Session type{trackId || fixedTrackId ? " (optional)" : ""}
+                Session type{hasTrack ? " (optional)" : ""}
               </Label>
               <SessionTypePicker
                 types={sessionTypes}
@@ -214,7 +231,11 @@ function ManualSessionDialog({
               label="Progress / Impact"
               value={progressImpact}
               onChange={setProgressImpact}
-              hint="How much did the track move?"
+              hint={
+                hasTrack
+                  ? "How much did the track move?"
+                  : "How much did this move things forward?"
+              }
             />
             <RatingPicker
               label="Enjoyment"
@@ -235,6 +256,9 @@ function ManualSessionDialog({
             />
           </div>
 
+          {blockedReason && (
+            <p className="text-xs text-muted-foreground">{blockedReason}</p>
+          )}
         </div>
 
         <DialogFooter>
