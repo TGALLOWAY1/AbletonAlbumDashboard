@@ -48,14 +48,14 @@ Run `pnpm typecheck && pnpm lint && pnpm test` before committing.
   this track", so they are not three sections.
 - Dashboard root (`src/app/page.tsx`) is a single responsive surface using Tailwind `md:` breakpoints — no user-agent sniffing, no separate desktop/mobile route for the home page.
 - **What the dashboard shows is the pinned shortlist** — up to `MAX_PINNED_TRACKS`
-  (5) tracks carrying `tracks.pinned_at` + `pin_order` (migration 0026), in an
+  (5) tracks carrying `tracks.pinned_at` + `pin_order` (migration 0028), in an
   order you drag. It is deliberately *not* derived from album membership or
   `status`: it used to be the intersection of "in the active album" and
   "status = active" under a hard cap, so changing your mind meant archiving a
   song. The cap now lives on the pin (`setTrackPinned`, the only writer — it is
-  not a database constraint, see 0026) and finishing or archiving a track
+  not a database constraint, see 0028) and finishing or archiving a track
   unpins it automatically in `setTrackStatus`. `status` means only where a
-  track is in its life; nothing caps how many are active. Migration 0026 also
+  track is in its life; nothing caps how many are active. Migration 0028 also
   dropped the never-wired one-track `is_focus` flag from 0012.
 - Pinned rows are **collapsed by default** (`src/components/home/pinned-tracks.tsx`).
   The expanded body is the existing `TrackCard`, rendered on the server and
@@ -70,7 +70,7 @@ Run `pnpm typecheck && pnpm lint && pnpm test` before committing.
   the home page shows. Album-less tracks are not called out here either; the
   `/tracks` shelf already files them under `BACKLOG_GROUP_LABEL`.
 - **Tasks do not have to belong to a track.** `actions.track_id` is nullable
-  (migration 0027); a row with no track and an `owner_id` is a studio task
+  (migration 0029); a row with no track and an `owner_id` is a studio task
   ("back up the drive", "sort the sample folder") and renders in
   `src/components/home/studio-tasks.tsx`. It is the *same* `TrackTodoList` and
   the *same* server actions in `src/app/actions/track-todos.ts`, which all take
@@ -96,6 +96,22 @@ Run `pnpm typecheck && pnpm lint && pnpm test` before committing.
   tab, which is the wrong place for the one control that keeps every number on
   the page true.
 - Library (`src/app/library/**`) is likewise a single responsive surface — the feature parity rule below is track-level and does not imply an `/m/library` route. `src/app/library/layout.tsx` mounts the preview player so playback survives navigation between Library routes without leaking an audio element onto every other page.
+- Resources (`src/app/resources/**`) is one system at three scopes: `/resources`
+  is the "All" gallery, `/resources/[categoryId]` is a category, and
+  `/resources/[categoryId]/[resourceId]` is a single topic. All three share the
+  same parts — `ResourceCategoryNav` (the horizontal tab row; `null` means All),
+  `ResourceTopicGallery` + `ResourceTopicCard` (the numbered, thumbnail-first
+  cards) and `AddResourceDialog`. There is no separate category-directory page:
+  the nav *is* the directory. Numbering is positional, off "recommended order"
+  (oldest first), not a stored field.
+- `AddResourceDialog` renders its own trigger button on purpose. Category pages
+  are server components, and an element passed into Radix's `asChild` Slot from
+  one hydrates without the props the Slot injects on the client. Pass
+  `categoryId`/`categoryTitle` to it and the new resource inherits that category
+  (read-only label instead of a picker); omit them on `/resources`, where there
+  is no category context, and the user picks one.
+- Server actions that mutate a resource call `revalidateResourceSurfaces` from
+  `src/lib/revalidate-resources.ts` — the sibling of `revalidateTrackSurfaces`.
 - Server actions live under `src/app/actions/`.
 - Data fetchers live under `src/lib/data/`.
 

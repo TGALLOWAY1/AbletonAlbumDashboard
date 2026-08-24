@@ -47,12 +47,24 @@ export const MIGRATION_0023_MISSING_MESSAGE =
   "your Supabase project — the finishing checklist has nowhere to save yet. " +
   "Run it, then try again.";
 
+/**
+ * 0011 created the resources category check inline, so Postgres auto-named it
+ * `resources_category_id_check`; 0026 re-adds it under the same name. Either
+ * way this is the constraint a too-narrow category list violates.
+ */
+export const RESOURCES_CATEGORY_CONSTRAINT = "resources_category_id_check";
+
 export const MIGRATION_0026_MISSING_MESSAGE =
-  "This needs supabase/migrations/0026_track_pins.sql applied to your " +
+  "This needs supabase/migrations/0026_resources_live_performance.sql applied " +
+  "to your Supabase project — the database still only accepts the original " +
+  "six resource categories. Run it, then try again.";
+
+export const MIGRATION_0028_MISSING_MESSAGE =
+  "This needs supabase/migrations/0028_track_pins.sql applied to your " +
   "Supabase project — tracks have nowhere to record a pin yet. Run it, then " +
   "try again.";
 
-export const MIGRATION_0027_MISSING_MESSAGE =
-  "This needs supabase/migrations/0027_general_tasks.sql applied to your " +
+export const MIGRATION_0029_MISSING_MESSAGE =
+  "This needs supabase/migrations/0029_general_tasks.sql applied to your " +
   "Supabase project — every task still has to belong to a track. Run it, " +
   "then try again.";

@@ -9,7 +9,7 @@ import type { ActionRow } from "@/lib/types";
  * project drive", "sort the sample folder" or "finish the FM course" had
  * nowhere to go — they stayed in the user's head, which is the one place a
  * task list is meant to empty. These are `actions` rows with no `track_id`
- * (migration 0027) and behave exactly like a track's tasks: same add, tick,
+ * (migration 0029) and behave exactly like a track's tasks: same add, tick,
  * edit, delete, and the same drag-to-order, because it is the same component.
  *
  * They also count toward the dashboard's tasks-done figure, since that reads

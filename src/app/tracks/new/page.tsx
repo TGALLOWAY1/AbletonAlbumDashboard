@@ -130,7 +130,7 @@ export default async function NewTrackPage({
               {/* No cap here any more: `status` says where a track is in its
                   life, and there is no reason to limit how many songs are
                   alive. The limit that matters — five at a time — moved to the
-                  dashboard pin (migration 0026). */}
+                  dashboard pin (migration 0028). */}
               <p className="text-xs text-muted-foreground">
                 Active or backlog is just where it sits. Pin it from the
                 dashboard when it&apos;s one of the five you&apos;re actually

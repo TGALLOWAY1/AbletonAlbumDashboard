@@ -28,12 +28,12 @@ type CompletionSlim = {
  *
  * Two queries, because this has to survive the deploy-before-migration window.
  * The first reads both kinds of task: track-scoped (owned through the track)
- * and studio (owned directly, migration 0027). On a database without 0027 the
+ * and studio (owned directly, migration 0029). On a database without 0029 the
  * `owner_id` column does not exist, which fails the whole select — and
  * returning nothing there would print "0 tasks done" over a history of real,
  * still-queryable completions. So the fallback re-reads the track-scoped ones
  * through the join `getWeeklyDelta` used before this change. Nothing is lost
- * by dropping the studio half in that branch: without 0027 there are no
+ * by dropping the studio half in that branch: without 0029 there are no
  * track-less tasks to count.
  */
 async function fetchTaskCompletions(
@@ -61,7 +61,7 @@ async function fetchTaskCompletions(
 
   console.warn(
     "[analytics] actions.owner_id is missing — counting track tasks only. " +
-      "Apply supabase/migrations/0027_general_tasks.sql to include studio tasks.",
+      "Apply supabase/migrations/0029_general_tasks.sql to include studio tasks.",
   );
 
   const legacy = await supabase

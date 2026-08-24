@@ -1,75 +1,51 @@
 "use client";
 
 import * as React from "react";
-import { Plus, Search } from "lucide-react";
-import { Button } from "@/components/ui/button";
+import { Search } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import {
   RESOURCE_CATEGORIES,
-  type ResourceCategory,
   type ResourceItem,
 } from "@/lib/data/resources";
-import { ResourceCategoryGrid } from "./resource-category-grid";
-import { FeaturedResources } from "./featured-resources";
-import { RecentResourcesTable } from "./recent-resources-table";
+import { ResourceCategoryNav } from "./resource-category-nav";
+import {
+  numberTopics,
+  ResourceTopicGallery,
+} from "./resource-topic-gallery";
 import { AddResourceDialog } from "./add-resource-dialog";
-import { ResourceViewerDialog } from "./resource-viewer-dialog";
-import { toggleResourceBookmark } from "@/app/actions/resources";
-import { useToast } from "@/components/toast";
 
 const CATEGORY_TITLES = new Map(
   RESOURCE_CATEGORIES.map((c) => [c.id, c.title.toLowerCase()]),
 );
 
-export function ResourcesPageClient({
-  categories,
-  featured,
-  recent,
-}: {
-  categories: ResourceCategory[];
-  featured: ResourceItem[];
-  recent: ResourceItem[];
-}) {
+/**
+ * The "All" view of the resources library: the shared category nav with All
+ * selected, then every topic as one ordered gallery. Picking a category tab
+ * navigates to that category's own page — the tabs are links, not filters, so
+ * the landing page and the category pages are the same surface at different
+ * scopes. Client-side only for the search box.
+ */
+export function ResourcesPageClient({ topics }: { topics: ResourceItem[] }) {
   const [query, setQuery] = React.useState("");
-  const [page, setPage] = React.useState(1);
-  const [selected, setSelected] = React.useState<ResourceItem | null>(null);
-  const [pendingBookmark, startBookmark] = React.useTransition();
-  const { toast } = useToast();
 
-  const filteredRecent = React.useMemo(() => {
+  // Number first, filter second: a card keeps its place in the recommended
+  // order while a search narrows what's on screen.
+  const numbered = React.useMemo(() => numberTopics(topics), [topics]);
+  const visible = React.useMemo(() => {
     const q = query.trim().toLowerCase();
-    if (!q) return recent;
-    return recent.filter((item) => {
-      const categoryTitle = CATEGORY_TITLES.get(item.categoryId) ?? "";
+    if (!q) return numbered;
+    return numbered.filter(({ resource }) => {
+      const categoryTitle = CATEGORY_TITLES.get(resource.categoryId) ?? "";
       return (
-        item.title.toLowerCase().includes(q) ||
-        item.description.toLowerCase().includes(q) ||
+        resource.title.toLowerCase().includes(q) ||
+        resource.description.toLowerCase().includes(q) ||
         categoryTitle.includes(q)
       );
     });
-  }, [recent, query]);
-
-  const handleSearchChange = (next: string) => {
-    setQuery(next);
-    setPage(1);
-  };
-
-  const handleToggleBookmark = (id: string) => {
-    if (id.startsWith("seed-")) return;
-    startBookmark(async () => {
-      try {
-        await toggleResourceBookmark(id);
-      } catch (e) {
-        console.error(e);
-        toast(
-          (e as Error).message || "Could not update bookmark. Please try again.",
-        );
-      }
-    });
-  };
+  }, [numbered, query]);
 
   return (
-    <div className="flex flex-col gap-6">
+    <div className="flex flex-col gap-5">
       <header className="flex flex-wrap items-start justify-between gap-4">
         <div>
           <h1 className="text-3xl font-semibold tracking-tight">Resources</h1>
@@ -78,8 +54,8 @@ export function ResourcesPageClient({
             better music.
           </p>
         </div>
-        <div className="flex flex-wrap items-center gap-2">
-          <div className="relative w-full max-w-sm">
+        <div className="flex w-full flex-wrap items-center gap-2 sm:w-auto">
+          <div className="relative min-w-0 flex-1 sm:w-64 sm:flex-none">
             <Search
               className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground"
               aria-hidden
@@ -87,42 +63,29 @@ export function ResourcesPageClient({
             <Input
               type="search"
               value={query}
-              onChange={(event) => handleSearchChange(event.target.value)}
+              onChange={(event) => setQuery(event.target.value)}
               placeholder="Search resources..."
               aria-label="Search resources"
               className="pl-9"
             />
           </div>
-          <AddResourceDialog
-            trigger={
-              <Button>
-                <Plus className="h-4 w-4" />
-                Add Resource
-              </Button>
-            }
-          />
+          <AddResourceDialog />
         </div>
       </header>
 
-      <ResourceCategoryGrid categories={categories} />
+      <ResourceCategoryNav activeCategoryId={null} />
 
-      <FeaturedResources
-        resources={featured}
-        onSelect={(r) => setSelected(r)}
-      />
+      <p className="text-sm font-medium text-muted-foreground">
+        {visible.length} topic{visible.length === 1 ? "" : "s"}
+      </p>
 
-      <RecentResourcesTable
-        resources={filteredRecent}
-        page={page}
-        onPageChange={setPage}
-        onToggleBookmark={handleToggleBookmark}
-        onSelect={(r) => setSelected(r)}
-        bookmarkPending={pendingBookmark}
-      />
-
-      <ResourceViewerDialog
-        resource={selected}
-        onClose={() => setSelected(null)}
+      <ResourceTopicGallery
+        topics={visible}
+        emptyMessage={
+          query.trim()
+            ? "No resources match your search."
+            : "No resources yet. Add your first one to start the library."
+        }
       />
     </div>
   );

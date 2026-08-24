@@ -1,14 +1,22 @@
 "use server";
 
-import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { getServerSupabase } from "@/lib/supabase/server";
 import { OWNER_ID } from "@/lib/owner";
 import {
+  isResourceCategoryId,
   RESOURCE_CATEGORIES,
   RESOURCE_SOURCE_KINDS,
   RESOURCE_TYPES,
+  type ResourceCategoryId,
 } from "@/lib/data/resources";
+import {
+  isCheckViolation,
+  MIGRATION_0026_MISSING_MESSAGE,
+  RESOURCES_CATEGORY_CONSTRAINT,
+} from "@/lib/migration-errors";
+import { logSupabaseError } from "@/lib/supabase/log-error";
+import { revalidateResourceSurfaces } from "@/lib/revalidate-resources";
 import {
   getYouTubeThumbnailUrl,
   getYouTubeVideoId,
@@ -20,6 +28,14 @@ const CATEGORY_IDS = RESOURCE_CATEGORIES.map((c) => c.id) as [
   string,
   ...string[],
 ];
+
+// Rows come back from PostgREST typed as plain strings; narrow before using one
+// to build a revalidation path.
+function asCategoryId(value: unknown): ResourceCategoryId | null {
+  return typeof value === "string" && isResourceCategoryId(value)
+    ? value
+    : null;
+}
 
 const baseSchema = z.object({
   title: z.string().min(1, "Title is required").max(200),
@@ -39,7 +55,12 @@ const baseSchema = z.object({
   thumbnail_url: z.string().url().optional().nullable(),
 });
 
-export async function createResource(formData: FormData) {
+// Errors are *returned*, not thrown: a production build replaces the message of
+// anything a server action throws with a generic string, which would strand the
+// user on the "apply migration 0026" case with nothing to act on.
+export async function createResource(
+  formData: FormData,
+): Promise<{ error?: string }> {
   const raw = {
     title: formData.get("title"),
     description: formData.get("description") ?? "",
@@ -54,17 +75,21 @@ export async function createResource(formData: FormData) {
     url: formData.get("url") || null,
     thumbnail_url: formData.get("thumbnail_url") || null,
   };
-  const parsed = baseSchema.parse(raw);
+  const result = baseSchema.safeParse(raw);
+  if (!result.success) {
+    return { error: result.error.issues[0]?.message ?? "That resource isn't valid." };
+  }
+  const parsed = result.data;
 
   // Enforce that the field for the chosen kind is present.
   if (parsed.source_kind === "pdf" && !parsed.storage_path) {
-    throw new Error("Upload a PDF before saving.");
+    return { error: "Upload a PDF before saving." };
   }
   if (parsed.source_kind === "markdown" && !parsed.content) {
-    throw new Error("Markdown content is required.");
+    return { error: "Markdown content is required." };
   }
   if (parsed.source_kind === "url" && !parsed.url) {
-    throw new Error("URL is required.");
+    return { error: "URL is required." };
   }
 
   // Auto-derive a YouTube thumbnail when none was provided.
@@ -93,36 +118,59 @@ export async function createResource(formData: FormData) {
     read_minutes: parsed.read_minutes,
     featured: parsed.featured,
   });
-  if (error) throw error;
+  if (error) {
+    // The database still only accepts the original six categories.
+    if (isCheckViolation(error, RESOURCES_CATEGORY_CONSTRAINT)) {
+      return { error: MIGRATION_0026_MISSING_MESSAGE };
+    }
+    logSupabaseError("createResource", error);
+    return { error: "Could not save that resource. Try again." };
+  }
 
-  revalidatePath("/resources");
+  revalidateResourceSurfaces({
+    categoryIds: [asCategoryId(parsed.category_id)],
+  });
+  return {};
 }
 
-export async function toggleResourceBookmark(id: string) {
+export async function toggleResourceBookmark(
+  id: string,
+): Promise<{ error?: string }> {
   const supabase = getServerSupabase();
   const { data: existing, error: readError } = await supabase
     .from("resources")
-    .select("bookmarked")
+    .select("bookmarked, category_id")
     .eq("owner_id", OWNER_ID)
     .eq("id", id)
     .maybeSingle();
-  if (readError) throw readError;
-  if (!existing) throw new Error("Resource not found.");
+  if (readError) {
+    logSupabaseError("toggleResourceBookmark.read", readError);
+    return { error: "Could not update bookmark. Try again." };
+  }
+  if (!existing) return { error: "Resource not found." };
 
   const { error } = await supabase
     .from("resources")
     .update({ bookmarked: !existing.bookmarked })
     .eq("owner_id", OWNER_ID)
     .eq("id", id);
-  if (error) throw error;
-  revalidatePath("/resources");
+  if (error) {
+    logSupabaseError("toggleResourceBookmark", error);
+    return { error: "Could not update bookmark. Try again." };
+  }
+
+  revalidateResourceSurfaces({
+    categoryIds: [asCategoryId(existing.category_id)],
+    resourceId: id,
+  });
+  return {};
 }
 
-export async function deleteResource(id: string) {
+export async function deleteResource(id: string): Promise<{ error?: string }> {
   const supabase = getServerSupabase();
   const { data: existing } = await supabase
     .from("resources")
-    .select("storage_path")
+    .select("storage_path, category_id")
     .eq("owner_id", OWNER_ID)
     .eq("id", id)
     .maybeSingle();
@@ -138,6 +186,14 @@ export async function deleteResource(id: string) {
     .delete()
     .eq("owner_id", OWNER_ID)
     .eq("id", id);
-  if (error) throw error;
-  revalidatePath("/resources");
+  if (error) {
+    logSupabaseError("deleteResource", error);
+    return { error: "Could not delete that resource. Try again." };
+  }
+
+  revalidateResourceSurfaces({
+    categoryIds: [asCategoryId(existing?.category_id)],
+    resourceId: id,
+  });
+  return {};
 }

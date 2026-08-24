@@ -3,6 +3,7 @@ import { Clock, ExternalLink } from "lucide-react";
 import { BackLink } from "@/components/back-link";
 import { Button } from "@/components/ui/button";
 import { ResourceBody } from "@/components/resources/resource-body";
+import { ResourceDetailActions } from "@/components/resources/resource-detail-actions";
 import { ResourceTypeBadge } from "@/components/resources/resource-type-badge";
 import { getResourceById } from "@/lib/data/resources-db";
 import {
@@ -55,20 +56,19 @@ export default async function ResourceTopicPage({
 
       <ResourceBody resource={resource} />
 
-      {resource.url && (
-        <div>
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        {resource.url ? (
           <Button asChild variant="outline" size="sm">
-            <a
-              href={resource.url}
-              target="_blank"
-              rel="noreferrer noopener"
-            >
+            <a href={resource.url} target="_blank" rel="noreferrer noopener">
               <ExternalLink className="h-3.5 w-3.5" />
               Open in new tab
             </a>
           </Button>
-        </div>
-      )}
+        ) : (
+          <span />
+        )}
+        <ResourceDetailActions resource={resource} />
+      </div>
     </div>
   );
 }

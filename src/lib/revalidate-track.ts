@@ -35,7 +35,7 @@ export function revalidateAlbumSurfaces(albumId?: string | null) {
 }
 
 /**
- * Studio tasks (`actions` rows with no track — migration 0027) live on the
+ * Studio tasks (`actions` rows with no track — migration 0029) live on the
  * dashboard and nowhere else, so they refresh only it. Split out from
  * `revalidateTrackSurfaces` rather than folded into it: that function's whole
  * job is "this track changed, refresh every surface that draws it", and a task

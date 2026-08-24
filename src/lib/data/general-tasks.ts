@@ -4,7 +4,7 @@ import { isMissingColumn } from "@/lib/migration-errors";
 import type { ActionRow } from "@/lib/types";
 
 /**
- * Studio tasks: rows in `actions` with no track (migration 0027).
+ * Studio tasks: rows in `actions` with no track (migration 0029).
  *
  * Same table and same list semantics as a track's tasks — hand-set
  * `sort_order` from 0025 with NULLs last, then `created_at` — so the two lists
@@ -31,13 +31,13 @@ export async function getGeneralTasks(): Promise<ActionRow[]> {
 
   if (!error) return data ?? [];
 
-  // Pre-0027 database: `actions.owner_id` does not exist, so there are no
+  // Pre-0029 database: `actions.owner_id` does not exist, so there are no
   // general tasks to return either. Say what to run rather than throwing the
   // dashboard away over a panel.
   if (isMissingColumn(error)) {
     console.warn(
       "[general-tasks] actions.owner_id is missing — apply supabase/migrations/" +
-        "0027_general_tasks.sql to enable studio tasks.",
+        "0029_general_tasks.sql to enable studio tasks.",
     );
     return [];
   }

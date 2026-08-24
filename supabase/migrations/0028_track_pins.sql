@@ -48,7 +48,7 @@ create index if not exists tracks_pinned_idx
 -- moment this lands. That set was NOT simply "every active track": when the
 -- owner had an album flagged `is_active`, the dashboard scoped to that album's
 -- active tracks and fell back to all active tracks only when no active album
--- existed (see the pre-0026 src/app/page.tsx). Ranking every active track
+-- existed (see the pre-0028 src/app/page.tsx). Ranking every active track
 -- across the library would quietly pin songs that were active but filed under
 -- a different record — tracks the user had never seen on this page.
 --

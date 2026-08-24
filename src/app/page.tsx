@@ -37,7 +37,7 @@ function greetingForHour(hour: number) {
  *
  * One question, asked once: what am I working on right now, and what has
  * actually been happening. It answers it with the pinned shortlist (migration
- * 0026) — up to five tracks in an order you set — rather than by intersecting
+ * 0028) — up to five tracks in an order you set — rather than by intersecting
  * album membership, track status and a hard cap, which is what it used to do.
  * Pinning is reversible in one click, so the page can stay honest without
  * anybody having to archive a song to change their mind.

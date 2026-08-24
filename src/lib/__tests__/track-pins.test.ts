@@ -18,7 +18,7 @@ function pin(overrides: Partial<Pin> & { id: string }): Pin {
 }
 
 const MIGRATION = readFileSync(
-  path.resolve(__dirname, "../../../supabase/migrations/0026_track_pins.sql"),
+  path.resolve(__dirname, "../../../supabase/migrations/0028_track_pins.sql"),
   "utf8",
 );
 
@@ -46,7 +46,7 @@ describe("comparePinPosition", () => {
   });
 
   it("sorts never-reordered tracks last, oldest pin first", () => {
-    // The mixed state migration 0026 describes: a reordered prefix, then
+    // The mixed state migration 0028 describes: a reordered prefix, then
     // whatever was pinned since, by age.
     const list = [
       pin({ id: "new", pinned_at: "2026-08-03T00:00:00Z" }),
@@ -122,7 +122,7 @@ describe("isPinnableStatus", () => {
   });
 });
 
-describe("0026 migration ↔ src/lib sync", () => {
+describe("0028 migration ↔ src/lib sync", () => {
   it("backfills at most MAX_PINNED_TRACKS tracks", () => {
     // The backfill's own cap has to match the constant the app enforces, or a
     // freshly migrated project lands over the limit and cannot pin anything
@@ -136,7 +136,7 @@ describe("0026 migration ↔ src/lib sync", () => {
   });
 
   it("scopes the backfill to the active album, as the old dashboard did", () => {
-    // The pre-0026 dashboard showed the active album's active tracks, falling
+    // The pre-0028 dashboard showed the active album's active tracks, falling
     // back to all active tracks only when no album was flagged active. A
     // backfill that just ranked every active track would pin songs filed under
     // a different record — ones the user had never seen on that page.

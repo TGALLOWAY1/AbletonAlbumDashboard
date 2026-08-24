@@ -107,7 +107,7 @@ const SIZING: Record<Variant, Sizing> = {
  *
  * `trackId` is nullable in the same way the server actions are: a string is a
  * song's task list, `null` is the studio list that belongs to no track
- * (migration 0027). The component does not branch on it beyond the heading and
+ * (migration 0029). The component does not branch on it beyond the heading and
  * the reorder hint — both lists add, tick, edit, delete and reorder
  * identically, which is the point of them being one component.
  */

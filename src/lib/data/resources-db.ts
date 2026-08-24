@@ -6,8 +6,7 @@ import {
   isResourceSourceKind,
   isResourceType,
   RESOURCE_CATEGORIES,
-  SEED_FEATURED_RESOURCES,
-  SEED_RECENT_RESOURCES,
+  SEED_RESOURCES,
   type ResourceCategory,
   type ResourceCategoryId,
   type ResourceItem,
@@ -76,7 +75,7 @@ async function fetchAllResources(): Promise<ResourceItem[]> {
     .order("created_at", { ascending: false });
   if (error) {
     // The resources table may not exist yet (migration not applied). Don't crash
-    // the page — fall back to seed content via getResourcesPageData's empty path.
+    // the page — fall back to seed content via the empty path below.
     console.error("[resources] fetch failed", error);
     return [];
   }
@@ -93,10 +92,26 @@ async function fetchAllResources(): Promise<ResourceItem[]> {
   return items;
 }
 
-// Same first-load rule as getResourcesPageData: until the user has added
-// anything, category pages show the seed entries so they are never empty.
+// Until the user has added anything, every resources surface shows the seed
+// entries so none of them is ever empty on first load.
 function seedResources(): ResourceItem[] {
-  return [...SEED_FEATURED_RESOURCES, ...SEED_RECENT_RESOURCES];
+  return SEED_RESOURCES;
+}
+
+// "Recommended order": first-added comes first, so a gallery reads as a curated
+// sequence (topic 1, topic 2, ...) rather than a reverse-chron feed. Both the
+// landing gallery and the category galleries number topics off this order.
+function byRecommendedOrder(items: ResourceItem[]): ResourceItem[] {
+  return [...items].sort((a, b) => a.addedAt.localeCompare(b.addedAt));
+}
+
+/** Every resource, in recommended order — the "All" gallery on /resources. */
+export async function getResourcesGalleryData(): Promise<{
+  topics: ResourceItem[];
+}> {
+  const items = await fetchAllResources();
+  const source = items.length === 0 ? seedResources() : items;
+  return { topics: byRecommendedOrder(source) };
 }
 
 export async function getResourceCategoryPageData(
@@ -104,11 +119,9 @@ export async function getResourceCategoryPageData(
 ): Promise<{ category: ResourceCategory; topics: ResourceItem[] }> {
   const items = await fetchAllResources();
   const source = items.length === 0 ? seedResources() : items;
-  // "Recommended order": first-added comes first, so the list reads as a
-  // curated sequence (topic 1, topic 2, …) rather than a reverse-chron feed.
-  const topics = source
-    .filter((item) => item.categoryId === categoryId)
-    .sort((a, b) => a.addedAt.localeCompare(b.addedAt));
+  const topics = byRecommendedOrder(
+    source.filter((item) => item.categoryId === categoryId),
+  );
   const base = RESOURCE_CATEGORIES.find((c) => c.id === categoryId)!;
   return {
     category: { ...base, articleCount: topics.length },
@@ -144,39 +157,4 @@ export async function getResourceById(
     console.error("[resources] bad row", id, e);
     return null;
   }
-}
-
-export async function getResourcesPageData(): Promise<{
-  categories: ResourceCategory[];
-  featured: ResourceItem[];
-  recent: ResourceItem[];
-}> {
-  const items = await fetchAllResources();
-
-  const counts = new Map<ResourceCategoryId, number>();
-  for (const item of items) {
-    counts.set(item.categoryId, (counts.get(item.categoryId) ?? 0) + 1);
-  }
-  const categories: ResourceCategory[] = RESOURCE_CATEGORIES.map((c) => ({
-    ...c,
-    articleCount: counts.get(c.id) ?? 0,
-  }));
-
-  // If the user hasn't uploaded anything yet, show seed entries so the page
-  // looks like the mockup. As soon as they add their own, only their items
-  // appear.
-  if (items.length === 0) {
-    return {
-      categories,
-      featured: SEED_FEATURED_RESOURCES,
-      recent: SEED_RECENT_RESOURCES,
-    };
-  }
-
-  const featured = items.filter((i) => i.featured);
-  return {
-    categories,
-    featured: featured.length > 0 ? featured : items.slice(0, 4),
-    recent: items,
-  };
 }
