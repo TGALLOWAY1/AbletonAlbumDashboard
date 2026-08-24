@@ -1,5 +1,6 @@
 import { getServerSupabase } from "@/lib/supabase/server";
 import { OWNER_ID } from "@/lib/owner";
+import { isMissingColumn } from "@/lib/migration-errors";
 import type { SunoExperimentStatus } from "@/lib/suno";
 import {
   finishingStepsFromRows,
@@ -58,6 +59,41 @@ export async function fetchTrackAlbums(
   return (base.data ?? []).map((a) => ({ ...a, genre: null }));
 }
 
+/**
+ * Open tasks for a set of tracks, in display order: hand-set `sort_order`
+ * (migration 0025) with NULLs last, then `created_at`. The one definition of
+ * that order, shared by `attachDetails` and `getOpenActionsForTrack`, so the
+ * dashboard's `nextTask` and the detail page's list cannot disagree.
+ *
+ * Ordering by a column PostgREST does not know fails the whole query with
+ * `42703 undefined_column`, which took down every track detail page when a
+ * deploy landed before 0025 was applied. Same posture as `fetchTrackAlbums`
+ * above: the hand-set order is refinement, the tasks are essential — retry in
+ * creation order and say what to run.
+ */
+async function selectOpenActions(
+  supabase: ReturnType<typeof getServerSupabase>,
+  trackIds: string[],
+) {
+  const openActions = () =>
+    supabase
+      .from("actions")
+      .select("*")
+      .in("track_id", trackIds)
+      .is("completed_at", null);
+
+  const ordered = await openActions()
+    .order("sort_order", { ascending: true, nullsFirst: false })
+    .order("created_at", { ascending: true });
+  if (!isMissingColumn(ordered.error)) return ordered;
+
+  console.warn(
+    "[tracks] actions.sort_order is missing — apply supabase/migrations/" +
+      "0025_action_sort_order.sql to enable hand-set task ordering.",
+  );
+  return openActions().order("created_at", { ascending: true });
+}
+
 async function attachDetails(tracks: TrackRow[]): Promise<TrackWithDetails[]> {
   if (tracks.length === 0) return [];
   const supabase = getServerSupabase();
@@ -81,16 +117,9 @@ async function attachDetails(tracks: TrackRow[]): Promise<TrackWithDetails[]> {
     await Promise.all([
       supabase.from("track_stages").select("*").in("track_id", ids),
       // One query serves the open-task count, the remaining-time estimate and
-      // `nextTask`. Same order as `getOpenActionsForTrack` below, so the first
-      // row per track is the top of the list the detail page renders — the two
-      // must not disagree.
-      supabase
-        .from("actions")
-        .select("*")
-        .in("track_id", ids)
-        .is("completed_at", null)
-        .order("sort_order", { ascending: true, nullsFirst: false })
-        .order("created_at", { ascending: true }),
+      // `nextTask`. The first row per track is the top of the list the detail
+      // page renders (`getOpenActionsForTrack` uses the same helper).
+      selectOpenActions(supabase, ids),
       supabase
         .from("actions")
         .select("track_id")
@@ -295,15 +324,9 @@ export async function getOpenActionsForTrack(
   trackId: string,
 ): Promise<ActionRow[]> {
   const supabase = getServerSupabase();
-  const { data, error } = await supabase
-    .from("actions")
-    .select("*")
-    .eq("track_id", trackId)
-    .is("completed_at", null)
-    // Hand-set order first (migration 0025), then anything never reordered by
-    // age. The first row is the track's next action.
-    .order("sort_order", { ascending: true, nullsFirst: false })
-    .order("created_at", { ascending: true });
+  // Hand-set order first (migration 0025), then anything never reordered by
+  // age. The first row is the track's next action.
+  const { data, error } = await selectOpenActions(supabase, [trackId]);
   if (error) throw error;
   return data ?? [];
 }
