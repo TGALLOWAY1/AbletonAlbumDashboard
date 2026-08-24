@@ -58,22 +58,53 @@ Required environment variables (see `.env.local.example`):
 
 ## Database
 
-Schema lives in `supabase/migrations/`. Apply in order:
+Schema lives in `supabase/migrations/`, numbered `NNNN_name.sql` and applied
+in order. Filenames are contiguous and a number is used once — see
+"Adding a migration" below.
 
+### Applying them
+
+Use tooling, not the dashboard SQL editor:
+
+```bash
+supabase link --project-ref <your-project-ref>   # once
+supabase db push                                 # applies everything outstanding
 ```
-0001_init.sql               # tables + triggers + indexes
-0002_storage.sql            # private 'track-audio' bucket
-0003_storage_policies.sql   # permissive V1 anon r/w on the bucket
-```
 
-If you have the [Supabase CLI](https://supabase.com/docs/guides/cli) linked
-to your project: `supabase db push`. Otherwise paste each file into the SQL
-editor in the Supabase dashboard.
+Pasting migrations into the dashboard by hand is no longer the convention. It
+was how this project ran for its first two dozen migrations, and it cost us:
+every applied file had to be remembered rather than recorded, so the project's
+migration history drifted out of step with the repo (see "Known drift" below).
+`db push` records what it applies, which is the whole point.
 
-> **Note:** the `0012` prefix is duplicated (`0012_albums_disable_rls.sql` and
-> `0012_track_focus.sql`). Both are independent and safe to apply in either
-> order; they are left as-is because renaming an already-applied migration
-> would desync the Supabase CLI's migration history.
+Pull request branches get this for free — the Supabase GitHub integration
+provisions a preview database per PR and applies new migration files to it on
+every commit, so a migration is exercised against real Postgres before it is
+merged.
+
+### Adding a migration
+
+Take the next unused number. Check `supabase/migrations/` at the moment you
+create the file **and** re-check before merging: if another PR lands a
+migration first, renumber yours. Two files sharing a number leaves the apply
+order undefined and lets one of them silently never run.
+
+Because the app deploys on merge but migrations are applied separately, a
+shipped build can briefly meet a database without its column. Reads must
+degrade rather than throw — see the header of `src/lib/migration-errors.ts`.
+
+### Known drift
+
+The production project's recorded migration history uses timestamp-style
+versions (`20260824173937`) rather than the repo's `NNNN` filenames, with no
+overlap between the two sets. `supabase db push` against production therefore
+reports `Remote migration versions not found in local migrations directory`,
+and migrations cannot yet be applied automatically on merge. Fixing it means a
+one-time repair of `supabase_migrations.schema_migrations` so the recorded
+versions match the filenames — metadata only, no schema change — after
+confirming every migration in the repo is genuinely reflected in the schema.
+Preview branches are unaffected: they are provisioned from the repo and are
+already consistent.
 
 Tables: `tracks`, `track_stages`, `bottlenecks`, `actions`, `sessions`,
 `session_activities` (per-activity time + notes), `track_versions`. Triggers

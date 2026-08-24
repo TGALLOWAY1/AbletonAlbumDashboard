@@ -1,9 +1,19 @@
 /**
- * Deploys land before migrations in this repo (Vercel deploys on merge; SQL is
- * applied by hand), so a shipped feature can meet a database that does not have
- * its column yet. Reads must degrade — see `fetchTrackAlbums` in
- * src/lib/data/tracks.ts, where a missing `genre` must not cost a track its
- * album. Writes can't, but they can at least say what to do about it instead of
+ * Deploys land before migrations in this repo, so a shipped build can meet a
+ * database that does not have its column yet.
+ *
+ * Vercel deploys on merge; migrations are applied separately with the Supabase
+ * CLI (`supabase db push`) — not pasted into the dashboard by hand, which is
+ * how this project ran until the history drifted out of step with the repo.
+ * See the Database section of README.md. Automating the push on merge is the
+ * goal and would shrink this window, but it cannot close it: the deploy and
+ * the migration are still two steps.
+ *
+ * So reads must degrade — see `fetchTrackAlbums` in src/lib/data/tracks.ts,
+ * where a missing `genre` must not cost a track its album, or
+ * `fetchTaskCompletions` in src/lib/data/analytics.ts, where a missing
+ * `owner_id` must not turn a real history of completed tasks into a confident
+ * zero. Writes can't degrade, but they can at least say what to run instead of
  * surfacing a raw PostgREST error.
  */
 
