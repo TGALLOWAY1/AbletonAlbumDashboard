@@ -13,6 +13,7 @@ export type ResourceCategoryId =
   | "production-guides"
   | "sound-design"
   | "mixing-mastering"
+  | "live-performance"
   | "workflow-mindset"
   | "tools-plugins"
   | "file-organization";
@@ -20,7 +21,7 @@ export type ResourceCategoryId =
 // NOTE: keep this interface fully serializable (no functions/components).
 // `ResourceCategory` values cross the server -> client component boundary as
 // props on /resources; icons are resolved client-side from `id` (see
-// RESOURCE_CATEGORY_ICONS in src/components/resources/resource-category-card.tsx).
+// RESOURCE_CATEGORY_ICONS in src/components/resources/resource-category-icons.ts).
 export interface ResourceCategory {
   id: ResourceCategoryId;
   title: string;
@@ -91,6 +92,13 @@ export const RESOURCE_CATEGORIES: ResourceCategory[] = [
     articleCount: 0,
   },
   {
+    id: "live-performance",
+    title: "Live Performance",
+    description: "Learn how to perform with Ableton Live and Push 3.",
+    color: "green",
+    articleCount: 0,
+  },
+  {
     id: "workflow-mindset",
     title: "Workflow & Mindset",
     description: "Boost productivity and stay in the creative flow.",
@@ -135,99 +143,22 @@ export function isResourceSourceKind(
 
 // Fallback seed content shown when the user has no resources yet, so the page
 // is never empty on first load. As soon as a real resource is uploaded, the
-// seed entries are hidden.
-export const SEED_FEATURED_RESOURCES: ResourceItem[] = [
+// seed entries are hidden. Ordered oldest -> newest: the galleries number
+// topics by position in that order, so this array *is* the recommended order.
+export const SEED_RESOURCES: ResourceItem[] = [
   {
-    id: "seed-featured-drum-sound-design",
-    title: "The Complete Drum Sound Design Workflow",
-    description: "Design punchy, professional drums from scratch.",
-    type: "guide",
-    categoryId: "sound-design",
+    id: "seed-arrangement-impact",
+    title: "Arrangement Tips: Build with Impact",
+    description: "Arrange tracks that pull listeners through every section.",
+    type: "video",
+    categoryId: "production-guides",
     sourceKind: "url",
     url: "https://www.youtube.com/watch?v=dQw4w9WgXcQ",
-    readMinutes: 10,
-    addedAt: "2024-05-22",
-    featured: true,
+    readMinutes: 11,
+    addedAt: "2024-05-13",
   },
   {
-    id: "seed-featured-atmospheric-pads",
-    title: "Building Atmospheric Pads in 5 Steps",
-    description: "Create lush, cinematic pads using layers and motion.",
-    type: "tutorial",
-    categoryId: "sound-design",
-    sourceKind: "markdown",
-    content:
-      "# Building Atmospheric Pads\n\n1. Start with a soft saw or sine layer.\n2. Add a detuned octave to fatten the body.\n3. Bring in a bell or chime layer high up.\n4. Slow modulate filters and pan.\n5. Reverb tail, then EQ the low end out.",
-    readMinutes: 8,
-    addedAt: "2024-05-21",
-    featured: true,
-  },
-  {
-    id: "seed-featured-mixing-drums",
-    title: "Mixing Drums for Punch and Clarity",
-    description: "Pro tips for balancing, EQ, and compression.",
-    type: "article",
-    categoryId: "mixing-mastering",
-    sourceKind: "markdown",
-    content:
-      "# Mixing Drums\n\nFocus on transient shaping before you reach for compression. EQ kicks at 60Hz and 4kHz, snares at 200Hz and 5kHz.",
-    readMinutes: 7,
-    addedAt: "2024-05-19",
-    featured: true,
-  },
-  {
-    id: "seed-featured-producers-routine",
-    title: "Staying Consistent: A Producer's Routine",
-    description: "Build habits that help you finish more music.",
-    type: "mindset",
-    categoryId: "workflow-mindset",
-    sourceKind: "markdown",
-    content:
-      "# A Producer's Routine\n\nBlock 90 minutes daily. End each session with one specific next action. Keep a finish list, not a to-do list.",
-    readMinutes: 6,
-    addedAt: "2024-05-17",
-    featured: true,
-  },
-];
-
-export const SEED_RECENT_RESOURCES: ResourceItem[] = [
-  {
-    id: "seed-recent-sidechain",
-    title: "Sidechain Compression: The Right Way",
-    description: "Use sidechaining for groove and clarity without pumping.",
-    type: "article",
-    categoryId: "mixing-mastering",
-    sourceKind: "markdown",
-    content:
-      "# Sidechain Compression\n\nUse a fast attack, medium release, 4-6dB of gain reduction. Source: kick. Target: bass or pads.",
-    readMinutes: 6,
-    addedAt: "2024-05-20",
-  },
-  {
-    id: "seed-recent-serum-wavetables",
-    title: "Serum Basics: Wavetables Explained",
-    description: "Understand wavetable synthesis from the ground up.",
-    type: "tutorial",
-    categoryId: "sound-design",
-    sourceKind: "url",
-    url: "https://www.youtube.com/watch?v=dQw4w9WgXcQ",
-    readMinutes: 9,
-    addedAt: "2024-05-18",
-  },
-  {
-    id: "seed-recent-reference-tracks",
-    title: "Reference Tracks: How to Use Them",
-    description: "Pick references and A/B effectively while mixing.",
-    type: "article",
-    categoryId: "mixing-mastering",
-    sourceKind: "markdown",
-    content:
-      "# Reference Tracks\n\nLevel-match before A/B. Pick references in the same genre and tonal balance you want.",
-    readMinutes: 5,
-    addedAt: "2024-05-16",
-  },
-  {
-    id: "seed-recent-creative-chords",
+    id: "seed-creative-chords",
     title: "Creative Chord Progressions",
     description: "Move beyond I-V-vi-IV with voicings and substitutions.",
     type: "guide",
@@ -239,14 +170,133 @@ export const SEED_RECENT_RESOURCES: ResourceItem[] = [
     addedAt: "2024-05-15",
   },
   {
-    id: "seed-recent-arrangement-impact",
-    title: "Arrangement Tips: Build with Impact",
-    description: "Arrange tracks that pull listeners through every section.",
-    type: "video",
-    categoryId: "production-guides",
+    id: "seed-reference-tracks",
+    title: "Reference Tracks: How to Use Them",
+    description: "Pick references and A/B effectively while mixing.",
+    type: "article",
+    categoryId: "mixing-mastering",
+    sourceKind: "markdown",
+    content:
+      "# Reference Tracks\n\nLevel-match before A/B. Pick references in the same genre and tonal balance you want.",
+    readMinutes: 5,
+    addedAt: "2024-05-16",
+  },
+  {
+    id: "seed-producers-routine",
+    title: "Staying Consistent: A Producer's Routine",
+    description: "Build habits that help you finish more music.",
+    type: "mindset",
+    categoryId: "workflow-mindset",
+    sourceKind: "markdown",
+    content:
+      "# A Producer's Routine\n\nBlock 90 minutes daily. End each session with one specific next action. Keep a finish list, not a to-do list.",
+    readMinutes: 6,
+    addedAt: "2024-05-17",
+  },
+  {
+    id: "seed-serum-wavetables",
+    title: "Serum Basics: Wavetables Explained",
+    description: "Understand wavetable synthesis from the ground up.",
+    type: "tutorial",
+    categoryId: "sound-design",
     sourceKind: "url",
     url: "https://www.youtube.com/watch?v=dQw4w9WgXcQ",
-    readMinutes: 11,
-    addedAt: "2024-05-13",
+    readMinutes: 9,
+    addedAt: "2024-05-18",
+  },
+  {
+    id: "seed-mixing-drums",
+    title: "Mixing Drums for Punch and Clarity",
+    description: "Pro tips for balancing, EQ, and compression.",
+    type: "article",
+    categoryId: "mixing-mastering",
+    sourceKind: "markdown",
+    content:
+      "# Mixing Drums\n\nFocus on transient shaping before you reach for compression. EQ kicks at 60Hz and 4kHz, snares at 200Hz and 5kHz.",
+    readMinutes: 7,
+    addedAt: "2024-05-19",
+  },
+  {
+    id: "seed-sidechain",
+    title: "Sidechain Compression: The Right Way",
+    description: "Use sidechaining for groove and clarity without pumping.",
+    type: "article",
+    categoryId: "mixing-mastering",
+    sourceKind: "markdown",
+    content:
+      "# Sidechain Compression\n\nUse a fast attack, medium release, 4-6dB of gain reduction. Source: kick. Target: bass or pads.",
+    readMinutes: 6,
+    addedAt: "2024-05-20",
+  },
+  {
+    id: "seed-atmospheric-pads",
+    title: "Building Atmospheric Pads in 5 Steps",
+    description: "Create lush, cinematic pads using layers and motion.",
+    type: "tutorial",
+    categoryId: "sound-design",
+    sourceKind: "markdown",
+    content:
+      "# Building Atmospheric Pads\n\n1. Start with a soft saw or sine layer.\n2. Add a detuned octave to fatten the body.\n3. Bring in a bell or chime layer high up.\n4. Slow modulate filters and pan.\n5. Reverb tail, then EQ the low end out.",
+    readMinutes: 8,
+    addedAt: "2024-05-21",
+  },
+  {
+    id: "seed-drum-sound-design",
+    title: "The Complete Drum Sound Design Workflow",
+    description: "Design punchy, professional drums from scratch.",
+    type: "guide",
+    categoryId: "sound-design",
+    sourceKind: "url",
+    url: "https://www.youtube.com/watch?v=dQw4w9WgXcQ",
+    readMinutes: 10,
+    addedAt: "2024-05-22",
+  },
+  {
+    id: "seed-push-session-view",
+    title: "Push 3 Session View",
+    description: "Build and perform arrangements in Session View.",
+    type: "tutorial",
+    categoryId: "live-performance",
+    sourceKind: "markdown",
+    content:
+      "# Push 3 Session View\n\nLaunch clips from the pads, capture takes into new scenes, and use the touch strip to ride filters while you play.",
+    readMinutes: 9,
+    addedAt: "2024-05-23",
+  },
+  {
+    id: "seed-push-drum-rack",
+    title: "Push 3 Drum Rack",
+    description: "Create and perform beats with Drum Racks.",
+    type: "tutorial",
+    categoryId: "live-performance",
+    sourceKind: "markdown",
+    content:
+      "# Push 3 Drum Rack\n\nLay a kit across the 16 pads, sample straight into a slot, then use step sequencing and per-pad accents to build the groove.",
+    readMinutes: 8,
+    addedAt: "2024-05-24",
+  },
+  {
+    id: "seed-push-live-looping",
+    title: "Push 3 Live Looping",
+    description: "Loop, layer and manipulate audio in real time.",
+    type: "tutorial",
+    categoryId: "live-performance",
+    sourceKind: "markdown",
+    content:
+      "# Push 3 Live Looping\n\nArm a track, set a fixed loop length, and overdub layer by layer. Keep one clip free for improvised fills.",
+    readMinutes: 10,
+    addedAt: "2024-05-25",
+  },
+  {
+    id: "seed-djing-with-live",
+    title: "DJing with Live",
+    description: "Mix and perform sets using Live.",
+    type: "guide",
+    categoryId: "live-performance",
+    sourceKind: "markdown",
+    content:
+      "# DJing with Live\n\nWarp every track before the set, lay them out in Session View by energy, and map a crossfader plus EQ kills to your controller.",
+    readMinutes: 12,
+    addedAt: "2024-05-26",
   },
 ];

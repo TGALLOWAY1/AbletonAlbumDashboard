@@ -1,6 +1,7 @@
 "use client";
 
 import * as React from "react";
+import { useRouter } from "next/navigation";
 import {
   FileText,
   ImageOff,
@@ -61,17 +62,32 @@ const DEFAULT_TYPE_BY_TAB: Record<Tab, ResourceType> = {
   url: "video",
 };
 
+/**
+ * Add a resource. Opened from a category page, pass `categoryId` (plus its
+ * `categoryTitle`): the new resource inherits that category, the picker is
+ * replaced by a read-only label, and the category's gallery refreshes on save.
+ * Opened from /resources — where there is no category context — leave both off
+ * and the user picks a category.
+ *
+ * The trigger button is rendered here rather than taken as a prop: category
+ * pages are server components, and an element created there and handed to
+ * Radix's `asChild` Slot hydrates without the props the Slot injects on the
+ * client, which React reports as a hydration mismatch.
+ */
 export function AddResourceDialog({
-  trigger,
+  categoryId: inheritedCategoryId,
+  categoryTitle: inheritedCategoryTitle,
 }: {
-  trigger?: React.ReactNode;
+  categoryId?: ResourceCategoryId;
+  categoryTitle?: string;
 }) {
+  const router = useRouter();
   const [open, setOpen] = React.useState(false);
   const [tab, setTab] = React.useState<Tab>("pdf");
   const [title, setTitle] = React.useState("");
   const [description, setDescription] = React.useState("");
   const [categoryId, setCategoryId] = React.useState<ResourceCategoryId>(
-    RESOURCE_CATEGORIES[0].id,
+    inheritedCategoryId ?? RESOURCE_CATEGORIES[0].id,
   );
   const [type, setType] = React.useState<ResourceType>("guide");
   const [readMinutes, setReadMinutes] = React.useState("5");
@@ -100,7 +116,7 @@ export function AddResourceDialog({
     setTab("pdf");
     setTitle("");
     setDescription("");
-    setCategoryId(RESOURCE_CATEGORIES[0].id);
+    setCategoryId(inheritedCategoryId ?? RESOURCE_CATEGORIES[0].id);
     setType("guide");
     setReadMinutes("5");
     setStoragePath("");
@@ -201,7 +217,15 @@ export function AddResourceDialog({
           formData.set("thumbnail_url", thumbnailOverride.trim());
         }
       }
-      await createResource(formData);
+      const result = await createResource(formData);
+      if (result?.error) {
+        setError(result.error);
+        setSubmitting(false);
+        return;
+      }
+      // The action revalidates the resources surfaces; refresh so the gallery
+      // behind the dialog shows the new topic straight away.
+      router.refresh();
       handleOpenChange(false);
     } catch (e) {
       setError((e as Error).message);
@@ -212,16 +236,18 @@ export function AddResourceDialog({
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
       <DialogTrigger asChild>
-        {trigger ?? (
-          <Button>
-            <Plus className="h-4 w-4" />
-            Add Resource
-          </Button>
-        )}
+        <Button>
+          <Plus className="h-4 w-4" />
+          Add Resource
+        </Button>
       </DialogTrigger>
       <DialogContent className="max-w-2xl">
         <DialogHeader>
-          <DialogTitle>Add a resource</DialogTitle>
+          <DialogTitle>
+            {inheritedCategoryTitle
+              ? `Add a resource to ${inheritedCategoryTitle}`
+              : "Add a resource"}
+          </DialogTitle>
           <DialogDescription>
             Upload a PDF, jot down a markdown note, or save a YouTube video or
             article link.
@@ -388,24 +414,33 @@ export function AddResourceDialog({
 
           <div className="grid gap-3 sm:grid-cols-3">
             <div className="grid gap-2">
-              <Label>Category</Label>
-              <Select
-                value={categoryId}
-                onValueChange={(v) =>
-                  setCategoryId(v as ResourceCategoryId)
-                }
-              >
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {RESOURCE_CATEGORIES.map((c) => (
-                    <SelectItem key={c.id} value={c.id}>
-                      {c.title}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <Label htmlFor={inheritedCategoryId ? undefined : "category"}>
+                Category
+              </Label>
+              {inheritedCategoryId ? (
+                <p
+                  className="flex h-9 items-center rounded-md border border-border bg-surface-2 px-3 text-sm text-muted-foreground"
+                  data-testid="inherited-category"
+                >
+                  {inheritedCategoryTitle ?? inheritedCategoryId}
+                </p>
+              ) : (
+                <Select
+                  value={categoryId}
+                  onValueChange={(v) => setCategoryId(v as ResourceCategoryId)}
+                >
+                  <SelectTrigger id="category">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {RESOURCE_CATEGORIES.map((c) => (
+                      <SelectItem key={c.id} value={c.id}>
+                        {c.title}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              )}
             </div>
             <div className="grid gap-2">
               <Label>Type</Label>
