@@ -27,12 +27,23 @@ const GUTTER_ROWS = new Set([0, 2, 4]);
 /**
  * Cell geometry, as CSS custom properties.
  *
- * Squares are a fixed size and the grid is whatever they add up to — the
- * inverse of the old layout, where each week column took `flex-1` of the card
- * and `aspect-square` turned that share into the row height. That made cell
- * size a function of how many columns the range happened to have (7D: 525px
- * squares; 1Y on a phone: 2px ones) and left the weekday gutter, whose boxes
- * were always 24px, aligned to the grid at no range at all.
+ * The invariant is that **cell size never depends on the range**. It used to:
+ * each week column took `flex-1` of the card and `aspect-square` turned that
+ * share into the row height, so the fewer columns a range had the bigger its
+ * squares got — 504px at 7D on a 1080px card, 1.8px at 1Y on a phone, from
+ * the same stylesheet. The weekday gutter, whose boxes were always 24px, then
+ * lined up with those rows at no range at all.
+ *
+ * The two modes hold that invariant differently, and only the trail is fixed
+ * in pixels:
+ *
+ *   - `trail` cells are exactly `--cell`, so a quarter and a year are drawn at
+ *     the same scale and anything wider than the card scrolls.
+ *   - `calendar` cells are a seventh of the container under a 30rem cap. That
+ *     tracks the viewport — ~35px on the narrowest phone, 63px at the cap —
+ *     but it is bounded at both ends and identical for 7D and 30D, which is
+ *     the property that matters. A month calendar that refused to use a
+ *     phone's width would be a worse calendar, not a more consistent one.
  *
  * Both modes read the same two variables, and every offset in the component —
  * row heights, the gutter, the month markers' left positions — is expressed in
@@ -267,6 +278,11 @@ function TrailGrid({
             slightly different width, which drifted, and to be placed by the
             month of each column's Monday, which named the column *after* the
             one a mid-week month actually started in.
+
+            Multiplying a length by a unitless number is CSS Values 3 `calc()`,
+            supported everywhere this app runs; measured in a browser, each
+            label resolves to an exact pixel offset and lands 0px from the
+            column holding its 1st.
           */}
           <div className="relative h-4">
             {grid.monthMarkers.map((marker) => (

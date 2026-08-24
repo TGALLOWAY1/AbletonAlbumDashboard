@@ -90,15 +90,19 @@ Run `pnpm typecheck && pnpm lint && pnpm test` before committing.
   routinely disagreed about what "now" meant. `getWeeklyDelta` is gone for the
   same reason. Tasks-done needs completion timestamps, so `fetchAnalyticsData`
   ships `taskCompletions` alongside sessions and the client filters by range.
-- **The heatmap's squares are a fixed pixel size, never a share of the width.**
-  They used to be `flex-1` week columns turned square by `aspect-square`, so
-  cell size was a function of how many columns a range had — 7D drew 500px
-  tiles, 1Y on a phone drew 2px ones — and the 24px weekday gutter lined up
-  with the grid at no range at all. Geometry now lives in `--cell`/`--gap`
-  (`src/components/analytics/work-heatmap.tsx`); anything wider than the card
-  scrolls. The grid itself is a pure model in `src/lib/heatmap.ts`, and month
-  labels carry a **week column index** rather than a width share, so a label
-  cannot drift off the column it names.
+- **A heatmap cell's size never depends on the range.** It used to: week
+  columns were `flex-1` turned square by `aspect-square`, so the fewer columns
+  a range had the bigger its squares got — 504px at 7D on a 1080px card, 1.8px
+  at 1Y on a phone — and the 24px weekday gutter lined up with those rows at
+  no range at all. Geometry now lives in `--cell`/`--gap`
+  (`src/components/analytics/work-heatmap.tsx`). Trail cells are exactly
+  `--cell` and anything wider than the card scrolls; calendar cells are a
+  seventh of the container under a 30rem cap, so they track the viewport
+  between ~35px and 63px but are identical for 7D and 30D. Do not "fix" the
+  calendar to a hard pixel width — a month grid that refuses a phone's width
+  is a worse calendar. The grid itself is a pure model in `src/lib/heatmap.ts`,
+  and month labels carry a **week column index** rather than a width share, so
+  a label cannot drift off the column it names.
 - Short and long windows are drawn differently on purpose (`heatmapMode`):
   7D/30D as a `calendar` — seven weekday columns, the date printed in every
   square, the month named in place on its 1st — and 3M/6M/1Y as the compact
