@@ -5,6 +5,7 @@ import { Search, X } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
 import {
+  buildTrackPickerOptions,
   clampHighlight,
   filterTrackOptions,
   nextHighlight,
@@ -33,7 +34,10 @@ export type PickableTrack = Pick<TrackRow, "id" | "name" | "status">;
  * When the field is optional the list ends with an explicit "No specific
  * track" row. Leaving an input empty is not a choice the user can see they
  * made, and general studio work that advanced no single track is a real
- * session worth logging.
+ * session worth logging. That row is a listbox option like any other, so the
+ * arrow keys and Enter reach it — it is the whole point of the change, and a
+ * pointer-only affordance would put it out of reach of the people most likely
+ * to be typing in this field.
  */
 export function TrackPicker({
   tracks,
@@ -64,8 +68,14 @@ export function TrackPicker({
     [tracks, query],
   );
 
+  // One list for the pointer, the keyboard and the ARIA tree to share.
+  const options = useMemo(
+    () => buildTrackPickerOptions(filtered, !required),
+    [filtered, required],
+  );
+
   // The list changes under the highlight as the query narrows it.
-  const activeIndex = clampHighlight(filtered.length, highlight);
+  const activeIndex = clampHighlight(options.length, highlight);
 
   const close = () => {
     setOpen(false);
@@ -123,14 +133,14 @@ export function TrackPicker({
       e.preventDefault();
       if (!open) setOpen(true);
       setHighlight(
-        nextHighlight(filtered.length, activeIndex, e.key === "ArrowDown" ? 1 : -1),
+        nextHighlight(options.length, activeIndex, e.key === "ArrowDown" ? 1 : -1),
       );
       return;
     }
     if (e.key === "Enter") {
       if (open && activeIndex >= 0) {
         e.preventDefault();
-        pick(filtered[activeIndex].id);
+        pick(options[activeIndex].trackId);
       }
       return;
     }
@@ -162,7 +172,7 @@ export function TrackPicker({
         aria-controls={listId}
         aria-autocomplete="list"
         aria-activedescendant={
-          activeIndex >= 0 ? `${listId}-${filtered[activeIndex].id}` : undefined
+          activeIndex >= 0 ? `${listId}-${options[activeIndex].key}` : undefined
         }
       />
 
@@ -174,38 +184,42 @@ export function TrackPicker({
         >
           {filtered.length === 0 && (
             <p className="px-2 py-1.5 text-sm text-muted-foreground">
-              No tracks match “{query.trim()}”.
+              {query.trim()
+                ? `No tracks match “${query.trim()}”.`
+                : "No tracks yet."}
             </p>
           )}
-          {filtered.map((t, i) => (
+          {options.map((option, i) => (
             <button
-              key={t.id}
-              id={`${listId}-${t.id}`}
+              key={option.key}
+              id={`${listId}-${option.key}`}
               type="button"
               role="option"
               aria-selected={i === activeIndex}
-              onClick={() => pick(t.id)}
+              // The input is the only tab stop; the highlight moves with the
+              // arrow keys and is announced via `aria-activedescendant`.
+              tabIndex={-1}
+              onClick={() => pick(option.trackId)}
               onMouseMove={() => setHighlight(i)}
               className={cn(
                 "flex w-full items-center gap-2 rounded-sm px-2 py-1.5 text-left text-sm hover:bg-surface-2",
                 i === activeIndex && "bg-surface-2",
+                option.track === null &&
+                  "mt-1 border-t border-border pb-1.5 pt-2 text-muted-foreground hover:text-foreground",
               )}
             >
-              <span className="truncate">{t.name}</span>
-              <span className="ml-auto text-xs text-muted-foreground">
-                {t.status}
-              </span>
+              {option.track ? (
+                <>
+                  <span className="truncate">{option.track.name}</span>
+                  <span className="ml-auto text-xs text-muted-foreground">
+                    {option.track.status}
+                  </span>
+                </>
+              ) : (
+                <span>No specific track — general studio work</span>
+              )}
             </button>
           ))}
-          {!required && (
-            <button
-              type="button"
-              onClick={() => pick(null)}
-              className="mt-1 flex w-full items-center gap-2 rounded-sm border-t border-border px-2 pb-1.5 pt-2 text-left text-sm text-muted-foreground hover:bg-surface-2 hover:text-foreground"
-            >
-              No specific track — general studio work
-            </button>
-          )}
         </div>
       )}
     </div>

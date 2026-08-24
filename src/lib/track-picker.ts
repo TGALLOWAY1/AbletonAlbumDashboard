@@ -30,6 +30,37 @@ export function filterTrackOptions<T extends PickableTrackLike>(
 }
 
 /**
+ * The key of the "no specific track" row, which is an option like any other
+ * and not a footer button. Keeping it inside the option model is what lets the
+ * keyboard reach it: arrow keys and Enter walk `buildTrackPickerOptions`, so a
+ * row outside that list would be pointer-only.
+ */
+export const NO_TRACK_OPTION_KEY = "__no_track__";
+
+export type TrackPickerOption<T extends PickableTrackLike> =
+  | { key: string; trackId: string; track: T }
+  | { key: typeof NO_TRACK_OPTION_KEY; trackId: null; track: null };
+
+/**
+ * Every row the open list offers, in the order it draws them: the matching
+ * tracks, then — when the field is optional — "no specific track".
+ */
+export function buildTrackPickerOptions<T extends PickableTrackLike>(
+  filtered: T[],
+  allowNone: boolean,
+): TrackPickerOption<T>[] {
+  const options: TrackPickerOption<T>[] = filtered.map((track) => ({
+    key: track.id,
+    trackId: track.id,
+    track,
+  }));
+  if (allowNone) {
+    options.push({ key: NO_TRACK_OPTION_KEY, trackId: null, track: null });
+  }
+  return options;
+}
+
+/**
  * Where ArrowUp/ArrowDown moves the highlight.
  *
  * Wraps at both ends, and treats `NO_HIGHLIGHT` as "just before the first

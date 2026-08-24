@@ -1,9 +1,11 @@
 import { describe, expect, it } from "vitest";
 import {
+  buildTrackPickerOptions,
   clampHighlight,
   filterTrackOptions,
   nextHighlight,
   NO_HIGHLIGHT,
+  NO_TRACK_OPTION_KEY,
   TRACK_PICKER_BROWSE_LIMIT,
   TRACK_PICKER_SEARCH_LIMIT,
 } from "@/lib/track-picker";
@@ -94,5 +96,52 @@ describe("clampHighlight", () => {
 
   it("leaves an untouched field untouched", () => {
     expect(clampHighlight(4, NO_HIGHLIGHT)).toBe(NO_HIGHLIGHT);
+  });
+});
+
+describe("buildTrackPickerOptions", () => {
+  const three = LIBRARY.slice(0, 3);
+
+  it("offers the no-track row last when the field is optional", () => {
+    const options = buildTrackPickerOptions(three, true);
+    expect(options).toHaveLength(4);
+    expect(options[3]).toMatchObject({
+      key: NO_TRACK_OPTION_KEY,
+      trackId: null,
+      track: null,
+    });
+  });
+
+  it("keeps the no-track row reachable by keyboard — it is a real option", () => {
+    const options = buildTrackPickerOptions(three, true);
+    // ArrowUp from an untouched field lands on it, ArrowDown wraps onto it.
+    expect(nextHighlight(options.length, NO_HIGHLIGHT, -1)).toBe(3);
+    expect(nextHighlight(options.length, 2, 1)).toBe(3);
+    expect(options[3].trackId).toBeNull();
+  });
+
+  it("still offers it when no track matches the query", () => {
+    const options = buildTrackPickerOptions([], true);
+    expect(options.map((o) => o.key)).toEqual([NO_TRACK_OPTION_KEY]);
+  });
+
+  it("omits it when a track is required", () => {
+    const options = buildTrackPickerOptions(three, false);
+    expect(options).toHaveLength(3);
+    expect(options.every((o) => o.trackId !== null)).toBe(true);
+  });
+
+  it("has nothing to highlight when a required field matches nothing", () => {
+    const options = buildTrackPickerOptions([], false);
+    expect(options).toEqual([]);
+    expect(nextHighlight(options.length, NO_HIGHLIGHT, 1)).toBe(NO_HIGHLIGHT);
+  });
+
+  it("carries each track through so the row can draw it", () => {
+    expect(buildTrackPickerOptions(three, true)[0]).toMatchObject({
+      key: three[0].id,
+      trackId: three[0].id,
+      track: three[0],
+    });
   });
 });
