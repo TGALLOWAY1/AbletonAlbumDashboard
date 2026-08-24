@@ -147,6 +147,28 @@ tabs — which is a viewport constraint, not a feature gap. The `.als` file-path
 renders in the desktop header only; it is meaningless on a phone (documented
 exception).
 
+## Migrations
+
+- SQL lives in `supabase/migrations/`, numbered `NNNN_name.sql`, contiguous, a
+  number used once. Take the next unused one and **re-check before merging** —
+  if another PR lands a migration while yours is open, renumber. Two files
+  sharing a number leaves the apply order undefined and lets one silently never
+  run (this happened: 0026 collided between the resources work and the pin
+  work).
+- Apply with `supabase db push`, never by pasting into the dashboard SQL
+  editor. Hand-application is what let production's recorded history drift out
+  of step with the repo — see "Known drift" in README.md.
+- **Reads must degrade, writes must explain.** Vercel deploys on merge and
+  migrations are applied separately, so a shipped build can meet a database
+  without its column. A read that hits a missing column retries without it or
+  returns empty *and logs which file to run*; it never takes the page down, and
+  it never silently reports zero where real data exists (see
+  `fetchTaskCompletions`). A write returns a `MIGRATION_*_MISSING_MESSAGE`
+  naming the file. Helpers live in `src/lib/migration-errors.ts`.
+- Destructive steps (`drop column`, `drop table`) get a `DATA LOSS` note in the
+  migration's header comment saying exactly what is lost and whether anything
+  read it.
+
 ## Conventions
 
 - Server components are the default; mark client components with `"use client"` only when they need state, refs, or browser APIs.

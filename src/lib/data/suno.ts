@@ -2,8 +2,9 @@ import { getServerSupabase } from "@/lib/supabase/server";
 import { OWNER_ID } from "@/lib/owner";
 import type { SunoCandidateRow, SunoExperimentRow, VersionRow } from "@/lib/types";
 
-// Deploys land before manual migrations in this repo (Vercel deploys on merge;
-// SQL is applied by hand), so the read paths must tolerate the Suno tables not
+// Deploys land before migrations in this repo (Vercel deploys on merge;
+// migrations are applied separately via `supabase db push` — see README.md),
+// so the read paths must tolerate the Suno tables not
 // existing yet — the app renders with Suno features empty instead of crashing
 // the dashboard. Writes still fail loudly. PostgREST reports a missing table
 // as PGRST205 (absent from its schema cache — the code supabase-js actually
