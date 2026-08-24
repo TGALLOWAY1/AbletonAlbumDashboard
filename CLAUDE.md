@@ -90,6 +90,21 @@ Run `pnpm typecheck && pnpm lint && pnpm test` before committing.
   routinely disagreed about what "now" meant. `getWeeklyDelta` is gone for the
   same reason. Tasks-done needs completion timestamps, so `fetchAnalyticsData`
   ships `taskCompletions` alongside sessions and the client filters by range.
+- **The heatmap's squares are a fixed pixel size, never a share of the width.**
+  They used to be `flex-1` week columns turned square by `aspect-square`, so
+  cell size was a function of how many columns a range had — 7D drew 500px
+  tiles, 1Y on a phone drew 2px ones — and the 24px weekday gutter lined up
+  with the grid at no range at all. Geometry now lives in `--cell`/`--gap`
+  (`src/components/analytics/work-heatmap.tsx`); anything wider than the card
+  scrolls. The grid itself is a pure model in `src/lib/heatmap.ts`, and month
+  labels carry a **week column index** rather than a width share, so a label
+  cannot drift off the column it names.
+- Short and long windows are drawn differently on purpose (`heatmapMode`):
+  7D/30D as a `calendar` — seven weekday columns, the date printed in every
+  square, the month named in place on its 1st — and 3M/6M/1Y as the compact
+  `trail`. A date cannot be read off a 14px square, and a `title` tooltip never
+  fires on touch, so the trail names the hovered or tapped day in a readout
+  line instead.
 - Time gets recorded two ways and both are in the dashboard header: "Start
   session" (`/focus/new`, the timer) and `ManualSessionEntry` (backfill).
   Logging used to sit at the bottom of the page behind the Progress → History
