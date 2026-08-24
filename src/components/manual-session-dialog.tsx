@@ -41,11 +41,16 @@ export function ManualSessionEntry({
       <Button
         variant="outline"
         size={variant === "mobile" ? "lg" : "md"}
-        className={variant === "mobile" ? "w-full" : undefined}
+        // The mobile trigger shares a row with the album picker and the pin,
+        // so it keeps the 44px tap height but not the full width it used to
+        // claim — stretched edge to edge it squeezed both of its neighbours
+        // to nothing. The label shortens for the same reason; the dialog it
+        // opens is titled "Log past session" in full.
+        className={variant === "mobile" ? "shrink-0 px-4" : undefined}
         onClick={() => setOpen(true)}
       >
         <Plus className="h-4 w-4" />
-        Log past session
+        {variant === "mobile" ? "Log session" : "Log past session"}
       </Button>
       <ManualSessionDialog
         open={open}

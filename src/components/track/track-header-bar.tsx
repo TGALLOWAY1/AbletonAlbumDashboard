@@ -181,8 +181,11 @@ export function TrackHeaderBar({
       />
 
       {mobile && (
+        // Three controls on one phone-width row, so each one has to declare
+        // whether it gives or takes width: the album picker is the only thing
+        // here that can shrink, and the two buttons hold their tap size.
         <div className="flex items-center gap-2">
-          <div className="min-w-0 flex-1">
+          <div className="flex min-w-0 flex-1">
             <TrackAlbumSelect
               trackId={track.id}
               albumId={track.album?.id ?? null}
@@ -206,7 +209,6 @@ export function TrackHeaderBar({
           />
         </div>
       )}
-
     </div>
   );
 }

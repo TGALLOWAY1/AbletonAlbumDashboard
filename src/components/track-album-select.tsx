@@ -79,12 +79,18 @@ export function TrackAlbumSelect({
       <SelectTrigger
         aria-label="Album"
         className={cn(
+          // `overflow-hidden` plus the truncating span below is load-bearing:
+          // the trigger shrinks in a crowded flex row, and an album title that
+          // doesn't truncate spills out of it and paints over its neighbours.
+          "overflow-hidden",
           variant === "compact" &&
-            "h-7 w-auto gap-1.5 border-none bg-transparent px-2 py-0 text-xs shadow-none hover:bg-surface-2",
+            "h-8 w-auto max-w-full min-w-0 gap-1.5 border-none bg-transparent px-2 py-0 text-xs shadow-none hover:bg-surface-2",
         )}
       >
         <Disc3 className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
-        <SelectValue placeholder="No album" />
+        <span className="min-w-0 flex-1 truncate text-left">
+          <SelectValue placeholder="No album" />
+        </span>
       </SelectTrigger>
       <SelectContent>
         <SelectItem value={NO_ALBUM}>No album</SelectItem>

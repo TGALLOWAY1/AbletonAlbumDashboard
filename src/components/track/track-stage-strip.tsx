@@ -6,6 +6,7 @@ import { useToast } from "@/components/toast";
 import {
   STAGE_KEYS,
   STAGE_LABELS,
+  STAGE_SHORT_LABELS,
   type StageRow,
   progressFromStages,
 } from "@/lib/types";
@@ -68,6 +69,7 @@ export function TrackStageStrip({
           <StageSegment
             key={key}
             label={STAGE_LABELS[key]}
+            shortLabel={STAGE_SHORT_LABELS[key]}
             percent={percent}
             disabled={pending}
             compact={mobile}
@@ -98,12 +100,14 @@ export function TrackStageStrip({
 
 function StageSegment({
   label,
+  shortLabel,
   percent,
   disabled,
   compact,
   onCommit,
 }: {
   label: string;
+  shortLabel: string;
   percent: number;
   disabled: boolean;
   compact: boolean;
@@ -119,7 +123,43 @@ function StageSegment({
   };
 
   return (
-    <div className="flex min-w-0 flex-col gap-1">
+    // The whole column is the control, label included. A 6px bar is far too
+    // small a tap target on a phone, and padding the bar itself is what broke
+    // this strip before: the bar carried the track background, so the padding
+    // painted as a fat lozenge that swallowed the fill. The hit area grows
+    // here, the background lives on the bar, and `barRef` keeps the click
+    // ratio measured against the bar rather than the column.
+    <div
+      role="slider"
+      aria-label={`${label} progress`}
+      aria-valuemin={0}
+      aria-valuemax={100}
+      aria-valuenow={percent}
+      aria-valuetext={`${label} ${percent}%`}
+      tabIndex={disabled ? -1 : 0}
+      onClick={handleClick}
+      onKeyDown={(e) => {
+        if (disabled) return;
+        if (e.key === "ArrowRight") {
+          e.preventDefault();
+          onCommit(Math.min(100, percent + 5));
+        } else if (e.key === "ArrowLeft") {
+          e.preventDefault();
+          onCommit(Math.max(0, percent - 5));
+        } else if (e.key === "Home") {
+          e.preventDefault();
+          onCommit(0);
+        } else if (e.key === "End") {
+          e.preventDefault();
+          onCommit(100);
+        }
+      }}
+      className={cn(
+        "flex min-w-0 cursor-pointer select-none flex-col gap-1 rounded-md outline-none ring-ring focus-visible:ring-2",
+        compact && "py-1",
+        disabled && "cursor-not-allowed opacity-60",
+      )}
+    >
       {!compact && (
         <div className="flex items-baseline justify-between gap-1">
           <span className="truncate text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
@@ -130,49 +170,23 @@ function StageSegment({
           </span>
         </div>
       )}
+
       <div
         ref={barRef}
-        role="slider"
-        aria-label={`${label} progress`}
-        aria-valuemin={0}
-        aria-valuemax={100}
-        aria-valuenow={percent}
-        tabIndex={disabled ? -1 : 0}
-        onClick={handleClick}
-        onKeyDown={(e) => {
-          if (disabled) return;
-          if (e.key === "ArrowRight") {
-            e.preventDefault();
-            onCommit(Math.min(100, percent + 5));
-          } else if (e.key === "ArrowLeft") {
-            e.preventDefault();
-            onCommit(Math.max(0, percent - 5));
-          } else if (e.key === "Home") {
-            e.preventDefault();
-            onCommit(0);
-          } else if (e.key === "End") {
-            e.preventDefault();
-            onCommit(100);
-          }
-        }}
         className={cn(
-          // A 6px bar is too small a tap target on its own, so the mobile
-          // variant pads the hit area vertically without growing the header.
-          "cursor-pointer rounded-full bg-surface-2 outline-none ring-ring focus-visible:ring-2",
-          compact ? "my-2 -my-2 h-1.5 py-2 box-content" : "h-[7px]",
-          disabled && "cursor-not-allowed opacity-60",
+          "w-full overflow-hidden rounded-full bg-surface-2",
+          compact ? "h-2" : "h-[7px]",
         )}
       >
-        <div className="h-full overflow-hidden rounded-full bg-surface-2">
-          <div
-            className="h-full rounded-full bg-primary transition-all"
-            style={{ width: `${percent}%` }}
-          />
-        </div>
+        <div
+          className="h-full rounded-full bg-primary transition-all"
+          style={{ width: `${percent}%` }}
+        />
       </div>
+
       {compact && (
-        <span className="truncate text-center text-[9.5px] font-medium text-muted-foreground">
-          {label.split(" ")[0]} {percent}
+        <span className="truncate text-center text-[10px] font-medium leading-tight text-muted-foreground">
+          {shortLabel}
         </span>
       )}
     </div>

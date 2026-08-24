@@ -53,6 +53,10 @@ export function PinTrackButton({
     <Button
       variant={optimisticPinned ? "default" : "outline"}
       size={mobile ? "icon" : "md"}
+      // Sized to sit level with the mobile header's other 44px control, and
+      // `shrink-0` so a long album title next to it can never squeeze the
+      // square into a sliver.
+      className={mobile ? "h-11 w-11 shrink-0" : undefined}
       onClick={toggle}
       disabled={pending}
       aria-pressed={optimisticPinned}
