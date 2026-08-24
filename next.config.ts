@@ -15,11 +15,15 @@ const nextConfig: NextConfig = {
     // `imageSizes`, hence 160 and 192.
     deviceSizes: [320, 420, 640, 750, 828, 1080, 1200, 1920, 2048, 3840],
     imageSizes: [16, 32, 48, 64, 96, 128, 160, 192, 256, 384],
-    // Upload keys are `${timestamp}-${uuid}.${ext}`, so a cover URL always
-    // names one immutable object: a new cover is a new URL, never a new body
-    // at the old one. Nothing here ever needs re-checking, and the default
-    // TTL only buys repeated optimizer round-trips.
-    minimumCacheTTL: 60 * 60 * 24 * 365,
+    // A floor, applied to every host above, which is why it is not a year.
+    // Uploaded covers would happily cache forever — their keys are
+    // `${timestamp}-${uuid}.${ext}`, so a URL names one immutable object and a
+    // new cover is a new URL. YouTube poster frames are the opposite: stable
+    // URL, replaceable bytes. A month keeps optimizer misses rare (a miss
+    // means re-fetching a multi-megabyte original and re-encoding it, which
+    // is the slow path this whole change exists to avoid) while bounding how
+    // long a replaced poster frame can stay stale.
+    minimumCacheTTL: 60 * 60 * 24 * 31,
   },
   async redirects() {
     return [

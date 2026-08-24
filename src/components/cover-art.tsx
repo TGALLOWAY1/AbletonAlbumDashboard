@@ -39,6 +39,13 @@ export function CoverArt({
   // `cover_image_url` is a free-text URL column, so a value can point
   // anywhere. `next/image` throws on an unconfigured host, which would take
   // out the whole page, so an unknown host degrades to a lazy <img> instead.
+  //
+  // It has to degrade to the *same box*, not just the same pixels: callers
+  // size the frame themselves and expect the artwork to fill it out of flow,
+  // so the fallback repeats what `fill` sets inline. A normal-flow image here
+  // becomes a flex item in frames like `CollectionCard`, displacing the
+  // overlay that is supposed to sit on top of it. Every caller already
+  // establishes a containing block, because `fill` requires one.
   if (!isOptimizableImageUrl(src)) {
     return (
       // eslint-disable-next-line @next/next/no-img-element
@@ -48,7 +55,10 @@ export function CoverArt({
         loading={priority ? "eager" : "lazy"}
         decoding="async"
         onError={onError}
-        className={cn("h-full w-full object-cover", className)}
+        className={cn(
+          "absolute inset-0 h-full w-full object-cover",
+          className,
+        )}
       />
     );
   }
