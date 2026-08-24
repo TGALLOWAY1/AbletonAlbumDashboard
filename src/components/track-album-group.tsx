@@ -4,6 +4,7 @@ import * as React from "react";
 import Link from "next/link";
 import { ChevronDown, Disc3, Star } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
+import { CoverArt } from "@/components/cover-art";
 import { cn } from "@/lib/utils";
 
 /**
@@ -13,10 +14,9 @@ import { cn } from "@/lib/utils";
  */
 function GroupCover({ coverImageUrl }: { coverImageUrl?: string | null }) {
   return (
-    <span className="h-6 w-6 shrink-0 overflow-hidden rounded border border-border bg-gradient-to-br from-primary/20 via-surface-2 to-accent/15">
+    <span className="relative block h-6 w-6 shrink-0 overflow-hidden rounded border border-border bg-gradient-to-br from-primary/20 via-surface-2 to-accent/15">
       {coverImageUrl ? (
-        // eslint-disable-next-line @next/next/no-img-element
-        <img src={coverImageUrl} alt="" className="h-full w-full object-cover" />
+        <CoverArt src={coverImageUrl} sizes="24px" />
       ) : (
         <span className="flex h-full w-full items-center justify-center text-foreground/25">
           <Disc3 className="h-3.5 w-3.5" />

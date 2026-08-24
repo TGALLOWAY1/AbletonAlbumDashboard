@@ -93,6 +93,7 @@ function LargeTile({
             track={track}
             className="aspect-square w-full"
             textClassName="text-5xl"
+            sizes="(min-width: 640px) 256px, 100vw"
           />
         </Link>
 
@@ -172,6 +173,7 @@ function MediumTile({ track }: { track: TrackWithDetails }) {
           track={track}
           className="aspect-square w-full"
           textClassName="text-3xl"
+          sizes="(min-width: 1024px) 25vw, (min-width: 640px) 33vw, 50vw"
         >
           <span className="absolute right-2 top-2 rounded-full bg-surface/85 px-1.5 py-0.5 text-[10px] font-semibold tabular-nums text-foreground">
             {progress}%
@@ -252,6 +254,7 @@ function SnapshotTile({ track }: { track: TrackWithDetails }) {
         track={track}
         className="aspect-square w-full rounded-md border border-border transition-colors group-hover:border-primary/50"
         textClassName="text-lg"
+        sizes="(min-width: 1280px) 12vw, (min-width: 768px) 17vw, (min-width: 640px) 25vw, 33vw"
       >
         <ProgressStrip value={progress} />
       </TrackCover>

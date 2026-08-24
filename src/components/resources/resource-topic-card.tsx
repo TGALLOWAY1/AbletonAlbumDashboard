@@ -5,6 +5,7 @@ import {
   ImageIcon,
   Link as LinkIcon,
 } from "lucide-react";
+import { CoverArt } from "@/components/cover-art";
 import type { ResourceItem } from "@/lib/data/resources";
 
 // Opaque pastels (the shared /15-alpha tiles would go muddy over imagery),
@@ -39,11 +40,10 @@ export function ResourceTopicCard({
     >
       <div className="relative aspect-[16/11] w-full overflow-hidden bg-surface-2">
         {resource.thumbnailUrl ? (
-          // eslint-disable-next-line @next/next/no-img-element
-          <img
+          <CoverArt
             src={resource.thumbnailUrl}
-            alt=""
-            className="h-full w-full object-cover transition-transform group-hover:scale-[1.02]"
+            sizes="(min-width: 1024px) 33vw, (min-width: 640px) 50vw, 100vw"
+            className="transition-transform group-hover:scale-[1.02]"
           />
         ) : (
           <div className="flex h-full w-full items-center justify-center bg-gradient-to-br from-surface-2 to-border text-muted-foreground">

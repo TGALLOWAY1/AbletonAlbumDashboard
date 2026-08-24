@@ -10,6 +10,7 @@ import {
   PinOff,
   Play,
 } from "lucide-react";
+import { CoverArt } from "@/components/cover-art";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { useToast } from "@/components/toast";
@@ -259,11 +260,9 @@ function PinnedRow({
             className="relative h-11 w-11 shrink-0 overflow-hidden rounded-md bg-gradient-to-br from-primary/20 via-surface-2 to-accent/15 sm:h-12 sm:w-12"
           >
             {summary.coverImageUrl ? (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img
+              <CoverArt
                 src={summary.coverImageUrl}
-                alt=""
-                className="h-full w-full object-cover"
+                sizes="(min-width: 640px) 48px, 44px"
               />
             ) : (
               <span className="flex h-full w-full items-center justify-center text-sm font-bold text-foreground/30">

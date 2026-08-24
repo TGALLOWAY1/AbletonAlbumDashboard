@@ -184,6 +184,18 @@ exception).
   out of flow, the scrolling column reserves its space via
   `APP_CHROME.contentColumn` / `.mainPadding`; `layout-chrome.test.ts` asserts
   those offsets still match the chrome's dimensions.
+- Artwork — track covers, album covers, library artwork, resource thumbnails —
+  renders through `CoverArt` (`src/components/cover-art.tsx`), never a bare
+  `<img>`. Uploads are full-resolution originals and most slots that show them
+  are 24-96px, so `CoverArt` wraps `next/image` to serve a resized, lazy WebP.
+  It takes `fill`, so **the calling element must be `relative` and carry its
+  own dimensions**, and it requires an explicit `sizes` describing that slot —
+  a wrong `sizes` silently undoes the whole thing. Hosts the optimizer may
+  fetch from are listed once in `src/lib/image-hosts.ts`, which `next.config.ts`
+  and `CoverArt` both read; an unlisted host degrades to a lazy `<img>` rather
+  than throwing. Image uploads go through `prepareImageUpload`
+  (`src/lib/image-downscale.ts`) and are stored with a one-year `cacheControl`,
+  since every storage key is unique per upload.
 - Styling: Tailwind utility classes, no CSS modules. Use `cn()` / `tailwind-merge` for conditional classes.
 - The track library (`/tracks`) keeps its gallery/list + large/medium/small
   view preference in the URL (`src/lib/view-mode.ts`), so the page stays a server

@@ -45,6 +45,7 @@ export function LibraryMiniPlayer() {
           id={asset.id}
           artworkUrl={asset.artworkUrl}
           className="h-11 w-11 shrink-0 rounded-md border border-border"
+          sizes="44px"
           waveformBars={14}
           waveformHeight={22}
         />

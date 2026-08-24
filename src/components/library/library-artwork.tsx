@@ -1,6 +1,7 @@
 "use client";
 
 import * as React from "react";
+import { CoverArt } from "@/components/cover-art";
 import { MiniWaveform } from "@/components/library/mini-waveform";
 import { cn } from "@/lib/utils";
 
@@ -13,12 +14,15 @@ export function LibraryArtwork({
   id,
   artworkUrl,
   className,
+  sizes,
   waveformBars = 40,
   waveformHeight = 44,
 }: {
   id: string;
   artworkUrl?: string;
   className?: string;
+  /** CSS `sizes` for the slot this artwork fills — see `CoverArt`. */
+  sizes: string;
   waveformBars?: number;
   waveformHeight?: number;
 }) {
@@ -35,11 +39,9 @@ export function LibraryArtwork({
       )}
     >
       {showArtwork ? (
-        // eslint-disable-next-line @next/next/no-img-element
-        <img
-          src={artworkUrl}
-          alt=""
-          className="h-full w-full object-cover"
+        <CoverArt
+          src={artworkUrl!}
+          sizes={sizes}
           onError={() => setFailedUrl(artworkUrl ?? null)}
         />
       ) : (

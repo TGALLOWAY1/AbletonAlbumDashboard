@@ -95,6 +95,7 @@ function MediumRow({ track }: { track: TrackWithDetails }) {
           track={track}
           className="h-full w-full rounded-md"
           textClassName="text-sm"
+          sizes="48px"
         />
       </Link>
 
@@ -157,6 +158,7 @@ function CompactRow({ track }: { track: TrackWithDetails }) {
         track={track}
         className="h-8 w-8 shrink-0 rounded"
         textClassName="text-[10px]"
+        sizes="32px"
       />
       <span className="min-w-0 flex-1 truncate text-sm font-medium">
         {track.name}

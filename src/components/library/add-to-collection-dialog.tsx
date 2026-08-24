@@ -199,6 +199,7 @@ function AddToCollectionForm({
                   id={row.id}
                   artworkUrl={row.artworkUrl}
                   className="h-10 w-10 shrink-0 rounded-md border border-border"
+                  sizes="40px"
                   waveformBars={8}
                   waveformHeight={18}
                 />

@@ -46,6 +46,7 @@ function AlbumTrackTile({
           track={track}
           className="aspect-square w-full"
           textClassName="text-3xl"
+          sizes="(min-width: 1024px) 25vw, (min-width: 640px) 33vw, 50vw"
         />
       </Link>
 
