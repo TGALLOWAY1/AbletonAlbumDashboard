@@ -14,6 +14,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { CoverArt } from "@/components/cover-art";
 import { TrackCardActions } from "@/components/track-card-actions";
 import { DeleteTrackMenuItem } from "@/components/delete-track-menu-item";
 import { sunoBadgeLabel } from "@/lib/suno";
@@ -35,12 +36,19 @@ export function TrackCover({
   track,
   className,
   textClassName,
+  sizes,
   children,
 }: {
   track: Pick<TrackWithDetails, "name" | "cover_image_url">;
   className?: string;
   /** Sizing for the initials fallback. */
   textClassName?: string;
+  /**
+   * CSS `sizes` for the slot this cover fills. Required because the same
+   * component draws a 32px list bullet and a 640px gallery tile, and only the
+   * call site knows which — see `CoverArt`.
+   */
+  sizes: string;
   /** Overlay content — rendered above the artwork. */
   children?: React.ReactNode;
 }) {
@@ -52,12 +60,7 @@ export function TrackCover({
       )}
     >
       {track.cover_image_url ? (
-        // eslint-disable-next-line @next/next/no-img-element
-        <img
-          src={track.cover_image_url}
-          alt=""
-          className="h-full w-full object-cover"
-        />
+        <CoverArt src={track.cover_image_url} sizes={sizes} />
       ) : (
         <div
           className={cn(

@@ -13,6 +13,7 @@ import {
   X,
 } from "lucide-react";
 import { setActiveAlbum, updateAlbum } from "@/app/actions/album";
+import { CoverArt } from "@/components/cover-art";
 import { CoverImageUpload } from "@/components/cover-image-upload";
 import { useToast } from "@/components/toast";
 import { Button } from "@/components/ui/button";
@@ -108,13 +109,12 @@ function CoverEditor({ album }: { album: AlbumHeaderAlbum }) {
   return (
     <>
       <div className="relative h-20 w-20 shrink-0 md:h-24 md:w-24">
-        <div className="h-full w-full overflow-hidden rounded-md border border-border bg-gradient-to-br from-primary/20 via-surface-2 to-accent/15">
+        <div className="relative h-full w-full overflow-hidden rounded-md border border-border bg-gradient-to-br from-primary/20 via-surface-2 to-accent/15">
           {album.cover_image_url ? (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img
+            <CoverArt
               src={album.cover_image_url}
-              alt=""
-              className="h-full w-full object-cover"
+              sizes="(min-width: 768px) 96px, 80px"
+              priority
             />
           ) : (
             <div className="flex h-full w-full items-center justify-center text-foreground/25">

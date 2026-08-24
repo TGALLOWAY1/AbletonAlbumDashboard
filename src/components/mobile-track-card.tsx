@@ -67,6 +67,7 @@ export function MobileTrackCard({
               track={track}
               className="h-full w-full rounded-2xl"
               textClassName="text-2xl"
+              sizes="96px"
             />
           </Link>
 

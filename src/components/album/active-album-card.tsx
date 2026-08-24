@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { Disc3 } from "lucide-react";
+import { CoverArt } from "@/components/cover-art";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { ProgressRing } from "@/components/ui/progress-ring";
@@ -48,15 +49,10 @@ export function ActiveAlbumCard({
           {album.cover_image_url && (
             <Link
               href={`/albums/${album.id}`}
-              className="hidden h-16 w-16 shrink-0 overflow-hidden rounded-md border border-border bg-surface-2 sm:block"
+              className="relative hidden h-16 w-16 shrink-0 overflow-hidden rounded-md border border-border bg-surface-2 sm:block"
               aria-label={`Open ${title}`}
             >
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img
-                src={album.cover_image_url}
-                alt=""
-                className="h-full w-full object-cover"
-              />
+              <CoverArt src={album.cover_image_url} sizes="64px" />
             </Link>
           )}
 

@@ -62,6 +62,7 @@ export function LibraryPlayTile({
           id={asset.id}
           artworkUrl={asset.artworkUrl}
           className="aspect-square w-full"
+          sizes="(min-width: 1536px) 17vw, (min-width: 1280px) 20vw, (min-width: 1024px) 25vw, (min-width: 640px) 33vw, 50vw"
           waveformBars={waveformBars}
         />
 

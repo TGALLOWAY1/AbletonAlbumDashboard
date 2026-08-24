@@ -61,6 +61,7 @@ export function TrackCard({
           track={track}
           className="h-20 w-20 rounded-md"
           textClassName="text-xl"
+          sizes="80px"
         />
 
         <div className="min-w-0">

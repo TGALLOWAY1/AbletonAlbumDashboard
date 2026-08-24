@@ -3,6 +3,7 @@ import { Disc3, MoreHorizontal, Pencil, Play } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { BackLink } from "@/components/back-link";
+import { CoverArt } from "@/components/cover-art";
 import { CopyPathButton } from "@/components/copy-path-button";
 import { SunoStatusToggle } from "@/components/suno-status-toggle";
 import { TrackAlbumSelect } from "@/components/track-album-select";
@@ -55,12 +56,9 @@ export function TrackHeaderBar({
         />
 
         {track.cover_image_url ? (
-          // eslint-disable-next-line @next/next/no-img-element
-          <img
-            src={track.cover_image_url}
-            alt=""
-            className="h-11 w-11 shrink-0 rounded-md object-cover"
-          />
+          <div className="relative h-11 w-11 shrink-0 overflow-hidden rounded-md">
+            <CoverArt src={track.cover_image_url} sizes="44px" />
+          </div>
         ) : (
           <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-md bg-surface-2 text-xs font-bold text-foreground/30">
             {track.name.slice(0, 2).toUpperCase()}

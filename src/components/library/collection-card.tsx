@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { Layers } from "lucide-react";
+import { CoverArt } from "@/components/cover-art";
 import { MiniWaveform } from "@/components/library/mini-waveform";
 import { cn } from "@/lib/utils";
 import type { LibraryCollection } from "@/lib/data/library";
@@ -31,11 +32,9 @@ export function CollectionCard({
     >
       <div className="relative flex h-24 items-end overflow-hidden bg-gradient-to-br from-primary/20 via-surface-2 to-accent/15 p-3">
         {collection.artworkUrl ? (
-          // eslint-disable-next-line @next/next/no-img-element
-          <img
+          <CoverArt
             src={collection.artworkUrl}
-            alt=""
-            className="absolute inset-0 h-full w-full object-cover"
+            sizes="(min-width: 1024px) 33vw, (min-width: 640px) 50vw, 100vw"
           />
         ) : (
           <div className="absolute inset-0 flex items-center px-3 opacity-60">

@@ -3,6 +3,7 @@
 import * as React from "react";
 import { ImageIcon, Loader2, Music, X } from "lucide-react";
 import { useToast } from "@/components/toast";
+import { prepareImageUpload } from "@/lib/image-downscale";
 import { getBrowserSupabase } from "@/lib/supabase/browser";
 import {
   ARTWORK_ACCEPT,
@@ -130,10 +131,15 @@ function UploadField({
     onBusyChange(true);
     try {
       const supabase = getBrowserSupabase();
-      const key = libraryObjectKey(folder, file.name);
-      const { error } = await supabase.storage
-        .from(bucket)
-        .upload(key, file, { contentType: file.type || undefined });
+      // Artwork goes through the same downscale as track covers; audio files
+      // are not an image type and pass through untouched.
+      const prepared = await prepareImageUpload(file);
+      const key = libraryObjectKey(folder, `upload.${prepared.extension}`);
+      const { error } = await supabase.storage.from(bucket).upload(key, prepared.body, {
+        contentType: prepared.contentType || undefined,
+        // Keys are unique per upload, so every object here is immutable.
+        cacheControl: "31536000",
+      });
       if (error) throw error;
 
       if (publicUrl) {

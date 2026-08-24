@@ -4,6 +4,8 @@ import { useState } from "react";
 import { ImagePlus, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { CoverArt } from "@/components/cover-art";
+import { COVER_MAX_EDGE, prepareImageUpload } from "@/lib/image-downscale";
 import { getBrowserSupabase } from "@/lib/supabase/browser";
 
 export const COVER_BUCKET = "track-images";
@@ -36,11 +38,21 @@ export function CoverImageUpload({
     setUploading(true);
     try {
       const supabase = getBrowserSupabase();
-      const ext = file.name.split(".").pop()?.toLowerCase() ?? "bin";
-      const key = `${pathPrefix}/${Date.now()}-${crypto.randomUUID()}.${ext}`;
+      // Covers arrive straight off a camera or an image generator at several
+      // megabytes, and never render larger than a gallery tile. Shrink once
+      // here rather than paying for the original on every read.
+      const prepared = await prepareImageUpload(file, COVER_MAX_EDGE);
+      const key = `${pathPrefix}/${Date.now()}-${crypto.randomUUID()}.${prepared.extension}`;
       const { error: upErr } = await supabase.storage
         .from(COVER_BUCKET)
-        .upload(key, file, { contentType: file.type, upsert: false });
+        .upload(key, prepared.body, {
+          contentType: prepared.contentType,
+          // The key is unique per upload, so this object's bytes never
+          // change. The Supabase default of an hour makes every browser
+          // re-fetch the whole library of covers each session.
+          cacheControl: "31536000",
+          upsert: false,
+        });
       if (upErr) throw upErr;
       const { data } = supabase.storage.from(COVER_BUCKET).getPublicUrl(key);
       setUrl(data.publicUrl);
@@ -63,8 +75,7 @@ export function CoverImageUpload({
       <div className="flex items-start gap-4">
         <div className="relative h-24 w-24 shrink-0 overflow-hidden rounded-md border border-border bg-surface-2">
           {url ? (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img src={url} alt="" className="h-full w-full object-cover" />
+            <CoverArt src={url} sizes="96px" />
           ) : (
             <div className="flex h-full w-full flex-col items-center justify-center gap-1 text-muted-foreground">
               <ImagePlus className="h-5 w-5" />
@@ -87,7 +98,7 @@ export function CoverImageUpload({
             <span className="text-xs text-muted-foreground">
               {uploading
                 ? "Uploading…"
-                : "PNG, JPG, WEBP, GIF, AVIF · up to 10MB"}
+                : `PNG, JPG, WEBP, GIF, AVIF · up to 10MB · resized to ${COVER_MAX_EDGE}px`}
             </span>
             {url && !uploading && (
               <Button
