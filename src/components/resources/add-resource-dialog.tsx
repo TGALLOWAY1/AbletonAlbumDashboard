@@ -51,9 +51,9 @@ const RESOURCE_FILES_BUCKET = "resource-files";
 type Tab = ResourceSourceKind;
 
 const TABS: { key: Tab; label: string; icon: React.ComponentType<{ className?: string }> }[] = [
+  { key: "url", label: "URL / Video", icon: LinkIcon },
   { key: "pdf", label: "PDF", icon: Upload },
   { key: "markdown", label: "Markdown", icon: FileText },
-  { key: "url", label: "URL / Video", icon: LinkIcon },
 ];
 
 const DEFAULT_TYPE_BY_TAB: Record<Tab, ResourceType> = {
@@ -83,13 +83,13 @@ export function AddResourceDialog({
 }) {
   const router = useRouter();
   const [open, setOpen] = React.useState(false);
-  const [tab, setTab] = React.useState<Tab>("pdf");
+  const [tab, setTab] = React.useState<Tab>("url");
   const [title, setTitle] = React.useState("");
   const [description, setDescription] = React.useState("");
   const [categoryId, setCategoryId] = React.useState<ResourceCategoryId>(
     inheritedCategoryId ?? RESOURCE_CATEGORIES[0].id,
   );
-  const [type, setType] = React.useState<ResourceType>("guide");
+  const [type, setType] = React.useState<ResourceType>(DEFAULT_TYPE_BY_TAB.url);
   const [readMinutes, setReadMinutes] = React.useState("5");
 
   const [storagePath, setStoragePath] = React.useState("");
@@ -99,7 +99,6 @@ export function AddResourceDialog({
   const [content, setContent] = React.useState("");
 
   const [url, setUrl] = React.useState("");
-  const [thumbnailOverride, setThumbnailOverride] = React.useState("");
 
   const [error, setError] = React.useState<string | null>(null);
   const [submitting, setSubmitting] = React.useState(false);
@@ -108,23 +107,23 @@ export function AddResourceDialog({
     () => (tab === "url" ? getYouTubeVideoId(url) : null),
     [tab, url],
   );
-  const autoThumbnail =
+  const previewThumbnail =
     youTubeId !== null ? getYouTubeThumbnailUrl(youTubeId) : null;
-  const previewThumbnail = thumbnailOverride.trim() || autoThumbnail;
 
   function reset() {
-    setTab("pdf");
+    setTab("url");
     setTitle("");
     setDescription("");
+    // Back to the inherited category when opened from one; their URL-first
+    // default for the type.
     setCategoryId(inheritedCategoryId ?? RESOURCE_CATEGORIES[0].id);
-    setType("guide");
+    setType(DEFAULT_TYPE_BY_TAB.url);
     setReadMinutes("5");
     setStoragePath("");
     setPdfName("");
     setUploading(false);
     setContent("");
     setUrl("");
-    setThumbnailOverride("");
     setError(null);
     setSubmitting(false);
   }
@@ -213,9 +212,6 @@ export function AddResourceDialog({
           return;
         }
         formData.set("url", url.trim());
-        if (thumbnailOverride.trim()) {
-          formData.set("thumbnail_url", thumbnailOverride.trim());
-        }
       }
       const result = await createResource(formData);
       if (result?.error) {
@@ -333,21 +329,6 @@ export function AddResourceDialog({
                   placeholder="https://www.youtube.com/watch?v=…"
                 />
               </div>
-              <div className="grid gap-2">
-                <Label htmlFor="thumbnail">
-                  Thumbnail URL{" "}
-                  <span className="text-xs font-normal text-muted-foreground">
-                    (optional · auto-detected for YouTube)
-                  </span>
-                </Label>
-                <Input
-                  id="thumbnail"
-                  type="url"
-                  value={thumbnailOverride}
-                  onChange={(e) => setThumbnailOverride(e.target.value)}
-                  placeholder="https://…/preview.jpg"
-                />
-              </div>
               <div className="grid gap-1.5">
                 <span className="text-xs font-medium text-muted-foreground">
                   Preview
@@ -371,7 +352,7 @@ export function AddResourceDialog({
                         <>
                           <ImageOff className="h-6 w-6" />
                           <span className="text-xs">
-                            Paste a YouTube link or thumbnail URL to preview
+                            Paste a link to preview
                           </span>
                         </>
                       )}
