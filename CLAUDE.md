@@ -49,6 +49,22 @@ Run `pnpm typecheck && pnpm lint && pnpm test` before committing.
 - Dashboard root (`src/app/page.tsx`) is a single responsive surface using Tailwind `md:` breakpoints — no user-agent sniffing, no separate desktop/mobile route for the home page.
 - The dashboard is also the progress surface: it ends with a Progress section (`src/components/home/progress-panel.tsx`, anchor `#progress`) carrying the work heatmap, range stats and the session-history log. There is no `/analytics` or `/sessions` page — both routes redirect to `/#progress`.
 - Library (`src/app/library/**`) is likewise a single responsive surface — the feature parity rule below is track-level and does not imply an `/m/library` route. `src/app/library/layout.tsx` mounts the preview player so playback survives navigation between Library routes without leaking an audio element onto every other page.
+- Resources (`src/app/resources/**`) is one system at three scopes: `/resources`
+  is the "All" gallery, `/resources/[categoryId]` is a category, and
+  `/resources/[categoryId]/[resourceId]` is a single topic. All three share the
+  same parts — `ResourceCategoryNav` (the horizontal tab row; `null` means All),
+  `ResourceTopicGallery` + `ResourceTopicCard` (the numbered, thumbnail-first
+  cards) and `AddResourceDialog`. There is no separate category-directory page:
+  the nav *is* the directory. Numbering is positional, off "recommended order"
+  (oldest first), not a stored field.
+- `AddResourceDialog` renders its own trigger button on purpose. Category pages
+  are server components, and an element passed into Radix's `asChild` Slot from
+  one hydrates without the props the Slot injects on the client. Pass
+  `categoryId`/`categoryTitle` to it and the new resource inherits that category
+  (read-only label instead of a picker); omit them on `/resources`, where there
+  is no category context, and the user picks one.
+- Server actions that mutate a resource call `revalidateResourceSurfaces` from
+  `src/lib/revalidate-resources.ts` — the sibling of `revalidateTrackSurfaces`.
 - Server actions live under `src/app/actions/`.
 - Data fetchers live under `src/lib/data/`.
 

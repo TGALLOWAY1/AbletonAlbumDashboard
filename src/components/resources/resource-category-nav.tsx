@@ -5,7 +5,7 @@ import {
   RESOURCE_CATEGORIES,
   type ResourceCategoryId,
 } from "@/lib/data/resources";
-import { RESOURCE_CATEGORY_ICONS } from "./resource-category-card";
+import { RESOURCE_CATEGORY_ICONS } from "./resource-category-icons";
 
 function CategoryTab({
   href,
@@ -37,14 +37,15 @@ function CategoryTab({
 }
 
 /**
- * Horizontally scrollable category switcher shown on category detail pages.
- * "All" returns to the main Resources page; the active category gets the
- * green accent and underline.
+ * The one category switcher, shared by /resources and every category page:
+ * "All" is the landing page, each other tab is that category's own page. The
+ * active tab carries the green accent and underline. Pass `null` for the
+ * landing page, where "All" is the active state.
  */
 export function ResourceCategoryNav({
   activeCategoryId,
 }: {
-  activeCategoryId: ResourceCategoryId;
+  activeCategoryId: ResourceCategoryId | null;
 }) {
   return (
     <nav aria-label="Resource categories" className="-mx-1 overflow-x-auto px-1">
@@ -53,7 +54,7 @@ export function ResourceCategoryNav({
           href="/resources"
           label="All"
           icon={LayoutGrid}
-          active={false}
+          active={activeCategoryId === null}
         />
         {RESOURCE_CATEGORIES.map((category) => (
           <CategoryTab
