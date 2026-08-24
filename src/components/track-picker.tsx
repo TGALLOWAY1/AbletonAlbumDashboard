@@ -6,6 +6,13 @@ import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
 import type { TrackRow } from "@/lib/types";
 
+/**
+ * All the picker draws. Narrowed from `TrackRow` so callers can hand it the
+ * lean `listTrackOptions` rows instead of paying for a full track fetch to
+ * render a name in a dropdown; a `TrackRow` still satisfies it.
+ */
+export type PickableTrack = Pick<TrackRow, "id" | "name" | "status">;
+
 export function TrackPicker({
   tracks,
   value,
@@ -13,7 +20,7 @@ export function TrackPicker({
   required,
   className,
 }: {
-  tracks: TrackRow[];
+  tracks: PickableTrack[];
   value: string | null;
   onChange: (id: string | null) => void;
   required?: boolean;

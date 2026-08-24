@@ -58,3 +58,13 @@ export const MIGRATION_0026_MISSING_MESSAGE =
   "This needs supabase/migrations/0026_resources_live_performance.sql applied " +
   "to your Supabase project — the database still only accepts the original " +
   "six resource categories. Run it, then try again.";
+
+export const MIGRATION_0027_MISSING_MESSAGE =
+  "This needs supabase/migrations/0027_track_pins.sql applied to your " +
+  "Supabase project — tracks have nowhere to record a pin yet. Run it, then " +
+  "try again.";
+
+export const MIGRATION_0028_MISSING_MESSAGE =
+  "This needs supabase/migrations/0028_general_tasks.sql applied to your " +
+  "Supabase project — every task still has to belong to a track. Run it, " +
+  "then try again.";

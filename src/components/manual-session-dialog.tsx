@@ -17,14 +17,11 @@ import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { RatingPicker } from "@/components/ui/rating-picker";
-import { TrackPicker } from "@/components/track-picker";
+import { TrackPicker, type PickableTrack } from "@/components/track-picker";
 import { SessionTypePicker } from "@/components/session-type-picker";
 import { completeSession } from "@/app/actions/sessions";
 import { useToast } from "@/components/toast";
-import {
-  type SessionTypeRow,
-  type TrackRow,
-} from "@/lib/types";
+import { type SessionTypeRow } from "@/lib/types";
 
 export function ManualSessionEntry({
   tracks,
@@ -32,7 +29,7 @@ export function ManualSessionEntry({
   trackId: fixedTrackId = null,
   variant = "desktop",
 }: {
-  tracks: TrackRow[];
+  tracks: PickableTrack[];
   sessionTypes: SessionTypeRow[];
   trackId?: string | null;
   variant?: "desktop" | "mobile";
@@ -74,7 +71,7 @@ function ManualSessionDialog({
 }: {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  tracks: TrackRow[];
+  tracks: PickableTrack[];
   sessionTypes: SessionTypeRow[];
   fixedTrackId: string | null;
 }) {

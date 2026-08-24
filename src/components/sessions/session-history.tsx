@@ -6,7 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { getServerSupabase } from "@/lib/supabase/server";
 import { OWNER_ID } from "@/lib/owner";
 import { ManualSessionEntry } from "@/components/manual-session-dialog";
-import { getAllTracks } from "@/lib/data/tracks";
+import { listTrackOptions } from "@/lib/data/tracks";
 import { getSessionTypes } from "@/lib/data/session-types";
 
 type SessionRow = {
@@ -50,7 +50,9 @@ function formatDuration(seconds: number | null) {
 export async function SessionHistory() {
   const [sessions, tracks, sessionTypes] = await Promise.all([
     fetchSessions(),
-    getAllTracks(),
+    // Only the picker needs tracks here, and it draws a name and a status —
+    // no reason to run the full per-track detail fan-out for that.
+    listTrackOptions(),
     getSessionTypes(),
   ]);
 
@@ -82,7 +84,8 @@ export async function SessionHistory() {
             <h3 className="text-lg font-semibold">No sessions yet</h3>
             <p className="text-sm text-muted-foreground">
               Start a focus session from the home page or any track to log
-              your first one.
+              your first one — or use “Log past session” to backfill one you
+              already did.
             </p>
           </CardContent>
         </Card>

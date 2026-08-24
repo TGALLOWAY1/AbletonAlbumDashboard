@@ -205,7 +205,68 @@ export function finishingStepsFromRows(
   }));
 }
 
-export const MAX_ACTIVE_TRACKS = 5;
+/**
+ * How many tracks can sit on the shortlist at once.
+ *
+ * The point of the number is that it is small enough to hurt: filling it and
+ * wanting a sixth is the moment you have to decide what you are *not* working
+ * on. The cap therefore lives on the pin — a reversible note about priority —
+ * rather than on `status`, which used to carry it. Under the old rule the only
+ * way to make room was to archive or back-burner a song, so the dashboard
+ * asked for a commitment to five specific tracks. Now you unpin one, or you
+ * finish it and it unpins itself (`setTrackStatus`).
+ *
+ * Enforced in `setTrackPinned`, the only writer — see migration 0027 for why
+ * it is not a database constraint.
+ */
+export const MAX_PINNED_TRACKS = 5;
+
+/**
+ * Statuses a track can be pinned in.
+ *
+ * `setTrackStatus` unpins on complete/archive, so allowing those to be pinned
+ * again would make that a suggestion rather than an invariant: a finished song
+ * could sit in one of the five slots forever, which is the exact stall the cap
+ * exists to prevent. Shared by the server action that enforces it and the UI
+ * that decides whether to offer the control, so the two cannot disagree about
+ * what is pinnable.
+ */
+export const PINNABLE_TRACK_STATUSES: readonly TrackStatus[] = [
+  "active",
+  "backlog",
+];
+
+export function isPinnableStatus(status: string): boolean {
+  return PINNABLE_TRACK_STATUSES.includes(status as TrackStatus);
+}
+
+/** Is this track on the shortlist? */
+export function isTrackPinned(
+  track: Pick<TrackRow, "pinned_at">,
+): boolean {
+  return track.pinned_at != null;
+}
+
+/**
+ * Compare two tracks by shortlist position: hand-set `pin_order` first with
+ * NULLs last, then oldest pin. Same shape as the task ordering in migration
+ * 0025, and the same reason — a newly pinned track has no `pin_order` yet and
+ * belongs at the bottom, without the insert having to look up a maximum.
+ *
+ * Exported so the database read (`getPinnedTracks`) and the optimistic client
+ * list cannot disagree about what "priority order" means.
+ */
+export function comparePinPosition(
+  a: Pick<TrackRow, "pin_order" | "pinned_at">,
+  b: Pick<TrackRow, "pin_order" | "pinned_at">,
+): number {
+  const ao = a.pin_order ?? Number.POSITIVE_INFINITY;
+  const bo = b.pin_order ?? Number.POSITIVE_INFINITY;
+  if (ao !== bo) return ao - bo;
+  const at = a.pinned_at ? new Date(a.pinned_at).getTime() : 0;
+  const bt = b.pinned_at ? new Date(b.pinned_at).getTime() : 0;
+  return at - bt;
+}
 
 // A track untouched for longer than this is considered going stale and gets
 // flagged on the dashboard ("Needs attention") and on track cards.
