@@ -28,6 +28,26 @@ export function pushPath(stack: string[], path: string): string[] {
   return next.length > NAV_STACK_MAX ? next.slice(next.length - NAV_STACK_MAX) : next;
 }
 
+/**
+ * Returns the stack with `to` swapped in for the current top entry — the
+ * `router.replace()` counterpart to `pushPath`.
+ *
+ * A replace navigation adds no browser-history entry, so letting the tracker
+ * append one would leave the stack claiming in-app history the browser does
+ * not have: `BackLink` would then call `router.back()` into nothing on a deep
+ * link, or out of the app entirely. Call this *before* `router.replace()` —
+ * the tracker's own push then dedupes against the top it finds.
+ *
+ * Falls back to a plain push when the top isn't `from`, and dedupes when the
+ * replacement is the entry underneath (replacing B in [A, B] with A → [A]).
+ */
+export function replaceTop(stack: string[], from: string, to: string): string[] {
+  if (stack.length > 0 && stack[stack.length - 1] === from) {
+    return pushPath(stack.slice(0, -1), to);
+  }
+  return pushPath(stack, to);
+}
+
 /** True when there is somewhere in-app to go back to. */
 export function hasInAppHistory(stack: string[]): boolean {
   return stack.length > 1;

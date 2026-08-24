@@ -6,9 +6,7 @@ import { Button } from "@/components/ui/button";
 import { CoverImageUpload } from "@/components/cover-image-upload";
 import { SubmitButton } from "@/components/submit-button";
 import { createTrack } from "@/app/actions/tracks";
-import { countActiveTracks } from "@/lib/data/tracks";
 import { listAlbums } from "@/lib/data/album";
-import { MAX_ACTIVE_TRACKS } from "@/lib/types";
 
 export const dynamic = "force-dynamic";
 
@@ -18,11 +16,7 @@ export default async function NewTrackPage({
   searchParams?: Promise<{ album?: string }>;
 }) {
   const sp = (await searchParams) ?? {};
-  const [activeCount, albums] = await Promise.all([
-    countActiveTracks(),
-    listAlbums(),
-  ]);
-  const atCap = activeCount >= MAX_ACTIVE_TRACKS;
+  const albums = await listAlbums();
   const activeAlbum = albums.find((a) => a.is_active);
   const defaultAlbumId = sp.album ?? activeAlbum?.id ?? "";
 
@@ -127,17 +121,21 @@ export default async function NewTrackPage({
               <select
                 id="status"
                 name="status"
-                defaultValue={atCap ? "backlog" : "active"}
+                defaultValue="active"
                 className="flex h-9 w-full rounded-md border border-border bg-surface-2 px-3 text-sm text-foreground"
               >
-                <option value="active" disabled={atCap}>
-                  Active{" "}
-                  {atCap
-                    ? `(at cap of ${MAX_ACTIVE_TRACKS})`
-                    : `(${activeCount}/${MAX_ACTIVE_TRACKS})`}
-                </option>
+                <option value="active">Active</option>
                 <option value="backlog">Backlog</option>
               </select>
+              {/* No cap here any more: `status` says where a track is in its
+                  life, and there is no reason to limit how many songs are
+                  alive. The limit that matters — five at a time — moved to the
+                  dashboard pin (migration 0027). */}
+              <p className="text-xs text-muted-foreground">
+                Active or backlog is just where it sits. Pin it from the
+                dashboard when it&apos;s one of the five you&apos;re actually
+                working on.
+              </p>
             </div>
 
             <div className="flex justify-end gap-2 pt-2">

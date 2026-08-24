@@ -8,8 +8,15 @@ import { CopyPathButton } from "@/components/copy-path-button";
 import { SunoStatusToggle } from "@/components/suno-status-toggle";
 import { TrackAlbumSelect } from "@/components/track-album-select";
 import { ManualSessionEntry } from "@/components/manual-session-dialog";
+import { PinTrackButton } from "@/components/track/pin-track-button";
 import { TrackStageStrip } from "@/components/track/track-stage-strip";
-import { trackSunoStatus, type AlbumRow, type TrackWithDetails } from "@/lib/types";
+import {
+  isPinnableStatus,
+  isTrackPinned,
+  trackSunoStatus,
+  type AlbumRow,
+  type TrackWithDetails,
+} from "@/lib/types";
 import type { SessionTypeRow } from "@/lib/types";
 
 /**
@@ -34,6 +41,10 @@ export function TrackHeaderBar({
   const mobile = variant === "mobile";
   const genre = track.album?.genre?.trim() || null;
   const sunoStatus = trackSunoStatus(track);
+  const pinned = isTrackPinned(track);
+  // Completed and archived tracks cannot be pinned (`setTrackPinned` rejects
+  // them), so the control is not offered rather than shown and refused.
+  const canPin = isPinnableStatus(track.status);
   const meta = [
     track.song_key ? track.song_key : null,
     track.bpm ? `${track.bpm} BPM` : null,
@@ -126,12 +137,21 @@ export function TrackHeaderBar({
 
         <div className="flex shrink-0 items-center gap-2">
           {!mobile && (
-            <ManualSessionEntry
-              trackId={track.id}
-              tracks={[]}
-              sessionTypes={sessionTypes}
-              variant="desktop"
-            />
+            <>
+              {canPin && (
+                <PinTrackButton
+                  trackId={track.id}
+                  trackName={track.name}
+                  pinned={pinned}
+                />
+              )}
+              <ManualSessionEntry
+                trackId={track.id}
+                tracks={[]}
+                sessionTypes={sessionTypes}
+                variant="desktop"
+              />
+            </>
           )}
           <Button asChild size={mobile ? "icon" : "md"}>
             <Link href={`/focus/${track.id}`} aria-label="Start focus session">
@@ -170,6 +190,14 @@ export function TrackHeaderBar({
               variant="compact"
             />
           </div>
+          {canPin && (
+            <PinTrackButton
+              trackId={track.id}
+              trackName={track.name}
+              pinned={pinned}
+              variant="mobile"
+            />
+          )}
           <ManualSessionEntry
             trackId={track.id}
             tracks={[]}

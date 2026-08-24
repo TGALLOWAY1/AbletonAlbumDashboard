@@ -16,6 +16,7 @@ import {
   RESOURCES_CATEGORY_CONSTRAINT,
 } from "@/lib/migration-errors";
 import { logSupabaseError } from "@/lib/supabase/log-error";
+import { planResourceCategoryMove } from "@/lib/resource-category-move";
 import { revalidateResourceSurfaces } from "@/lib/revalidate-resources";
 import {
   getYouTubeThumbnailUrl,
@@ -131,6 +132,66 @@ export async function createResource(
     categoryIds: [asCategoryId(parsed.category_id)],
   });
   return {};
+}
+
+/**
+ * Move a resource to another category after the fact. Returns where the
+ * resource now lives: the category is part of its URL, so the caller's current
+ * page is stale the moment this succeeds.
+ */
+export async function updateResourceCategory(
+  id: string,
+  categoryId: string,
+): Promise<{ error?: string; destination?: string }> {
+  if (id.startsWith("seed-")) {
+    // Seed entries are placeholder content with no row behind them.
+    return {
+      error: "Sample resources can't be moved. Add your own to organize it.",
+    };
+  }
+
+  const supabase = getServerSupabase();
+  const { data: existing, error: readError } = await supabase
+    .from("resources")
+    .select("category_id")
+    .eq("owner_id", OWNER_ID)
+    .eq("id", id)
+    .maybeSingle();
+  if (readError) {
+    logSupabaseError("updateResourceCategory.read", readError);
+    return { error: "Could not move that resource. Try again." };
+  }
+  if (!existing) return { error: "Resource not found." };
+
+  const plan = planResourceCategoryMove({
+    resourceId: id,
+    from: existing.category_id,
+    to: categoryId,
+  });
+  if (!plan.ok) return { error: plan.error };
+  // Already there — nothing to write, but still answer with the destination so
+  // the caller has one code path.
+  if (plan.unchanged) return { destination: plan.destination };
+
+  const { error } = await supabase
+    .from("resources")
+    .update({ category_id: plan.to })
+    .eq("owner_id", OWNER_ID)
+    .eq("id", id);
+  if (error) {
+    // The database still only accepts the original six categories.
+    if (isCheckViolation(error, RESOURCES_CATEGORY_CONSTRAINT)) {
+      return { error: MIGRATION_0026_MISSING_MESSAGE };
+    }
+    logSupabaseError("updateResourceCategory", error);
+    return { error: "Could not move that resource. Try again." };
+  }
+
+  revalidateResourceSurfaces({
+    categoryIds: plan.categoryIds,
+    resourceId: id,
+  });
+  return { destination: plan.destination };
 }
 
 export async function toggleResourceBookmark(

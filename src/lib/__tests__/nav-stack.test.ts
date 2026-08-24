@@ -6,6 +6,7 @@ import {
   previousPath,
   pushPath,
   hasInAppHistory,
+  replaceTop,
   serializeStack,
 } from "@/lib/nav-stack";
 
@@ -44,6 +45,43 @@ describe("pushPath", () => {
     expect(stack).toHaveLength(NAV_STACK_MAX);
     expect(stack[0]).toBe("/page-5"); // oldest five dropped
     expect(stack[stack.length - 1]).toBe(`/page-${NAV_STACK_MAX + 4}`);
+  });
+});
+
+describe("replaceTop", () => {
+  const FROM = "/resources/sound-design/abc";
+  const TO = "/resources/mixing-mastering/abc";
+
+  it("swaps the current page out instead of appending", () => {
+    // A deep-linked page is the only entry; a replace navigation must leave it
+    // that way, or BackLink would see history the browser doesn't have.
+    expect(replaceTop([FROM], FROM, TO)).toEqual([TO]);
+    expect(hasInAppHistory(replaceTop([FROM], FROM, TO))).toBe(false);
+  });
+
+  it("keeps everything below the top", () => {
+    expect(replaceTop(["/resources", FROM], FROM, TO)).toEqual([
+      "/resources",
+      TO,
+    ]);
+  });
+
+  it("dedupes when the replacement is the entry underneath", () => {
+    expect(replaceTop(["/resources", FROM], FROM, "/resources")).toEqual([
+      "/resources",
+    ]);
+  });
+
+  it("falls back to a push when the top isn't the page being replaced", () => {
+    expect(replaceTop(["/resources"], FROM, TO)).toEqual(["/resources", TO]);
+    expect(replaceTop([], FROM, TO)).toEqual([TO]);
+  });
+
+  it("leaves the tracker's follow-up push a no-op", () => {
+    // NavigationTracker pushes the destination once the pathname changes;
+    // consecutive-duplicate dedupe is what keeps that from re-growing the stack.
+    const replaced = replaceTop([FROM], FROM, TO);
+    expect(pushPath(replaced, TO)).toEqual(replaced);
   });
 });
 

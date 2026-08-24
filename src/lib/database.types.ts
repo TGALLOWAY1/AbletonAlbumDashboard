@@ -20,8 +20,9 @@ export type Database = {
           description: string;
           estimated_minutes: number | null;
           id: string;
+          owner_id: string | null;
           sort_order: number | null;
-          track_id: string;
+          track_id: string | null;
         };
         Insert: {
           category?: string | null;
@@ -30,8 +31,9 @@ export type Database = {
           description: string;
           estimated_minutes?: number | null;
           id?: string;
+          owner_id?: string | null;
           sort_order?: number | null;
-          track_id: string;
+          track_id?: string | null;
         };
         Update: {
           category?: string | null;
@@ -40,8 +42,9 @@ export type Database = {
           description?: string;
           estimated_minutes?: number | null;
           id?: string;
+          owner_id?: string | null;
           sort_order?: number | null;
-          track_id?: string;
+          track_id?: string | null;
         };
         Relationships: [
           {
@@ -866,7 +869,8 @@ export type Database = {
           cover_image_url: string | null;
           created_at: string;
           id: string;
-          is_focus: boolean;
+          pin_order: number | null;
+          pinned_at: string | null;
           last_worked_at: string | null;
           name: string;
           notes: string;
@@ -884,7 +888,8 @@ export type Database = {
           cover_image_url?: string | null;
           created_at?: string;
           id?: string;
-          is_focus?: boolean;
+          pin_order?: number | null;
+          pinned_at?: string | null;
           last_worked_at?: string | null;
           name: string;
           notes?: string;
@@ -902,7 +907,8 @@ export type Database = {
           cover_image_url?: string | null;
           created_at?: string;
           id?: string;
-          is_focus?: boolean;
+          pin_order?: number | null;
+          pinned_at?: string | null;
           last_worked_at?: string | null;
           name?: string;
           notes?: string;
