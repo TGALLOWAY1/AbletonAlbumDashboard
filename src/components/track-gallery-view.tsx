@@ -45,22 +45,36 @@ export function TrackGalleryView({
 }) {
   return (
     <div className={cn("grid gap-3", GALLERY_GRID_CLASSES[size])}>
-      {tracks.map((track) =>
-        size === "large" ? (
-          <LargeTile
-            key={track.id}
-            track={track}
-            stats={sessionStats?.get(track.id)}
-            stale={staleTrackIds?.has(track.id) ?? false}
-          />
-        ) : size === "medium" ? (
-          <MediumTile key={track.id} track={track} />
-        ) : (
-          <SnapshotTile key={track.id} track={track} />
-        ),
-      )}
+      {tracks.map((track) => (
+        <TrackGalleryItem
+          key={track.id}
+          track={track}
+          size={size}
+          stats={sessionStats?.get(track.id)}
+          stale={staleTrackIds?.has(track.id) ?? false}
+        />
+      ))}
     </div>
   );
+}
+
+/** One server-rendered tile, also used as a slot in the reorderable library. */
+export function TrackGalleryItem({
+  track,
+  size,
+  stats,
+  stale = false,
+}: {
+  track: TrackWithDetails;
+  size: ViewSize;
+  stats?: SessionStats;
+  stale?: boolean;
+}) {
+  if (size === "large") {
+    return <LargeTile track={track} stats={stats} stale={stale} />;
+  }
+  if (size === "medium") return <MediumTile track={track} />;
+  return <SnapshotTile track={track} />;
 }
 
 function LargeTile({

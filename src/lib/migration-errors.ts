@@ -78,3 +78,8 @@ export const MIGRATION_0028_MISSING_MESSAGE =
   "This needs supabase/migrations/0028_general_tasks.sql applied to your " +
   "Supabase project — every task still has to belong to a track. Run it, " +
   "then try again.";
+
+export const MIGRATION_0029_MISSING_MESSAGE =
+  "This needs supabase/migrations/0029_track_sort_order.sql applied to your " +
+  "Supabase project — tracks have nowhere to save their library order yet. " +
+  "Run it, then try again.";
