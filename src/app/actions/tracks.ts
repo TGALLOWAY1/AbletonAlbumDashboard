@@ -1,5 +1,6 @@
 "use server";
 
+import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { z } from "zod";
 import { getServerSupabase } from "@/lib/supabase/server";
@@ -22,7 +23,9 @@ import {
   MIGRATION_0021_MISSING_MESSAGE,
   MIGRATION_0022_MISSING_MESSAGE,
   MIGRATION_0027_MISSING_MESSAGE,
+  MIGRATION_0029_MISSING_MESSAGE,
 } from "@/lib/migration-errors";
+import { mergeVisibleTrackOrder } from "@/lib/track-order";
 
 const optionalTrimmed = z
   .string()
@@ -488,4 +491,63 @@ export async function updateNotes(id: string, notes: string) {
     .eq("id", id);
   if (error) throw error;
   revalidateTrackSurfaces(id);
+}
+
+const reorderTracksSchema = z.object({
+  orderedIds: z.array(z.string().uuid("Invalid track id")).min(1),
+});
+
+/** Persist the order of any visible subset on the album-shelf track library. */
+export async function reorderTracks(input: {
+  orderedIds: string[];
+}): Promise<SetTrackPinnedResult> {
+  const parsed = reorderTracksSchema.parse(input);
+  if (new Set(parsed.orderedIds).size !== parsed.orderedIds.length) {
+    return { error: "Track order contains duplicate ids." };
+  }
+
+  const supabase = getServerSupabase();
+  const { data: existing, error: readError } = await supabase
+    .from("tracks")
+    .select("id")
+    .eq("owner_id", OWNER_ID)
+    .order("sort_order", { ascending: true })
+    .order("created_at", { ascending: false });
+  if (readError) {
+    if (isMissingColumn(readError)) {
+      return { error: MIGRATION_0029_MISSING_MESSAGE };
+    }
+    logSupabaseError("[reorderTracks] read failed", readError);
+    return { error: "Could not read the track order. Please try again." };
+  }
+
+  const existingIds = (existing ?? []).map((track) => track.id);
+  const existingIdSet = new Set(existingIds);
+  if (parsed.orderedIds.some((id) => !existingIdSet.has(id))) {
+    return { error: "One or more tracks are no longer in this library." };
+  }
+
+  // Album shelves and filters are only views onto one global priority order.
+  // Replacing just their occupied slots keeps every hidden track stable.
+  const mergedIds = mergeVisibleTrackOrder(existingIds, parsed.orderedIds);
+  const results = await Promise.all(
+    mergedIds.map((id, index) =>
+      supabase
+        .from("tracks")
+        .update({ sort_order: index })
+        .eq("owner_id", OWNER_ID)
+        .eq("id", id),
+    ),
+  );
+  const updateError = results.find((result) => result.error)?.error;
+  if (updateError) {
+    if (isMissingColumn(updateError)) {
+      return { error: MIGRATION_0029_MISSING_MESSAGE };
+    }
+    logSupabaseError("[reorderTracks] write failed", updateError);
+    return { error: "Could not save the new order. Please try again." };
+  }
+
+  revalidatePath("/tracks");
+  return { error: null };
 }

@@ -1,10 +1,11 @@
 import Link from "next/link";
 import { Disc3, Plus } from "lucide-react";
 import { setActiveAlbum } from "@/app/actions/album";
+import { ReorderableTrackList } from "@/components/reorderable-track-list";
 import { TrackAlbumGroup } from "@/components/track-album-group";
 import { TrackFilterPanel } from "@/components/track-filter-panel";
-import { TrackGalleryView } from "@/components/track-gallery-view";
-import { TrackListView } from "@/components/track-list-view";
+import { TrackGalleryItem } from "@/components/track-gallery-view";
+import { ReorderableTrackListItem } from "@/components/track-list-view";
 import { ViewModeToggle } from "@/components/view-mode-toggle";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -110,7 +111,7 @@ export default async function AllTracksPage({
         <div>
           <h1 className="text-3xl font-semibold tracking-tight">Tracks</h1>
           <p className="mt-1 text-muted-foreground">
-            Your whole library, shelved by album.
+            Your whole library, shelved by album and ordered by priority.
           </p>
         </div>
         <div className="flex flex-wrap items-center gap-2">
@@ -180,19 +181,31 @@ export default async function AllTracksPage({
             >
               {group.tracks.length === 0 && group.href ? (
                 <EmptyAlbumShelf href={group.href} />
-              ) : view.layout === "gallery" ? (
-                <TrackGalleryView
-                  tracks={group.tracks}
-                  size={view.size}
-                  sessionStats={sessionStats}
-                  staleTrackIds={staleTrackIds}
-                />
               ) : (
-                <TrackListView
-                  tracks={group.tracks}
+                <ReorderableTrackList
+                  key={group.tracks.map((track) => track.id).join(":")}
+                  tracks={group.tracks.map((track) => ({
+                      id: track.id,
+                      name: track.name,
+                      card:
+                        view.layout === "gallery" ? (
+                          <TrackGalleryItem
+                            track={track}
+                            size={view.size}
+                            stats={sessionStats.get(track.id)}
+                            stale={staleTrackIds.has(track.id)}
+                          />
+                        ) : (
+                          <ReorderableTrackListItem
+                            track={track}
+                            size={view.size}
+                            sessionStats={sessionStats.get(track.id)}
+                            stale={staleTrackIds.has(track.id)}
+                          />
+                        ),
+                  }))}
+                  layout={view.layout}
                   size={view.size}
-                  sessionStats={sessionStats}
-                  staleTrackIds={staleTrackIds}
                 />
               )}
             </TrackAlbumGroup>

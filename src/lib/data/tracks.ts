@@ -427,13 +427,26 @@ export async function getAssignableTracks(
 
 export async function getAllTracks(): Promise<TrackWithDetails[]> {
   const supabase = getServerSupabase();
-  const { data, error } = await supabase
+  const ordered = await supabase
+    .from("tracks")
+    .select("*")
+    .eq("owner_id", OWNER_ID)
+    .order("sort_order", { ascending: true })
+    .order("created_at", { ascending: false });
+  if (!ordered.error) return attachDetails(ordered.data ?? []);
+  if (!isMissingColumn(ordered.error)) throw ordered.error;
+
+  const fallback = await supabase
     .from("tracks")
     .select("*")
     .eq("owner_id", OWNER_ID)
     .order("created_at", { ascending: false });
-  if (error) throw error;
-  return attachDetails(data ?? []);
+  if (fallback.error) throw fallback.error;
+  console.warn(
+    "[tracks] tracks.sort_order is missing — apply supabase/migrations/" +
+      "0029_track_sort_order.sql to enable library ordering.",
+  );
+  return attachDetails(fallback.data ?? []);
 }
 
 export async function getTrack(id: string): Promise<TrackWithDetails | null> {
@@ -474,4 +487,3 @@ export async function getCompletedActionsForTrack(
   if (error) throw error;
   return data ?? [];
 }
-

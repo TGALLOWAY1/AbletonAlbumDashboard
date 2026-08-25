@@ -876,6 +876,7 @@ export type Database = {
           notes: string;
           owner_id: string;
           song_key: string | null;
+          sort_order: number;
           status: string;
           suno_status: string;
           tags: string[];
@@ -895,6 +896,7 @@ export type Database = {
           notes?: string;
           owner_id: string;
           song_key?: string | null;
+          sort_order?: number;
           status: string;
           suno_status?: string;
           tags?: string[];
@@ -914,6 +916,7 @@ export type Database = {
           notes?: string;
           owner_id?: string;
           song_key?: string | null;
+          sort_order?: number;
           status?: string;
           suno_status?: string;
           tags?: string[];

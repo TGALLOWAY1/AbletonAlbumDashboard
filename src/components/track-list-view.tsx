@@ -78,6 +78,34 @@ export function TrackListView({
   );
 }
 
+/**
+ * One server-rendered row for a list that needs a client-side ordering shell.
+ * Compact rows get their own card because the reorder controls separate them.
+ */
+export function ReorderableTrackListItem({
+  track,
+  size,
+  sessionStats,
+  stale = false,
+}: {
+  track: TrackWithDetails;
+  size: ViewSize;
+  sessionStats?: SessionStats;
+  stale?: boolean;
+}) {
+  if (size === "large") {
+    return (
+      <TrackCard track={track} sessionStats={sessionStats} stale={stale} />
+    );
+  }
+  if (size === "medium") return <MediumRow track={track} />;
+  return (
+    <Card className="overflow-hidden">
+      <CompactRow track={track} />
+    </Card>
+  );
+}
+
 function MediumRow({ track }: { track: TrackWithDetails }) {
   const progress = progressFromStages(track.stages);
   // Key and tempo rather than a task count: they're what you match a track
