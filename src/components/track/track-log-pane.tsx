@@ -23,6 +23,12 @@ import {
   type SunoTrackMeta,
 } from "@/components/suno/suno-experiment-dialog";
 import { getBrowserSupabase } from "@/lib/supabase/browser";
+import {
+  AUDIO_ACCEPT,
+  AUDIO_FORMAT_HINT,
+  audioContentType,
+  audioUploadErrorMessage,
+} from "@/lib/audio-upload";
 import { addVersionRecord } from "@/app/actions/versions";
 import {
   deleteTrackTodo,
@@ -164,13 +170,16 @@ export function TrackLogPane({
     const finalLabel = label.trim() || file.name.replace(/\.[^.]+$/, "");
     const ext = file.name.split(".").pop() ?? "bin";
     const key = `${trackId}/${Date.now()}-${crypto.randomUUID()}.${ext}`;
+    // Derived rather than taken from File.type: iCloud hands Safari files with
+    // an empty type, which Storage rejects. See src/lib/audio-upload.ts.
+    const contentType = audioContentType(file);
     setUploading(true);
     try {
       const supabase = getBrowserSupabase();
       const { error } = await supabase.storage
         .from("track-audio")
-        .upload(key, file, { contentType: file.type });
-      if (error) throw error;
+        .upload(key, file, { contentType });
+      if (error) throw new Error(audioUploadErrorMessage(error, contentType));
 
       const duration = await readAudioDuration(file);
       await addVersionRecord({
@@ -344,7 +353,7 @@ export function TrackLogPane({
             />
             <Input
               type="file"
-              accept="audio/*"
+              accept={AUDIO_ACCEPT}
               onChange={(e) => setFile(e.target.files?.[0] ?? null)}
               className={variant === "mobile" ? "h-11 text-base" : undefined}
             />
@@ -359,7 +368,7 @@ export function TrackLogPane({
             {uploading ? "Uploading…" : "Upload a bounce"}
           </Button>
           <p className="text-xs text-muted-foreground">
-            Up to 100MB · mp3, wav, flac, aac, ogg
+            {AUDIO_FORMAT_HINT} · up to 500MB
           </p>
         </div>
       </div>
