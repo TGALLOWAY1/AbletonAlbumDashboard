@@ -39,6 +39,11 @@ import {
 } from "@/components/suno/suno-experiment-dialog";
 import { SunoCandidateItem } from "@/components/suno/suno-candidate-item";
 import { getBrowserSupabase } from "@/lib/supabase/browser";
+import {
+  AUDIO_ACCEPT,
+  audioContentType,
+  audioUploadErrorMessage,
+} from "@/lib/audio-upload";
 import { MAX_CANDIDATES_PER_EXPERIMENT, type SunoExperimentStatus } from "@/lib/suno";
 import { useToast } from "@/components/toast";
 import type { SunoExperimentWithCandidates } from "@/lib/data/suno";
@@ -192,11 +197,12 @@ function ExperimentView({
       for (const file of Array.from(files)) {
         const ext = file.name.split(".").pop() ?? "bin";
         const key = `${meta.trackId}/suno/${experiment.id}/${Date.now()}-${crypto.randomUUID()}.${ext}`;
+        const contentType = audioContentType(file);
         const supabase = getBrowserSupabase();
         const { error } = await supabase.storage
           .from("track-audio")
-          .upload(key, file, { contentType: file.type });
-        if (error) throw error;
+          .upload(key, file, { contentType });
+        if (error) throw new Error(audioUploadErrorMessage(error, contentType));
         const duration = await readAudioDuration(file);
         await addSunoCandidate({
           experimentId: experiment.id,
@@ -335,7 +341,7 @@ function ExperimentView({
             <input
               id={`suno-upload-${experiment.id}`}
               type="file"
-              accept="audio/*"
+              accept={AUDIO_ACCEPT}
               multiple
               disabled={uploading}
               onChange={(e) => {

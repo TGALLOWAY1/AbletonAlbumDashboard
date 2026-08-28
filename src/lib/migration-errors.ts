@@ -78,3 +78,33 @@ export const MIGRATION_0028_MISSING_MESSAGE =
   "This needs supabase/migrations/0028_general_tasks.sql applied to your " +
   "Supabase project — every task still has to belong to a track. Run it, " +
   "then try again.";
+
+export const MIGRATION_0029_MISSING_MESSAGE =
+  "This needs supabase/migrations/0029_audio_upload_mime_types.sql applied to " +
+  "your Supabase project — the storage bucket still rejects this audio " +
+  "format. Run it, then try again.";
+
+/**
+ * Storage rejections, which are HTTP errors from the Storage API rather than
+ * PostgREST rows: no `code`, a `statusCode` string, and a message written for
+ * an API client. A disallowed content type is what a bucket whose
+ * `allowed_mime_types` predates 0029 returns for an AIFF or an M4A.
+ */
+function storageErrorText(error: unknown): string {
+  const e = error as { message?: string; error?: string } | null;
+  return `${e?.error ?? ""} ${e?.message ?? ""}`.toLowerCase();
+}
+
+export function isStorageMimeRejection(error: unknown): boolean {
+  const text = storageErrorText(error);
+  return text.includes("mime type") || text.includes("invalid_mime_type");
+}
+
+export function isStorageSizeRejection(error: unknown): boolean {
+  const text = storageErrorText(error);
+  return (
+    text.includes("exceeded the maximum allowed size") ||
+    text.includes("payload too large") ||
+    text.includes("entity_too_large")
+  );
+}

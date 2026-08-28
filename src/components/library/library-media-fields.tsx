@@ -3,6 +3,10 @@
 import * as React from "react";
 import { ImageIcon, Loader2, Music, X } from "lucide-react";
 import { useToast } from "@/components/toast";
+import {
+  audioContentType,
+  audioUploadErrorMessage,
+} from "@/lib/audio-upload";
 import { prepareImageUpload } from "@/lib/image-downscale";
 import { getBrowserSupabase } from "@/lib/supabase/browser";
 import {
@@ -68,6 +72,7 @@ export function LibraryMediaFields({
           hint="A short loop you can audition."
           icon={Music}
           accept={PREVIEW_ACCEPT}
+          audio
           bucket={LIBRARY_PREVIEW_BUCKET}
           folder={folder}
           filled={Boolean(value.previewPath)}
@@ -100,6 +105,7 @@ function UploadField({
   hint,
   icon: Icon,
   accept,
+  audio,
   bucket,
   folder,
   publicUrl,
@@ -113,6 +119,9 @@ function UploadField({
   hint: string;
   icon: typeof Music;
   accept: string;
+  /** Audio fields normalise the content type themselves — see
+   * src/lib/audio-upload.ts for why File.type can't be trusted. */
+  audio?: boolean;
   bucket: string;
   folder: string;
   publicUrl?: boolean;
@@ -134,13 +143,20 @@ function UploadField({
       // Artwork goes through the same downscale as track covers; audio files
       // are not an image type and pass through untouched.
       const prepared = await prepareImageUpload(file);
+      const contentType = audio
+        ? audioContentType(file)
+        : prepared.contentType || undefined;
       const key = libraryObjectKey(folder, `upload.${prepared.extension}`);
       const { error } = await supabase.storage.from(bucket).upload(key, prepared.body, {
-        contentType: prepared.contentType || undefined,
+        contentType,
         // Keys are unique per upload, so every object here is immutable.
         cacheControl: "31536000",
       });
-      if (error) throw error;
+      if (error) {
+        throw new Error(
+          audio ? audioUploadErrorMessage(error, contentType!) : error.message,
+        );
+      }
 
       if (publicUrl) {
         const { data } = supabase.storage.from(bucket).getPublicUrl(key);

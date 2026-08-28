@@ -9,13 +9,17 @@
  * with no round trip. Same split as `track-audio` / `track-images`.
  */
 
+import { AUDIO_ACCEPT } from "@/lib/audio-upload";
+
 export const LIBRARY_PREVIEW_BUCKET = "library-previews";
 export const LIBRARY_ARTWORK_BUCKET = "library-artwork";
 
 /** How long a preview URL is signed for. The player re-signs on failure. */
 export const PREVIEW_SIGNED_URL_TTL_SECONDS = 60 * 60;
 
-export const PREVIEW_ACCEPT = "audio/*";
+/** Shared with track bounces and Suno results — see src/lib/audio-upload.ts
+ * for why this is not a bare "audio/*". */
+export const PREVIEW_ACCEPT = AUDIO_ACCEPT;
 export const ARTWORK_ACCEPT = "image/*";
 
 /**
