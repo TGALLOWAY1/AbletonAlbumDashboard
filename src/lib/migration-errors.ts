@@ -79,6 +79,19 @@ export const MIGRATION_0028_MISSING_MESSAGE =
   "Supabase project — every task still has to belong to a track. Run it, " +
   "then try again.";
 
+/**
+ * 0023 created the step_key check inline, so Postgres auto-named it
+ * `track_finishing_steps_step_key_check`; 0030 re-adds it under the same name
+ * with the Suno workflow keys. Either way this is the constraint a too-narrow
+ * step list violates.
+ */
+export const FINISHING_STEP_CONSTRAINT = "track_finishing_steps_step_key_check";
+
+export const MIGRATION_0030_MISSING_MESSAGE =
+  "This needs supabase/migrations/0030_suno_workflow_steps.sql applied to " +
+  "your Supabase project — the database still only accepts the original " +
+  "three finishing steps. Run it, then try again.";
+
 export const MIGRATION_0029_MISSING_MESSAGE =
   "This needs supabase/migrations/0029_audio_upload_mime_types.sql applied to " +
   "your Supabase project — the storage bucket still rejects this audio " +

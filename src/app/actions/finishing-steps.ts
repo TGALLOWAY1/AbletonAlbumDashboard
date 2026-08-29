@@ -4,8 +4,11 @@ import { z } from "zod";
 import { getServerSupabase } from "@/lib/supabase/server";
 import { revalidateTrackSurfaces } from "@/lib/revalidate-track";
 import {
+  FINISHING_STEP_CONSTRAINT,
+  isCheckViolation,
   isMissingTable,
   MIGRATION_0023_MISSING_MESSAGE,
+  MIGRATION_0030_MISSING_MESSAGE,
 } from "@/lib/migration-errors";
 import { logSupabaseError } from "@/lib/supabase/log-error";
 import { FINISHING_STEP_KEYS } from "@/lib/types";
@@ -13,7 +16,7 @@ import { FINISHING_STEP_KEYS } from "@/lib/types";
 const stepSchema = z.enum(FINISHING_STEP_KEYS);
 
 /**
- * Tick or untick one of the three finishing steps.
+ * Tick or untick one of the finishing steps.
  *
  * Reports through the return value rather than throwing: in a production build
  * React replaces the message of anything a server action throws with the
@@ -40,6 +43,11 @@ export async function setFinishingStep(
 
   if (error) {
     if (isMissingTable(error)) return { error: MIGRATION_0023_MISSING_MESSAGE };
+    // A Suno-workflow key against a database whose constraint predates 0030:
+    // the table exists, so the write is well-formed right up until the row is
+    // validated.
+    if (isCheckViolation(error, FINISHING_STEP_CONSTRAINT))
+      return { error: MIGRATION_0030_MISSING_MESSAGE };
     logSupabaseError("setFinishingStep", error);
     return { error: "Could not save that step. Try again." };
   }

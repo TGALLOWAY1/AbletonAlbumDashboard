@@ -176,18 +176,32 @@ export const STAGE_SHORT_LABELS: Record<StageKey, string> = {
 
 /**
  * The hand-off checklist every track goes through once the music is done —
- * three fixed jobs, same three for every track, shown straight on the large
- * track card so the last mile is visible without opening the track.
+ * fixed jobs, the same list for every track, shown straight on the large
+ * track card so the last mile is visible without opening the track. This
+ * array is the single place the list is defined: adding a key here (plus its
+ * label, an icon in `TrackFinishingSteps`, and a migration widening the check
+ * constraint) changes the checklist on every track at once, and because rows
+ * are only written on first tick the new step reads as outstanding everywhere
+ * with no backfill.
+ *
+ * The Suno round-trip is the first five keys: generate variations, save the
+ * arrangement favorites, build a sound palette with ChatGPT, recreate the
+ * core elements from bounces of what exists, and get ChatGPT mixing tips for
+ * tonal balance — then stems/MIDI and Ableton cleanup close the track out.
  *
  * Separate from `STAGE_KEYS`: stages are the creative arc and their average is
  * the track's progress percentage, while these are housekeeping that says
  * nothing about how finished the music is. Array order is the order they are
  * rendered and the order they are done in. Keep in sync with the check
- * constraint in supabase/migrations/0023_track_finishing_steps.sql
+ * constraint, last widened in supabase/migrations/0030_suno_workflow_steps.sql
  * (finishing-steps.test.ts asserts it).
  */
 export const FINISHING_STEP_KEYS = [
   "suno_variations",
+  "arrangement_favorites",
+  "sound_palette",
+  "core_elements",
+  "mixing_tips",
   "stems_midi",
   "ableton_cleanup",
 ] as const;
@@ -195,11 +209,15 @@ export type FinishingStepKey = (typeof FINISHING_STEP_KEYS)[number];
 
 export const FINISHING_STEP_LABELS: Record<FinishingStepKey, string> = {
   suno_variations: "Create Suno variations",
+  arrangement_favorites: "Save arrangement favorites",
+  sound_palette: "Build sound palette with ChatGPT",
+  core_elements: "Recreate core elements from bounces",
+  mixing_tips: "ChatGPT mixing tips for tonal balance",
   stems_midi: "Save stems and MIDI",
   ableton_cleanup: "Cleanup in Ableton",
 };
 
-/** One checklist row as the card draws it — always three, always in order. */
+/** One checklist row as the card draws it — every key, always in order. */
 export type FinishingStep = {
   key: FinishingStepKey;
   /** ISO timestamp of the tick, or null while the step is outstanding. */
@@ -207,8 +225,8 @@ export type FinishingStep = {
 };
 
 /**
- * The three steps in render order. A track with no rows yet (never ticked, or
- * a database without migration 0023) reads as three outstanding steps rather
+ * Every step in render order. A track with no rows yet (never ticked, or a
+ * database without migration 0023) reads as all-outstanding steps rather
  * than as an empty checklist, so the card never renders a hole.
  */
 export function finishingStepsFromRows(
@@ -328,8 +346,8 @@ export type TrackSunoSummary = {
  */
 export type TrackWithDetails = TrackRow & {
   stages: StageRow[];
-  // Always three entries (see `finishingStepsFromRows`) so the card can
-  // draw the checklist without a length check.
+  // Always every FINISHING_STEP_KEYS entry (see `finishingStepsFromRows`) so
+  // the card can draw the checklist without a length check.
   finishingSteps: FinishingStep[];
   /** First open task in list order, or null when nothing is open. */
   nextTask: ActionRow | null;
