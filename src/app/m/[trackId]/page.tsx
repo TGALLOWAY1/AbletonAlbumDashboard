@@ -140,6 +140,7 @@ export default async function MobileTrackPage({
               <TrackFinishingSteps
                 trackId={track.id}
                 steps={track.finishingSteps}
+                variations={track.variations}
               />
             </div>
           </div>

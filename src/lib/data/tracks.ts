@@ -5,12 +5,14 @@ import type { SunoExperimentStatus } from "@/lib/suno";
 import {
   comparePinPosition,
   finishingStepsFromRows,
+  trackVariationFromRow,
   type ActionRow,
   type FinishingStepRow,
   type StageRow,
   type TrackRow,
   type TrackStatus,
   type TrackSunoSummary,
+  type TrackVariation,
   type TrackWithDetails,
 } from "@/lib/types";
 
@@ -114,6 +116,7 @@ async function attachDetails(tracks: TrackRow[]): Promise<TrackWithDetails[]> {
     albumsRes,
     sunoRes,
     finishingRes,
+    variationsRes,
   ] =
     await Promise.all([
       supabase.from("track_stages").select("*").in("track_id", ids),
@@ -138,6 +141,14 @@ async function attachDetails(tracks: TrackRow[]): Promise<TrackWithDetails[]> {
       // cards: every step reads as outstanding (see below) rather than the
       // whole track query failing on `42P01 undefined_table`.
       supabase.from("track_finishing_steps").select("*").in("track_id", ids),
+      // Migration 0031. Steps embed through the variation FK, so one query
+      // carries each variation and its checklist run; same degrade posture as
+      // finishing steps — no table means no variations, not a dead page.
+      supabase
+        .from("track_variations")
+        .select("*, track_variation_steps(*)")
+        .in("track_id", ids)
+        .order("created_at", { ascending: true }),
     ]);
 
   const stagesByTrack = new Map<string, StageRow[]>();
@@ -190,6 +201,19 @@ async function attachDetails(tracks: TrackRow[]): Promise<TrackWithDetails[]> {
     list.push(row);
     finishingByTrack.set(row.track_id, list);
   });
+  const variationsByTrack = new Map<string, TrackVariation[]>();
+  if (variationsRes.error) {
+    console.warn(
+      "[tracks] could not load variations — apply supabase/migrations/" +
+        "0031_track_variations.sql to enable per-variation checklists: " +
+        variationsRes.error.message,
+    );
+  }
+  (variationsRes.data ?? []).forEach((v) => {
+    const list = variationsByTrack.get(v.track_id) ?? [];
+    list.push(trackVariationFromRow(v, v.track_variation_steps));
+    variationsByTrack.set(v.track_id, list);
+  });
   const sunoByTrack = new Map<string, TrackSunoSummary>();
   (sunoRes.data ?? []).forEach((e) => {
     sunoByTrack.set(e.track_id, {
@@ -206,6 +230,7 @@ async function attachDetails(tracks: TrackRow[]): Promise<TrackWithDetails[]> {
     ...t,
     stages: stagesByTrack.get(t.id) ?? [],
     finishingSteps: finishingStepsFromRows(finishingByTrack.get(t.id) ?? []),
+    variations: variationsByTrack.get(t.id) ?? [],
     nextTask: nextTaskByTrack.get(t.id) ?? null,
     openTaskCount: openCountByTrack.get(t.id) ?? 0,
     completedTaskCount: completedCountByTrack.get(t.id) ?? 0,

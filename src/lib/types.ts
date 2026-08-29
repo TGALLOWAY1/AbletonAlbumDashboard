@@ -6,6 +6,10 @@ export type TrackRow = Database["public"]["Tables"]["tracks"]["Row"];
 export type StageRow = Database["public"]["Tables"]["track_stages"]["Row"];
 export type FinishingStepRow =
   Database["public"]["Tables"]["track_finishing_steps"]["Row"];
+export type TrackVariationRow =
+  Database["public"]["Tables"]["track_variations"]["Row"];
+export type TrackVariationStepRow =
+  Database["public"]["Tables"]["track_variation_steps"]["Row"];
 export type ActionRow = Database["public"]["Tables"]["actions"]["Row"];
 export type SessionRow = Database["public"]["Tables"]["sessions"]["Row"];
 export type VersionRow = Database["public"]["Tables"]["track_versions"]["Row"];
@@ -228,15 +232,45 @@ export type FinishingStep = {
  * Every step in render order. A track with no rows yet (never ticked, or a
  * database without migration 0023) reads as all-outstanding steps rather
  * than as an empty checklist, so the card never renders a hole.
+ *
+ * Takes only the columns it reads so the same gap-filling serves both row
+ * shapes: track_finishing_steps (keyed by track) and track_variation_steps
+ * (keyed by variation, migration 0031).
  */
 export function finishingStepsFromRows(
-  rows: FinishingStepRow[] = [],
+  rows: Pick<FinishingStepRow, "step_key" | "completed_at">[] = [],
 ): FinishingStep[] {
   const byKey = new Map(rows.map((r) => [r.step_key, r]));
   return FINISHING_STEP_KEYS.map((key) => ({
     key,
     completedAt: byKey.get(key)?.completed_at ?? null,
   }));
+}
+
+/**
+ * A named variation of a song, carrying its own run of the finishing
+ * checklist (migration 0031). The track's own checklist stays separate:
+ * a track with no variations renders exactly as it always has, and each
+ * variation added renders one more full pass of the same steps.
+ */
+export type TrackVariation = {
+  id: string;
+  name: string;
+  createdAt: string;
+  /** Same shape and order as the track's own checklist — never a subset. */
+  steps: FinishingStep[];
+};
+
+export function trackVariationFromRow(
+  row: TrackVariationRow,
+  steps: TrackVariationStepRow[] = [],
+): TrackVariation {
+  return {
+    id: row.id,
+    name: row.name,
+    createdAt: row.created_at,
+    steps: finishingStepsFromRows(steps),
+  };
 }
 
 /**
@@ -349,6 +383,8 @@ export type TrackWithDetails = TrackRow & {
   // Always every FINISHING_STEP_KEYS entry (see `finishingStepsFromRows`) so
   // the card can draw the checklist without a length check.
   finishingSteps: FinishingStep[];
+  /** Named variations in creation order, each with its own checklist run. */
+  variations: TrackVariation[];
   /** First open task in list order, or null when nothing is open. */
   nextTask: ActionRow | null;
   openTaskCount: number;
