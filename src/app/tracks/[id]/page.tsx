@@ -107,6 +107,7 @@ export default async function TrackDetailPage({
             <TrackFinishingSteps
               trackId={track.id}
               steps={track.finishingSteps}
+              variations={track.variations}
               variant="compact"
             />
           </div>

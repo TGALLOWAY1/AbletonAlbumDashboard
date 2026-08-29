@@ -1,7 +1,13 @@
 import { readFileSync } from "node:fs";
 import path from "node:path";
 import { describe, expect, it } from "vitest";
-import { MIGRATION_0023_MISSING_MESSAGE, isMissingTable } from "@/lib/migration-errors";
+import {
+  FINISHING_STEP_CONSTRAINT,
+  MIGRATION_0023_MISSING_MESSAGE,
+  MIGRATION_0030_MISSING_MESSAGE,
+  isCheckViolation,
+  isMissingTable,
+} from "@/lib/migration-errors";
 import {
   FINISHING_STEP_KEYS,
   FINISHING_STEP_LABELS,
@@ -17,6 +23,16 @@ const MIGRATION = readFileSync(
   "utf8",
 );
 
+// 0030 widened 0023's step_key check to the Suno workflow keys, so the
+// constraint the database actually enforces lives there now.
+const MIGRATION_0030 = readFileSync(
+  path.resolve(
+    __dirname,
+    "../../../supabase/migrations/0030_suno_workflow_steps.sql",
+  ),
+  "utf8",
+);
+
 function row(
   step_key: string,
   completed_at: string | null = null,
@@ -26,15 +42,27 @@ function row(
 
 // Same cross-module invariant as suno-migration-sync.test.ts: drift between
 // the check constraint and the union would let the app write rows the database
-// rejects, or leave a key the app can never render.
-describe("0023 migration ↔ FINISHING_STEP_KEYS", () => {
+// rejects, or leave a key the app can never render. The effective constraint
+// is 0030's — it drops 0023's and re-adds it under the same name.
+describe("0030 migration ↔ FINISHING_STEP_KEYS", () => {
   it("the step_key constraint lists exactly the keys the app knows", () => {
-    const match = MIGRATION.match(/check \(step_key in \(([^)]+)\)/);
+    const match = MIGRATION_0030.match(/check \(step_key in \(([^)]+)\)/);
     expect(match, "step_key check list present").not.toBeNull();
     const keys = [...match![1].matchAll(/'([^']+)'/g)].map((m) => m[1]);
     expect(keys).toEqual([...FINISHING_STEP_KEYS]);
   });
 
+  it("drops the old constraint before re-adding it under the same name", () => {
+    const constraint = "track_finishing_steps_step_key_check";
+    expect(MIGRATION_0030).toContain(
+      `drop constraint if exists ${constraint}`,
+    );
+    expect(MIGRATION_0030).toContain(`add constraint ${constraint}`);
+    expect(FINISHING_STEP_CONSTRAINT).toBe(constraint);
+  });
+});
+
+describe("0023 migration", () => {
   it("cascades with the track, so deleting a track leaves no orphans", () => {
     expect(MIGRATION).toContain("references tracks(id) on delete cascade");
   });
@@ -51,15 +79,19 @@ describe("0023 migration ↔ FINISHING_STEP_KEYS", () => {
 });
 
 describe("finishingStepsFromRows", () => {
-  it("always returns the three steps in render order", () => {
+  it("always returns every step in render order", () => {
     expect(finishingStepsFromRows([]).map((s) => s.key)).toEqual([
       "suno_variations",
+      "arrangement_favorites",
+      "sound_palette",
+      "core_elements",
+      "mixing_tips",
       "stems_midi",
       "ableton_cleanup",
     ]);
   });
 
-  it("reads a track with no rows as three outstanding steps", () => {
+  it("reads a track with no rows as all-outstanding steps", () => {
     expect(finishingStepsFromRows([]).every((s) => s.completedAt === null)).toBe(
       true,
     );
@@ -67,7 +99,7 @@ describe("finishingStepsFromRows", () => {
 
   it("defaults to outstanding when called with nothing at all", () => {
     // A database without 0023 applied hands the fetcher no rows.
-    expect(finishingStepsFromRows()).toHaveLength(3);
+    expect(finishingStepsFromRows()).toHaveLength(FINISHING_STEP_KEYS.length);
   });
 
   it("carries the completion timestamp through", () => {
@@ -90,7 +122,7 @@ describe("finishingStepsFromRows", () => {
 
   it("ignores a key the app does not know", () => {
     const steps = finishingStepsFromRows([row("mastering", "2026-05-01T00:00:00.000Z")]);
-    expect(steps).toHaveLength(3);
+    expect(steps).toHaveLength(FINISHING_STEP_KEYS.length);
     expect(steps.every((s) => s.completedAt === null)).toBe(true);
   });
 });
@@ -116,6 +148,24 @@ describe("isMissingTable", () => {
   });
 });
 
+describe("isCheckViolation with the finishing-step constraint", () => {
+  it("matches a 23514 naming this constraint", () => {
+    const error = {
+      code: "23514",
+      message: `new row violates check constraint "${FINISHING_STEP_CONSTRAINT}"`,
+    };
+    expect(isCheckViolation(error, FINISHING_STEP_CONSTRAINT)).toBe(true);
+  });
+
+  it("ignores a 23514 from some other constraint", () => {
+    const error = {
+      code: "23514",
+      message: 'new row violates check constraint "tracks_status_check"',
+    };
+    expect(isCheckViolation(error, FINISHING_STEP_CONSTRAINT)).toBe(false);
+  });
+});
+
 // Same contract as setTrackSunoStatus: React replaces a *thrown* message with
 // the generic render error in production, so the migration hint has to be
 // returned to survive the trip.
@@ -129,11 +179,23 @@ describe("setFinishingStep error contract", () => {
     expect(MIGRATION_0023_MISSING_MESSAGE).toContain(
       "0023_track_finishing_steps.sql",
     );
+    expect(MIGRATION_0030_MISSING_MESSAGE).toContain(
+      "0030_suno_workflow_steps.sql",
+    );
   });
 
   it("returns the migration message rather than throwing it", () => {
     expect(SOURCE).toContain("return { error: MIGRATION_0023_MISSING_MESSAGE }");
     expect(SOURCE).not.toContain("throw new Error(MIGRATION_0023_MISSING_MESSAGE)");
+  });
+
+  it("explains a constraint that predates 0030 instead of a generic failure", () => {
+    // A Suno-workflow key against 0023's original three-key check comes back
+    // as a check violation, not a missing table — it needs its own branch.
+    expect(SOURCE).toContain(
+      "isCheckViolation(error, FINISHING_STEP_CONSTRAINT)",
+    );
+    expect(SOURCE).toContain("return { error: MIGRATION_0030_MISSING_MESSAGE }");
   });
 
   it("never throws at all — every exit reports through the return value", () => {

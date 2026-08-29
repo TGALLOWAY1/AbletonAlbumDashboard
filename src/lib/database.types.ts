@@ -428,6 +428,61 @@ export type Database = {
           },
         ];
       };
+      track_variations: {
+        Row: {
+          created_at: string;
+          id: string;
+          name: string;
+          track_id: string;
+        };
+        Insert: {
+          created_at?: string;
+          id?: string;
+          name: string;
+          track_id: string;
+        };
+        Update: {
+          created_at?: string;
+          id?: string;
+          name?: string;
+          track_id?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "track_variations_track_id_fkey";
+            columns: ["track_id"];
+            isOneToOne: false;
+            referencedRelation: "tracks";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
+      track_variation_steps: {
+        Row: {
+          completed_at: string | null;
+          step_key: string;
+          variation_id: string;
+        };
+        Insert: {
+          completed_at?: string | null;
+          step_key: string;
+          variation_id: string;
+        };
+        Update: {
+          completed_at?: string | null;
+          step_key?: string;
+          variation_id?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "track_variation_steps_variation_id_fkey";
+            columns: ["variation_id"];
+            isOneToOne: false;
+            referencedRelation: "track_variations";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
       library_loop_stacks: {
         Row: {
           artwork_url: string | null;

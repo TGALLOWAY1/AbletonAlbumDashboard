@@ -6,6 +6,10 @@ export type TrackRow = Database["public"]["Tables"]["tracks"]["Row"];
 export type StageRow = Database["public"]["Tables"]["track_stages"]["Row"];
 export type FinishingStepRow =
   Database["public"]["Tables"]["track_finishing_steps"]["Row"];
+export type TrackVariationRow =
+  Database["public"]["Tables"]["track_variations"]["Row"];
+export type TrackVariationStepRow =
+  Database["public"]["Tables"]["track_variation_steps"]["Row"];
 export type ActionRow = Database["public"]["Tables"]["actions"]["Row"];
 export type SessionRow = Database["public"]["Tables"]["sessions"]["Row"];
 export type VersionRow = Database["public"]["Tables"]["track_versions"]["Row"];
@@ -176,18 +180,32 @@ export const STAGE_SHORT_LABELS: Record<StageKey, string> = {
 
 /**
  * The hand-off checklist every track goes through once the music is done —
- * three fixed jobs, same three for every track, shown straight on the large
- * track card so the last mile is visible without opening the track.
+ * fixed jobs, the same list for every track, shown straight on the large
+ * track card so the last mile is visible without opening the track. This
+ * array is the single place the list is defined: adding a key here (plus its
+ * label, an icon in `TrackFinishingSteps`, and a migration widening the check
+ * constraint) changes the checklist on every track at once, and because rows
+ * are only written on first tick the new step reads as outstanding everywhere
+ * with no backfill.
+ *
+ * The Suno round-trip is the first five keys: generate variations, save the
+ * arrangement favorites, build a sound palette with ChatGPT, recreate the
+ * core elements from bounces of what exists, and get ChatGPT mixing tips for
+ * tonal balance — then stems/MIDI and Ableton cleanup close the track out.
  *
  * Separate from `STAGE_KEYS`: stages are the creative arc and their average is
  * the track's progress percentage, while these are housekeeping that says
  * nothing about how finished the music is. Array order is the order they are
  * rendered and the order they are done in. Keep in sync with the check
- * constraint in supabase/migrations/0023_track_finishing_steps.sql
+ * constraint, last widened in supabase/migrations/0030_suno_workflow_steps.sql
  * (finishing-steps.test.ts asserts it).
  */
 export const FINISHING_STEP_KEYS = [
   "suno_variations",
+  "arrangement_favorites",
+  "sound_palette",
+  "core_elements",
+  "mixing_tips",
   "stems_midi",
   "ableton_cleanup",
 ] as const;
@@ -195,11 +213,15 @@ export type FinishingStepKey = (typeof FINISHING_STEP_KEYS)[number];
 
 export const FINISHING_STEP_LABELS: Record<FinishingStepKey, string> = {
   suno_variations: "Create Suno variations",
+  arrangement_favorites: "Save arrangement favorites",
+  sound_palette: "Build sound palette with ChatGPT",
+  core_elements: "Recreate core elements from bounces",
+  mixing_tips: "ChatGPT mixing tips for tonal balance",
   stems_midi: "Save stems and MIDI",
   ableton_cleanup: "Cleanup in Ableton",
 };
 
-/** One checklist row as the card draws it — always three, always in order. */
+/** One checklist row as the card draws it — every key, always in order. */
 export type FinishingStep = {
   key: FinishingStepKey;
   /** ISO timestamp of the tick, or null while the step is outstanding. */
@@ -207,18 +229,48 @@ export type FinishingStep = {
 };
 
 /**
- * The three steps in render order. A track with no rows yet (never ticked, or
- * a database without migration 0023) reads as three outstanding steps rather
+ * Every step in render order. A track with no rows yet (never ticked, or a
+ * database without migration 0023) reads as all-outstanding steps rather
  * than as an empty checklist, so the card never renders a hole.
+ *
+ * Takes only the columns it reads so the same gap-filling serves both row
+ * shapes: track_finishing_steps (keyed by track) and track_variation_steps
+ * (keyed by variation, migration 0031).
  */
 export function finishingStepsFromRows(
-  rows: FinishingStepRow[] = [],
+  rows: Pick<FinishingStepRow, "step_key" | "completed_at">[] = [],
 ): FinishingStep[] {
   const byKey = new Map(rows.map((r) => [r.step_key, r]));
   return FINISHING_STEP_KEYS.map((key) => ({
     key,
     completedAt: byKey.get(key)?.completed_at ?? null,
   }));
+}
+
+/**
+ * A named variation of a song, carrying its own run of the finishing
+ * checklist (migration 0031). The track's own checklist stays separate:
+ * a track with no variations renders exactly as it always has, and each
+ * variation added renders one more full pass of the same steps.
+ */
+export type TrackVariation = {
+  id: string;
+  name: string;
+  createdAt: string;
+  /** Same shape and order as the track's own checklist — never a subset. */
+  steps: FinishingStep[];
+};
+
+export function trackVariationFromRow(
+  row: TrackVariationRow,
+  steps: TrackVariationStepRow[] = [],
+): TrackVariation {
+  return {
+    id: row.id,
+    name: row.name,
+    createdAt: row.created_at,
+    steps: finishingStepsFromRows(steps),
+  };
 }
 
 /**
@@ -328,9 +380,11 @@ export type TrackSunoSummary = {
  */
 export type TrackWithDetails = TrackRow & {
   stages: StageRow[];
-  // Always three entries (see `finishingStepsFromRows`) so the card can
-  // draw the checklist without a length check.
+  // Always every FINISHING_STEP_KEYS entry (see `finishingStepsFromRows`) so
+  // the card can draw the checklist without a length check.
   finishingSteps: FinishingStep[];
+  /** Named variations in creation order, each with its own checklist run. */
+  variations: TrackVariation[];
   /** First open task in list order, or null when nothing is open. */
   nextTask: ActionRow | null;
   openTaskCount: number;

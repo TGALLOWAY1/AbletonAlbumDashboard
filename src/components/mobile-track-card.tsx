@@ -98,6 +98,7 @@ export function MobileTrackCard({
         <TrackFinishingSteps
           trackId={track.id}
           steps={track.finishingSteps}
+          variations={track.variations}
           className="border-y border-border"
         />
 
