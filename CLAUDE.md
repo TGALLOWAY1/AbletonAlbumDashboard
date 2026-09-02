@@ -153,6 +153,30 @@ Run `pnpm typecheck && pnpm lint && pnpm test` before committing.
   `src/lib/revalidate-resources.ts` — the sibling of `revalidateTrackSurfaces`.
 - Server actions live under `src/app/actions/`.
 - Data fetchers live under `src/lib/data/`.
+- **A task can carry an estimate and a stage.** `actions.estimated_minutes`
+  and `actions.category` have existed since 0001; `src/lib/task-details.ts`
+  owns their meaning (`formatMinutes`, `sumOpenEstimates`, `toStageKey`).
+  `category` is free text and the Suno round trip stores `"suno"` in it, so
+  reads *narrow* it to one of the five stage keys rather than casting, and
+  `updateTrackTodoDetails` only writes the keys the caller passed — an
+  untouched picker must never erase that marker. Studio tasks (`trackId`
+  null) may have an estimate but never a stage; the action refuses one.
+- **A logged session is editable.** `updateSession` / `deleteSession` in
+  `src/app/actions/sessions.ts` never write `duration_seconds` (generated),
+  and afterwards put `tracks.last_worked_at` back in step with the rule in
+  `src/lib/session-last-worked.ts`, because the insert-only trigger cannot.
+  Backfill and edit share one form, `SessionFormDialog`; the Edit/Delete
+  controls are one `SessionActions` component with a `variant` prop, mounted
+  in the History tab and in the track log on both surfaces.
+- `/tracks` also keeps its sort (`src/lib/track-sort.ts`, default last
+  worked) and name/tag search (`src/lib/track-search.ts`) in the URL, sorted
+  within each album shelf. Every control on that page owns one query param
+  and merges the others through `mergeQuery`, so none resets another.
+- The focus runner's track and session-type pickers are decided by the pure
+  helpers in `src/lib/focus-runner.ts`; switching track mid-session patches
+  the running session in `FocusSessionProvider` *before* the route change so
+  the destination page owns it at once, and the goal re-seeds from the new
+  track unless the user typed their own.
 
 ## Feature parity rule (desktop ↔ mobile)
 
