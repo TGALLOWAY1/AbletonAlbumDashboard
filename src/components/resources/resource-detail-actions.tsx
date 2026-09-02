@@ -24,10 +24,11 @@ import {
   toggleResourceBookmark,
   updateResourceCategory,
 } from "@/app/actions/resources";
+import { EditResourceDialog } from "./edit-resource-dialog";
 
 /**
- * Category, bookmark and delete for a single resource, on its own page. Seed
- * entries have no row behind them, so they get none of the three.
+ * Category, edit, bookmark and delete for a single resource, on its own page.
+ * Seed entries have no row behind them, so they get none of the four.
  */
 export function ResourceDetailActions({
   resource,
@@ -120,6 +121,7 @@ export function ResourceDetailActions({
           ))}
         </SelectContent>
       </Select>
+      <EditResourceDialog resource={resource} />
       <Button
         type="button"
         variant="outline"

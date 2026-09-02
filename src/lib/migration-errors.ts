@@ -97,6 +97,11 @@ export const MIGRATION_0031_MISSING_MESSAGE =
   "Supabase project — variations have nowhere to save yet. Run it, then try " +
   "again.";
 
+export const MIGRATION_0032_MISSING_MESSAGE =
+  "This needs supabase/migrations/0032_resource_tags.sql applied to your " +
+  "Supabase project — resources have nowhere to record a tag yet. Run it, " +
+  "then try again.";
+
 export const MIGRATION_0029_MISSING_MESSAGE =
   "This needs supabase/migrations/0029_audio_upload_mime_types.sql applied to " +
   "your Supabase project — the storage bucket still rejects this audio " +

@@ -11,6 +11,7 @@ import {
   type ResourceCategoryId,
   type ResourceItem,
 } from "@/lib/data/resources";
+import { normalizeTags } from "@/lib/resource-tags";
 
 const RESOURCE_FILES_BUCKET = "resource-files";
 
@@ -29,9 +30,35 @@ type ResourceRow = {
   bookmarked: boolean;
   featured: boolean;
   created_at: string;
+  /** Absent, not null, on a database without migration 0032. */
+  tags?: string[] | null;
 };
 
 type ServerSupabase = ReturnType<typeof getServerSupabase>;
+
+/**
+ * Reads degrade: every resource query is `select("*")`, so a database without
+ * migration 0032 simply returns rows with no `tags` key rather than failing —
+ * there is nothing to retry without. The row then reads as untagged, the
+ * galleries render, the tag chip row is empty, and this says once which file
+ * to run. It must never become a thrown error: the whole Resources section
+ * would go down over a filter.
+ */
+let warnedMissingTags = false;
+function readTags(row: ResourceRow): string[] {
+  if (!("tags" in row)) {
+    if (!warnedMissingTags) {
+      warnedMissingTags = true;
+      console.warn(
+        "[resources] resources.tags is missing — every resource reads as " +
+          "untagged. Apply supabase/migrations/0032_resource_tags.sql to " +
+          "enable tags, the tag filter and grouping.",
+      );
+    }
+    return [];
+  }
+  return Array.isArray(row.tags) ? normalizeTags(row.tags) : [];
+}
 
 function rowToItem(supabase: ServerSupabase, row: ResourceRow): ResourceItem | null {
   if (
@@ -60,6 +87,7 @@ function rowToItem(supabase: ServerSupabase, row: ResourceRow): ResourceItem | n
     content: row.content,
     thumbnailUrl: row.thumbnail_url,
     readMinutes: row.read_minutes,
+    tags: readTags(row),
     bookmarked: row.bookmarked,
     featured: row.featured,
     addedAt: row.created_at,

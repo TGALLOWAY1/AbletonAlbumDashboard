@@ -129,6 +129,26 @@ Run `pnpm typecheck && pnpm lint && pnpm test` before committing.
   `categoryId`/`categoryTitle` to it and the new resource inherits that category
   (read-only label instead of a picker); omit them on `/resources`, where there
   is no category context, and the user picks one.
+- **A resource's category is its shelf; its tags are what it is about.**
+  `resources.tags` (migration 0032) is a free-form `text[]` — instrument and
+  role words like bass, drums, pad, fx — with *no* check constraint, because
+  adding a word must never need a migration. `src/lib/resource-tags.ts` owns
+  the storage form (trim, lowercase, dedupe, length cap), the suggested
+  vocabulary (seeded from the library's `PRESET_CATEGORIES` so a pad article
+  and a pad preset answer to the same word), the AND-semantics filter and the
+  grouping. Display casing is `formatTag` at render time — never store it.
+- Search, the tag chip row, the group-by-tag toggle and the gallery are one
+  component (`ResourceGalleryView`) mounted by both `/resources` and every
+  category page, so the two scopes cannot drift. The tag selection and the
+  grouping live in the URL (`?tag=a&tag=b`, `?group=tag`) so a filtered view is
+  linkable and the pages stay server components; search is client state.
+  Grouping repeats a two-tag resource in both groups on purpose — it is a way
+  of browsing, not a partition — and untagged items come last.
+- A saved resource is editable (`updateResource` + `EditResourceDialog` off the
+  detail page). Category is *not* part of that form: it is in the resource's
+  URL, so moving one stays `updateResourceCategory`, which returns the
+  destination. Nor is `source_kind` — the body field follows the row's own kind
+  and a PDF's storage path is not editable.
 - Server actions that mutate a resource call `revalidateResourceSurfaces` from
   `src/lib/revalidate-resources.ts` — the sibling of `revalidateTrackSurfaces`.
 - Server actions live under `src/app/actions/`.
