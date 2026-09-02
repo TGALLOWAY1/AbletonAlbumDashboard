@@ -1,7 +1,7 @@
 "use client";
 
-import { useOptimistic, useRef, useState, useTransition } from "react";
-import { Check, GripVertical, Plus, Trash2 } from "lucide-react";
+import { useId, useOptimistic, useRef, useState, useTransition } from "react";
+import { Check, GripVertical, Plus, SlidersHorizontal, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -11,18 +11,46 @@ import {
   reorderTrackTodos,
   toggleTrackTodo,
   updateTrackTodo,
+  updateTrackTodoDetails,
 } from "@/app/actions/track-todos";
 import { useToast } from "@/components/toast";
 import { applyOrder, moveItemTo } from "@/lib/task-order";
-import type { ActionRow } from "@/lib/types";
+import {
+  MAX_ESTIMATE_MINUTES,
+  formatEstimateSummary,
+  formatMinutes,
+  taskDetails,
+} from "@/lib/task-details";
+import {
+  STAGE_KEYS,
+  STAGE_LABELS,
+  STAGE_SHORT_LABELS,
+  type ActionRow,
+  type StageKey,
+} from "@/lib/types";
 import { cn } from "@/lib/utils";
 
 type TodoItem = ActionRow & { _temp?: boolean };
 
+/** What the row editor and the add form both collect beyond a description. */
+type DetailsDraft = { minutes: string; stage: StageKey | "" };
+
+const EMPTY_DETAILS: DetailsDraft = { minutes: "", stage: "" };
+
 type Action =
   | { kind: "add"; item: TodoItem }
   | { kind: "toggle"; id: string; done: boolean }
-  | { kind: "edit"; id: string; description: string }
+  // `undefined` on a field means "this one did not change" — the row editor
+  // only sends what the user actually touched, so an untouched stage picker
+  // cannot overwrite a category the list does not render (see
+  // `updateTrackTodoDetails`).
+  | {
+      kind: "edit";
+      id: string;
+      description?: string;
+      estimatedMinutes?: number | null;
+      category?: StageKey | null;
+    }
   | { kind: "delete"; id: string }
   | { kind: "reorder"; ids: string[] };
 
@@ -41,7 +69,18 @@ function reducer(state: TodoItem[], action: Action): TodoItem[] {
       );
     case "edit":
       return state.map((t) =>
-        t.id === action.id ? { ...t, description: action.description } : t,
+        t.id === action.id
+          ? {
+              ...t,
+              description: action.description ?? t.description,
+              estimated_minutes:
+                action.estimatedMinutes === undefined
+                  ? t.estimated_minutes
+                  : action.estimatedMinutes,
+              category:
+                action.category === undefined ? t.category : action.category,
+            }
+          : t,
       );
     case "delete":
       return state.filter((t) => t.id !== action.id);
@@ -49,6 +88,23 @@ function reducer(state: TodoItem[], action: Action): TodoItem[] {
       return applyOrder(state, action.ids);
   }
 }
+
+/**
+ * Read a minutes field. `null` is an empty field (no estimate) and `undefined`
+ * is a value the server would reject, which the caller turns into a toast
+ * rather than a silently dropped edit.
+ */
+function parseMinutesDraft(raw: string): number | null | undefined {
+  const trimmed = raw.trim();
+  if (trimmed === "") return null;
+  const value = Number(trimmed);
+  if (!Number.isFinite(value)) return undefined;
+  const rounded = Math.round(value);
+  if (rounded < 0 || rounded > MAX_ESTIMATE_MINUTES) return undefined;
+  return rounded;
+}
+
+const BAD_MINUTES_MESSAGE = `Estimate must be a whole number of minutes, 0–${MAX_ESTIMATE_MINUTES}.`;
 
 type Variant = "desktop" | "mobile";
 
@@ -65,6 +121,11 @@ type Sizing = {
   deleteIcon: string;
   handle: string;
   handleIcon: string;
+  chip: string;
+  detailToggle: string;
+  detailIcon: string;
+  minutesInput: string;
+  stageSelect: string;
 };
 
 const SIZING: Record<Variant, Sizing> = {
@@ -79,11 +140,18 @@ const SIZING: Record<Variant, Sizing> = {
     label:
       "min-w-0 flex-1 rounded-md px-1 py-2 text-left text-base leading-snug break-words",
     editInput:
-      "min-w-0 flex-1 rounded-md border border-border bg-surface px-3 py-2 text-base outline-none focus:ring-2 focus:ring-primary",
+      "w-full min-w-0 rounded-md border border-border bg-surface px-3 py-2 text-base outline-none focus:ring-2 focus:ring-primary",
     deleteBtn: "h-11 w-11 shrink-0",
     deleteIcon: "h-5 w-5",
     handle: "h-11 w-9",
     handleIcon: "h-5 w-5",
+    chip: "text-[11px]",
+    detailToggle: "h-11 w-11 shrink-0",
+    detailIcon: "h-5 w-5",
+    minutesInput:
+      "h-10 w-24 rounded-md border border-border bg-surface px-2 text-base outline-none focus:ring-2 focus:ring-primary",
+    stageSelect:
+      "h-10 min-w-0 flex-1 rounded-md border border-border bg-surface px-2 text-base text-foreground outline-none focus:ring-2 focus:ring-primary",
   },
   desktop: {
     input:
@@ -96,11 +164,18 @@ const SIZING: Record<Variant, Sizing> = {
     label:
       "min-w-0 flex-1 rounded-md px-1 py-1 text-left text-sm leading-snug break-words",
     editInput:
-      "min-w-0 flex-1 rounded-md border border-border bg-surface px-2 py-1 text-sm outline-none focus:ring-2 focus:ring-primary",
+      "w-full min-w-0 rounded-md border border-border bg-surface px-2 py-1 text-sm outline-none focus:ring-2 focus:ring-primary",
     deleteBtn: "h-8 w-8 shrink-0",
     deleteIcon: "h-4 w-4",
     handle: "h-8 w-6",
     handleIcon: "h-4 w-4",
+    chip: "text-[10px]",
+    detailToggle: "h-8 w-8 shrink-0",
+    detailIcon: "h-4 w-4",
+    minutesInput:
+      "h-8 w-20 rounded-md border border-border bg-surface px-2 text-sm outline-none focus:ring-2 focus:ring-primary",
+    stageSelect:
+      "h-8 min-w-0 flex-1 rounded-md border border-border bg-surface px-2 text-sm text-foreground outline-none focus:ring-2 focus:ring-primary",
   },
 };
 
@@ -109,9 +184,11 @@ const SIZING: Record<Variant, Sizing> = {
  *
  * `trackId` is nullable in the same way the server actions are: a string is a
  * song's task list, `null` is the studio list that belongs to no track
- * (migration 0028). The component does not branch on it beyond the heading and
- * the reorder hint — both lists add, tick, edit, delete and reorder
- * identically, which is the point of them being one component.
+ * (migration 0028). The component does not branch on it beyond the heading,
+ * the reorder hint and the stage picker — a studio task has no production
+ * stage, because the five stages are a song's arc. Everything else is shared:
+ * both lists add, tick, edit, estimate, delete and reorder identically, which
+ * is the point of them being one component.
  */
 export function TrackTodoList({
   trackId,
@@ -126,12 +203,17 @@ export function TrackTodoList({
   heading?: string;
 }) {
   const sizing = SIZING[variant];
+  // Studio tasks belong to no song, so they have no stage to be at.
+  const showStage = trackId != null;
   const [optimistic, applyOptimistic] = useOptimistic<TodoItem[], Action>(
     initial,
     reducer,
   );
   const [, startTransition] = useTransition();
   const [draft, setDraft] = useState("");
+  const [details, setDetails] = useState<DetailsDraft>(EMPTY_DETAILS);
+  const [detailsOpen, setDetailsOpen] = useState(false);
+  const detailsPanelId = useId();
   const inputRef = useRef<HTMLInputElement | null>(null);
   const { toast } = useToast();
 
@@ -201,7 +283,16 @@ export function TrackTodoList({
   const submitDraft = () => {
     const description = draft.trim();
     if (!description) return;
+    const estimatedMinutes = parseMinutesDraft(details.minutes);
+    if (estimatedMinutes === undefined) {
+      toast(BAD_MINUTES_MESSAGE);
+      return;
+    }
+    const category = showStage && details.stage ? details.stage : null;
     setDraft("");
+    // Cleared rather than carried over: a stage that stuck to the next task
+    // without being asked for is a wrong stage nobody notices.
+    setDetails(EMPTY_DETAILS);
     const tempId = `temp-${crypto.randomUUID()}`;
     startTransition(async () => {
       applyOptimistic({
@@ -211,8 +302,8 @@ export function TrackTodoList({
           track_id: trackId,
           owner_id: null,
           description,
-          category: null,
-          estimated_minutes: null,
+          category,
+          estimated_minutes: estimatedMinutes,
           sort_order: null,
           completed_at: null,
           created_at: new Date().toISOString(),
@@ -220,7 +311,7 @@ export function TrackTodoList({
         },
       });
       try {
-        await addTrackTodo({ trackId, description });
+        await addTrackTodo({ trackId, description, estimatedMinutes, category });
       } catch (e) {
         toast((e as Error).message);
       }
@@ -240,13 +331,55 @@ export function TrackTodoList({
     });
   };
 
-  const onEdit = (item: TodoItem, description: string) => {
-    const trimmed = description.trim();
-    if (!trimmed || trimmed === item.description || item._temp) return;
+  /**
+   * Commit a row edit — description, estimate, stage, or any combination.
+   *
+   * Each of the three is compared against what the row already holds and only
+   * the changed ones are written, which is what keeps a stage the list cannot
+   * render (a "suno" category, say) from being cleared by a save that never
+   * touched the picker.
+   */
+  const onEdit = (
+    item: TodoItem,
+    next: { description: string; minutes: string; stage: StageKey | "" },
+  ) => {
+    if (item._temp) return;
+    const current = taskDetails(item);
+    const description = next.description.trim();
+    if (!description) return;
+
+    const minutes = parseMinutesDraft(next.minutes);
+    if (minutes === undefined) {
+      toast(BAD_MINUTES_MESSAGE);
+      return;
+    }
+    const stage = showStage ? (next.stage || null) : current.category;
+
+    const descriptionChanged = description !== item.description;
+    const minutesChanged = minutes !== current.estimatedMinutes;
+    const stageChanged = stage !== current.category;
+    if (!descriptionChanged && !minutesChanged && !stageChanged) return;
+
     startTransition(async () => {
-      applyOptimistic({ kind: "edit", id: item.id, description: trimmed });
+      applyOptimistic({
+        kind: "edit",
+        id: item.id,
+        description: descriptionChanged ? description : undefined,
+        estimatedMinutes: minutesChanged ? minutes : undefined,
+        category: stageChanged ? stage : undefined,
+      });
       try {
-        await updateTrackTodo(item.id, trimmed, trackId);
+        if (descriptionChanged) {
+          await updateTrackTodo(item.id, description, trackId);
+        }
+        if (minutesChanged || stageChanged) {
+          await updateTrackTodoDetails({
+            id: item.id,
+            trackId,
+            ...(minutesChanged ? { estimatedMinutes: minutes } : {}),
+            ...(stageChanged ? { category: stage } : {}),
+          });
+        }
       } catch (e) {
         toast((e as Error).message);
       }
@@ -266,6 +399,10 @@ export function TrackTodoList({
   };
 
   const openCount = optimistic.filter((t) => t.completed_at == null).length;
+  // Null until something is actually estimated — an unestimated list says
+  // nothing rather than announcing a confident zero.
+  const estimateSummary = formatEstimateSummary(optimistic);
+  const detailsSet = details.minutes.trim() !== "" || details.stage !== "";
   const dragIndex = dragId ? optimistic.findIndex((t) => t.id === dragId) : -1;
   const overIndex = overId ? optimistic.findIndex((t) => t.id === overId) : -1;
 
@@ -278,32 +415,68 @@ export function TrackTodoList({
         <span className="text-xs text-muted-foreground">{openCount} open</span>
       </div>
 
+      {/* Still one line to add a task: the estimate and the stage live behind a
+          toggle so the fast path stays type-and-Enter. */}
       <form
-        className="flex items-center gap-2 rounded-md border border-primary/40 bg-primary/5 p-2"
+        className="flex flex-col gap-2 rounded-md border border-primary/40 bg-primary/5 p-2"
         onSubmit={(e) => {
           e.preventDefault();
           submitDraft();
         }}
       >
-        <Plus className={sizing.addIcon} aria-hidden />
-        <Input
-          ref={inputRef}
-          value={draft}
-          onChange={(e) => setDraft(e.target.value)}
-          placeholder="Add a task…"
-          className={sizing.input}
-          enterKeyHint="done"
-          autoComplete="off"
-        />
-        <Button
-          type="submit"
-          size="sm"
-          className={sizing.addBtn}
-          disabled={!draft.trim()}
-        >
-          Add
-        </Button>
+        <div className="flex items-center gap-2">
+          <Plus className={sizing.addIcon} aria-hidden />
+          <Input
+            ref={inputRef}
+            value={draft}
+            onChange={(e) => setDraft(e.target.value)}
+            placeholder="Add a task…"
+            className={sizing.input}
+            enterKeyHint="done"
+            autoComplete="off"
+          />
+          <Button
+            type="button"
+            variant="ghost"
+            size="icon"
+            className={cn(sizing.detailToggle, detailsSet && "text-primary")}
+            onClick={() => setDetailsOpen((open) => !open)}
+            aria-expanded={detailsOpen}
+            aria-controls={detailsPanelId}
+            aria-label={
+              showStage ? "Estimate and stage" : "Estimate for this task"
+            }
+            title={showStage ? "Estimate and stage" : "Estimate"}
+          >
+            <SlidersHorizontal className={sizing.detailIcon} />
+          </Button>
+          <Button
+            type="submit"
+            size="sm"
+            className={sizing.addBtn}
+            disabled={!draft.trim()}
+          >
+            Add
+          </Button>
+        </div>
+
+        {detailsOpen && (
+          <div id={detailsPanelId}>
+            <TaskDetailFields
+              sizing={sizing}
+              showStage={showStage}
+              value={details}
+              onChange={setDetails}
+            />
+          </div>
+        )}
       </form>
+
+      {estimateSummary && (
+        <p className="text-xs tabular-nums text-muted-foreground">
+          {estimateSummary}
+        </p>
+      )}
 
       {optimistic.length === 0 ? (
         <p className="py-2 text-sm text-muted-foreground">
@@ -319,6 +492,7 @@ export function TrackTodoList({
                 index={index}
                 total={optimistic.length}
                 sizing={sizing}
+                showStage={showStage}
                 dragging={dragId === item.id}
                 // The edge sits on the side the row arrives from, so the gap
                 // you see is the gap it lands in.
@@ -338,7 +512,7 @@ export function TrackTodoList({
                 onDragEnd={endDrag}
                 onNudge={(delta) => nudge(item, delta)}
                 onToggle={(next) => onToggle(item, next)}
-                onEdit={(desc) => onEdit(item, desc)}
+                onEdit={(next) => onEdit(item, next)}
                 onDelete={() => onDelete(item)}
               />
             ))}
@@ -356,11 +530,97 @@ export function TrackTodoList({
   );
 }
 
+/**
+ * The estimate and stage controls, shared by the add form and the row editor
+ * so the two cannot offer different ranges or a different stage list.
+ *
+ * A native `<select>` rather than the Radix one: the value here is genuinely
+ * nullable ("no stage"), which Radix models with an empty string it refuses to
+ * accept as an item value, and the native control is the better picker on a
+ * phone anyway.
+ */
+function TaskDetailFields({
+  sizing,
+  showStage,
+  value,
+  onChange,
+}: {
+  sizing: Sizing;
+  showStage: boolean;
+  value: DetailsDraft;
+  onChange: (next: DetailsDraft) => void;
+}) {
+  return (
+    <div className="flex min-w-0 flex-wrap items-center gap-2">
+      <input
+        type="number"
+        inputMode="numeric"
+        min={0}
+        max={MAX_ESTIMATE_MINUTES}
+        step={5}
+        value={value.minutes}
+        onChange={(e) => onChange({ ...value, minutes: e.target.value })}
+        placeholder="min"
+        aria-label="Estimated minutes"
+        className={sizing.minutesInput}
+      />
+      {showStage && (
+        <select
+          value={value.stage}
+          onChange={(e) =>
+            onChange({ ...value, stage: e.target.value as StageKey | "" })
+          }
+          aria-label="Production stage"
+          className={sizing.stageSelect}
+        >
+          <option value="">No stage</option>
+          {STAGE_KEYS.map((key) => (
+            <option key={key} value={key}>
+              {STAGE_LABELS[key]}
+            </option>
+          ))}
+        </select>
+      )}
+    </div>
+  );
+}
+
+/**
+ * The quiet chips a row carries when it has been estimated or staged.
+ *
+ * Rendered inside the description button so they sit on the same line as the
+ * text and a tap anywhere on the row still opens the editor. `no-underline`
+ * keeps them out of the strike-through a completed task's label carries.
+ */
+function TaskChips({ item, sizing }: { item: TodoItem; sizing: Sizing }) {
+  const { estimatedMinutes, category } = taskDetails(item);
+  if (estimatedMinutes == null && category == null) return null;
+  const chip = cn(
+    "ml-1.5 inline-flex items-center rounded-full border border-border bg-surface-2 px-1.5 py-0.5 align-middle font-medium leading-none text-muted-foreground no-underline",
+    sizing.chip,
+  );
+  return (
+    <>
+      {estimatedMinutes != null && (
+        <span className={cn(chip, "tabular-nums")}>
+          {formatMinutes(estimatedMinutes)}
+        </span>
+      )}
+      {category && (
+        <span className={chip} title={STAGE_LABELS[category]}>
+          {STAGE_SHORT_LABELS[category]}
+        </span>
+      )}
+    </>
+  );
+}
+
 function TodoRow({
   item,
   index,
   total,
   sizing,
+  showStage,
   dragging,
   dropEdge,
   registerRef,
@@ -376,6 +636,7 @@ function TodoRow({
   index: number;
   total: number;
   sizing: Sizing;
+  showStage: boolean;
   dragging: boolean;
   dropEdge: "top" | "bottom" | null;
   registerRef: (el: HTMLLIElement | null) => void;
@@ -384,20 +645,46 @@ function TodoRow({
   onDragEnd: () => void;
   onNudge: (delta: -1 | 1) => void;
   onToggle: (done: boolean) => void;
-  onEdit: (description: string) => void;
+  onEdit: (next: {
+    description: string;
+    minutes: string;
+    stage: StageKey | "";
+  }) => void;
   onDelete: () => void;
 }) {
+  const stored = taskDetails(item);
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState(item.description);
+  const [details, setDetails] = useState<DetailsDraft>({
+    minutes: stored.estimatedMinutes == null ? "" : String(stored.estimatedMinutes),
+    stage: stored.category ?? "",
+  });
   const done = item.completed_at != null;
+
+  const open = () => {
+    // Re-seed from the row every time, so an edit abandoned earlier does not
+    // come back the next time the row is opened.
+    setDraft(item.description);
+    setDetails({
+      minutes:
+        stored.estimatedMinutes == null ? "" : String(stored.estimatedMinutes),
+      stage: stored.category ?? "",
+    });
+    setEditing(true);
+  };
 
   const commit = () => {
     setEditing(false);
-    onEdit(draft);
+    onEdit({ description: draft, minutes: details.minutes, stage: details.stage });
   };
 
   const cancel = () => {
     setDraft(item.description);
+    setDetails({
+      minutes:
+        stored.estimatedMinutes == null ? "" : String(stored.estimatedMinutes),
+      stage: stored.category ?? "",
+    });
     setEditing(false);
   };
 
@@ -449,29 +736,51 @@ function TodoRow({
       </label>
 
       {editing ? (
-        <input
-          autoFocus
-          value={draft}
-          onChange={(e) => setDraft(e.target.value)}
-          onBlur={commit}
-          onKeyDown={(e) => {
-            if (e.key === "Enter") {
-              e.preventDefault();
-              commit();
-            } else if (e.key === "Escape") {
-              cancel();
-            }
-          }}
-          className={sizing.editInput}
-          enterKeyHint="done"
-        />
+        // Multi-field, so committing on blur is gone: moving from the
+        // description to the minutes field would have saved the row halfway
+        // through the edit. Enter and Save commit, Escape and Cancel back out.
+        <div className="flex min-w-0 flex-1 flex-col gap-2 py-1">
+          <input
+            autoFocus
+            value={draft}
+            onChange={(e) => setDraft(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === "Enter") {
+                e.preventDefault();
+                commit();
+              } else if (e.key === "Escape") {
+                cancel();
+              }
+            }}
+            aria-label="Task description"
+            className={sizing.editInput}
+            enterKeyHint="done"
+          />
+          <div className="flex min-w-0 flex-wrap items-center gap-2">
+            <TaskDetailFields
+              sizing={sizing}
+              showStage={showStage}
+              value={details}
+              onChange={setDetails}
+            />
+            <div className="ml-auto flex items-center gap-1">
+              <Button type="button" variant="ghost" size="sm" onClick={cancel}>
+                Cancel
+              </Button>
+              <Button type="button" size="sm" onClick={commit}>
+                Save
+              </Button>
+            </div>
+          </div>
+        </div>
       ) : (
         <button
           type="button"
-          onClick={() => setEditing(true)}
+          onClick={open}
           className={`${sizing.label} ${done ? "text-muted-foreground line-through" : ""}`}
         >
           {item.description}
+          <TaskChips item={item} sizing={sizing} />
           {item._temp && (
             <Check
               className="ml-2 inline h-3 w-3 animate-pulse text-muted-foreground"

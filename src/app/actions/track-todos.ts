@@ -8,6 +8,8 @@ import {
   revalidateGeneralTasks,
   revalidateTrackSurfaces,
 } from "@/lib/revalidate-track";
+import { MAX_ESTIMATE_MINUTES } from "@/lib/task-details";
+import { STAGE_KEYS } from "@/lib/types";
 
 /**
  * Task-list writes for both kinds of list.
@@ -45,14 +47,50 @@ function revalidateList(trackId: string | null) {
   else revalidateGeneralTasks();
 }
 
-const addSchema = z.object({
-  trackId: trackIdSchema,
-  description: z.string().min(1).max(300),
-});
+/**
+ * A task's two optional details, in the shape both writes below accept.
+ *
+ * `estimated_minutes` and `category` have existed since migration 0001, so
+ * neither needs one of its own — the gap this closes is that nothing ever wrote
+ * them, which made the "time left" figure on every track card structurally
+ * zero. `category` holds one of the five production stage keys, matching what
+ * `toStageKey` will accept back on read; the column has no check constraint, so
+ * the enum here is the only thing keeping a stray value out.
+ */
+const estimatedMinutesSchema = z
+  .number()
+  .int("Estimate must be whole minutes")
+  .min(0)
+  .max(MAX_ESTIMATE_MINUTES, "Estimate is longer than a task should be")
+  .nullable();
+const stageCategorySchema = z.enum(STAGE_KEYS).nullable();
+
+/**
+ * A studio task has no track, so it has no production stage either — the five
+ * stages are a song's creative arc, and "back up the drive" is not at one of
+ * them. The list hides the picker in that case; this refusal is what makes it
+ * an invariant rather than a UI convention.
+ */
+const noStageWithoutTrack = (v: {
+  trackId: string | null;
+  category?: string | null;
+}) => v.trackId != null || v.category == null;
+const NO_STAGE_MESSAGE = "A studio task has no production stage.";
+
+const addSchema = z
+  .object({
+    trackId: trackIdSchema,
+    description: z.string().min(1).max(300),
+    estimatedMinutes: estimatedMinutesSchema.optional(),
+    category: stageCategorySchema.optional(),
+  })
+  .refine(noStageWithoutTrack, { message: NO_STAGE_MESSAGE, path: ["category"] });
 
 export async function addTrackTodo(input: {
   trackId: string | null;
   description: string;
+  estimatedMinutes?: number | null;
+  category?: string | null;
 }) {
   const parsed = addSchema.parse(input);
   const supabase = getServerSupabase();
@@ -63,6 +101,8 @@ export async function addTrackTodo(input: {
     // keeps one row shape.
     owner_id: OWNER_ID,
     description: parsed.description,
+    estimated_minutes: parsed.estimatedMinutes ?? null,
+    category: parsed.category ?? null,
   });
   if (error) {
     if (isMissingColumn(error)) throw new Error(MIGRATION_0028_MISSING_MESSAGE);
@@ -103,6 +143,58 @@ export async function updateTrackTodo(
   const supabase = getServerSupabase();
   const { error } = await scopeToList(
     supabase.from("actions").update({ description: parsed.description }),
+    parsed.trackId,
+  ).eq("id", parsed.id);
+  if (error) throw error;
+  revalidateList(parsed.trackId);
+}
+
+const updateDetailsSchema = z
+  .object({
+    id: z.string().uuid(),
+    trackId: trackIdSchema,
+    estimatedMinutes: estimatedMinutesSchema.optional(),
+    category: stageCategorySchema.optional(),
+  })
+  .refine((v) => v.estimatedMinutes !== undefined || v.category !== undefined, {
+    message: "Nothing to update",
+  })
+  .refine(noStageWithoutTrack, { message: NO_STAGE_MESSAGE, path: ["category"] });
+
+/**
+ * Set a task's estimate and/or its production stage.
+ *
+ * Separate from `updateTrackTodo` because the description is the task and
+ * these two are notes about it: the row editor commits whichever of the three
+ * the user actually changed, so retyping a description does not rewrite a
+ * stage and vice versa. An absent key means "leave this column alone" — an
+ * explicit `null` is the value that clears it.
+ *
+ * That distinction is load-bearing rather than tidy. `actions.category` is
+ * free text and `startSunoExperiment` stores `"suno"` in it, which the list
+ * reads as no stage; if an untouched picker wrote `null` on every save, opening
+ * and saving a Suno round-trip task would quietly erase that marker.
+ *
+ * Scoped through `scopeToList` like every other write here, so a task on
+ * another track — or on the studio list — cannot be edited through this action.
+ */
+export async function updateTrackTodoDetails(input: {
+  id: string;
+  trackId: string | null;
+  estimatedMinutes?: number | null;
+  category?: string | null;
+}) {
+  const parsed = updateDetailsSchema.parse(input);
+  const patch: { estimated_minutes?: number | null; category?: string | null } =
+    {};
+  if (parsed.estimatedMinutes !== undefined) {
+    patch.estimated_minutes = parsed.estimatedMinutes;
+  }
+  if (parsed.category !== undefined) patch.category = parsed.category;
+
+  const supabase = getServerSupabase();
+  const { error } = await scopeToList(
+    supabase.from("actions").update(patch),
     parsed.trackId,
   ).eq("id", parsed.id);
   if (error) throw error;
