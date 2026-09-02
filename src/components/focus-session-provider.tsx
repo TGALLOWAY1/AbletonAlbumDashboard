@@ -25,6 +25,12 @@ type FocusSessionState = {
   notes: string;
   // The one thing this session is trying to achieve. Checked at log time.
   goal: string;
+  // Which track `goal` was last seeded from — lets a track switch mid-session
+  // re-seed the goal from the new track's top task, see `shouldReseedGoal`.
+  goalTrackId: string | null;
+  // Sticky for the rest of the session once the user types their own goal, so
+  // a later track switch never clobbers it.
+  goalEdited: boolean;
 };
 
 const INITIAL_STATE: FocusSessionState = {
@@ -37,6 +43,8 @@ const INITIAL_STATE: FocusSessionState = {
   todos: [],
   notes: "",
   goal: "",
+  goalTrackId: null,
+  goalEdited: false,
 };
 
 export type StartInput = {
@@ -56,7 +64,14 @@ type FocusSessionContextValue = FocusSessionState & {
   reset: () => void;
   setTodos: (next: ChecklistItem[]) => void;
   setNotes: (next: string) => void;
+  /** User-driven goal edit — marks `goalEdited` so a later track switch won't overwrite it. */
   setGoal: (next: string) => void;
+  /** Re-seeds the goal from a (new) track's top task without marking it user-edited. */
+  seedGoal: (trackId: string | null, next: string) => void;
+  /** Re-attaches a running/paused session to a different track (or none) in place. */
+  setTrack: (trackId: string | null, trackName: string | null) => void;
+  /** Changes the session type mid-session. */
+  setSessionType: (sessionTypeId: string | null) => void;
 };
 
 const FocusSessionContext = createContext<FocusSessionContextValue | null>(null);
@@ -129,6 +144,8 @@ export function FocusSessionProvider({ children }: { children: React.ReactNode }
       todos: input.initialTodos ?? [],
       notes: "",
       goal: input.goal ?? "",
+      goalTrackId: input.trackId,
+      goalEdited: false,
     });
   }, []);
 
@@ -170,7 +187,24 @@ export function FocusSessionProvider({ children }: { children: React.ReactNode }
   }, []);
 
   const setGoal = useCallback((next: string) => {
-    setState((prev) => ({ ...prev, goal: next }));
+    setState((prev) => ({ ...prev, goal: next, goalEdited: true }));
+  }, []);
+
+  const seedGoal = useCallback((trackId: string | null, next: string) => {
+    setState((prev) => ({
+      ...prev,
+      goal: next,
+      goalTrackId: trackId,
+      goalEdited: false,
+    }));
+  }, []);
+
+  const setTrack = useCallback((trackId: string | null, trackName: string | null) => {
+    setState((prev) => ({ ...prev, trackId, trackName }));
+  }, []);
+
+  const setSessionType = useCallback((sessionTypeId: string | null) => {
+    setState((prev) => ({ ...prev, sessionTypeId }));
   }, []);
 
   const value: FocusSessionContextValue = {
@@ -184,6 +218,9 @@ export function FocusSessionProvider({ children }: { children: React.ReactNode }
     setTodos,
     setNotes,
     setGoal,
+    seedGoal,
+    setTrack,
+    setSessionType,
   };
 
   return (
