@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { ArrowLeft, Pause, Play, Square } from "lucide-react";
 import { BackLink } from "@/components/back-link";
 import { Button } from "@/components/ui/button";
@@ -11,20 +11,28 @@ import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
 import { SessionTodoChecklist } from "@/components/session-todo-checklist";
 import { TrackTodoList } from "@/components/mobile/track-todo-list";
+import { TrackPicker, type PickableTrack } from "@/components/track-picker";
+import { SessionTypePicker } from "@/components/session-type-picker";
 import { useFocusSession } from "@/components/focus-session-provider";
 import { useToast } from "@/components/toast";
+import {
+  canSelectSessionType,
+  resolveTrackSelection,
+  shouldReseedGoal,
+} from "@/lib/focus-runner";
 import type { ActionRow, SessionTypeRow, TrackRow } from "@/lib/types";
 
 export function FocusRunner({
   track,
   sessionType,
   sessionTypes,
+  tracks,
   trackTodos,
 }: {
   track: TrackRow | null;
   sessionType?: SessionTypeRow | null;
   sessionTypes?: SessionTypeRow[];
-  tracks?: TrackRow[];
+  tracks?: PickableTrack[];
   trackTodos?: ActionRow[];
 }) {
   const router = useRouter();
@@ -52,6 +60,83 @@ export function FocusRunner({
     }
   }, [pageOwnsSession, ctx.phase, router]);
 
+  // Before Start, the session type picker is local state seeded from the
+  // `?type=` the sidebar's start button may have arrived with. Once a
+  // session is running, `ctx.sessionTypeId` is the only copy that matters —
+  // the picker writes straight to it so the log page (which reads the
+  // context directly) sees the change immediately.
+  const [pendingSessionTypeId, setPendingSessionTypeId] = useState<string | null>(
+    sessionType?.id ?? null,
+  );
+  const phaseForType = pageOwnsSession ? ctx.phase : "idle";
+  const effectiveSessionTypeId =
+    phaseForType === "idle" ? pendingSessionTypeId : ctx.sessionTypeId;
+  const effectiveSessionType =
+    sessionTypes?.find((t) => t.id === effectiveSessionTypeId) ?? null;
+
+  // The goal re-seeds from the (new) track's top task whenever the attached
+  // track changes underneath a running session, unless the user has typed
+  // their own goal — see `shouldReseedGoal`. Read off individually rather
+  // than as `ctx.x` so the effect only reruns when one of these actually
+  // changes, not on every ~250ms timer tick.
+  const { phase: ctxPhase, goalTrackId, goalEdited, seedGoal } = ctx;
+  useEffect(() => {
+    if (!pageOwnsSession || ctxPhase === "idle") return;
+    const trackId = track?.id ?? null;
+    if (shouldReseedGoal({ trackId, goalTrackId, goalEdited })) {
+      seedGoal(trackId, nextTask?.description ?? "");
+    }
+  }, [
+    pageOwnsSession,
+    ctxPhase,
+    track?.id,
+    goalTrackId,
+    goalEdited,
+    seedGoal,
+    nextTask?.description,
+  ]);
+
+  const handleTrackChange = (nextId: string | null) => {
+    const result = resolveTrackSelection({
+      nextTrackId: nextId,
+      sessionTypeRequiresTrack: effectiveSessionType?.requires_track ?? false,
+      sessionTypeName: effectiveSessionType?.name,
+    });
+    if (!result.allowed) {
+      toast(result.reason);
+      return;
+    }
+    // A running/paused session carries its identity in the provider, not the
+    // URL — patch it before navigating so the new page recognizes ownership
+    // (and keeps ticking) the instant it mounts, instead of a frame where it
+    // looks like a session running "elsewhere".
+    if (pageOwnsSession && ctx.phase !== "idle") {
+      const nextTrack = nextId ? (tracks?.find((t) => t.id === nextId) ?? null) : null;
+      ctx.setTrack(nextId, nextTrack?.name ?? null);
+      router.replace(result.path);
+      return;
+    }
+    // Before Start there's no session in the provider to carry the picked
+    // type across the navigation, so it rides the same `?type=` query the
+    // sidebar's start button already uses — both focus pages read it.
+    const query = pendingSessionTypeId ? `?type=${pendingSessionTypeId}` : "";
+    router.replace(`${result.path}${query}`);
+  };
+
+  const handleSessionTypeChange = (nextId: string | null) => {
+    const type = nextId ? (sessionTypes?.find((t) => t.id === nextId) ?? null) : null;
+    const currentTrackId = track?.id ?? null;
+    if (type && !canSelectSessionType(type, currentTrackId)) {
+      toast(`${type.name} sessions require a track.`);
+      return;
+    }
+    if (pageOwnsSession && ctx.phase !== "idle") {
+      ctx.setSessionType(nextId);
+    } else {
+      setPendingSessionTypeId(nextId);
+    }
+  };
+
   const activeFocusPath = ctx.trackId ? `/focus/${ctx.trackId}` : "/focus/new";
 
   if (isOtherSessionActive) {
@@ -73,22 +158,19 @@ export function FocusRunner({
   const notes = pageOwnsSession ? ctx.notes : "";
   const goal = pageOwnsSession ? ctx.goal : "";
 
-  const runningType = ctx.sessionTypeId
-    ? sessionTypes?.find((t) => t.id === ctx.sessionTypeId)
-    : null;
-  const headline = track?.name ?? runningType?.name ?? sessionType?.name ?? "Focus";
+  const headline = track?.name ?? effectiveSessionType?.name ?? "Focus";
 
   const start = () => {
     // A session type flagged requires_track can't run track-less from
     // /focus/new.
-    if (!track && sessionType?.requires_track) {
-      toast(`${sessionType.name} sessions require a track.`);
+    if (!track && effectiveSessionType?.requires_track) {
+      toast(`${effectiveSessionType.name} sessions require a track.`);
       return;
     }
     ctx.start({
       trackId: track?.id ?? null,
-      trackName: track?.name ?? sessionType?.name ?? null,
-      sessionTypeId: sessionType?.id ?? null,
+      trackName: track?.name ?? effectiveSessionType?.name ?? null,
+      sessionTypeId: effectiveSessionType?.id ?? null,
       // Committing to one outcome up front; the log page asks whether you
       // got there. Defaults to the top open task.
       goal: nextTask?.description ?? "",
@@ -168,6 +250,40 @@ export function FocusRunner({
 
       <div className="font-mono text-7xl tabular-nums">
         {formatHMS(elapsedMs)}
+      </div>
+
+      {/* Track and session type — pick or change either before Start and
+          while running. One row on desktop, stacked on a phone. */}
+      <div className="mx-auto flex w-full max-w-md flex-col gap-3 text-left md:flex-row md:items-start">
+        {tracks && (
+          <TrackPicker
+            tracks={tracks}
+            value={track?.id ?? null}
+            onChange={handleTrackChange}
+            size="lg"
+            className="md:flex-1"
+          />
+        )}
+        {sessionTypes && sessionTypes.length > 0 && (
+          <div className="flex min-w-0 flex-col gap-1 md:flex-1">
+            <SessionTypePicker
+              types={sessionTypes}
+              value={effectiveSessionTypeId}
+              onChange={handleSessionTypeChange}
+              isDisabled={(t) => !canSelectSessionType(t, track?.id ?? null)}
+              disabledHint="Requires a track — pick one first."
+              size="lg"
+            />
+            {!track &&
+              sessionTypes.some(
+                (t) => t.id !== effectiveSessionTypeId && t.requires_track,
+              ) && (
+                <p className="text-xs text-muted-foreground">
+                  Some session types need a track — pick one above to unlock them.
+                </p>
+              )}
+          </div>
+        )}
       </div>
 
       <div className="flex flex-wrap items-center justify-center gap-3">
