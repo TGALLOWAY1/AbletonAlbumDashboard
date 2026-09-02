@@ -40,6 +40,10 @@ import {
   type ResourceType,
 } from "@/lib/data/resources";
 import { createResource } from "@/app/actions/resources";
+import {
+  appendTagFields,
+  ResourceTagPicker,
+} from "./resource-tag-picker";
 import { getBrowserSupabase } from "@/lib/supabase/browser";
 import {
   getYouTubeThumbnailUrl,
@@ -91,6 +95,7 @@ export function AddResourceDialog({
   );
   const [type, setType] = React.useState<ResourceType>(DEFAULT_TYPE_BY_TAB.url);
   const [readMinutes, setReadMinutes] = React.useState("5");
+  const [tags, setTags] = React.useState<string[]>([]);
 
   const [storagePath, setStoragePath] = React.useState("");
   const [pdfName, setPdfName] = React.useState("");
@@ -119,6 +124,7 @@ export function AddResourceDialog({
     setCategoryId(inheritedCategoryId ?? RESOURCE_CATEGORIES[0].id);
     setType(DEFAULT_TYPE_BY_TAB.url);
     setReadMinutes("5");
+    setTags([]);
     setStoragePath("");
     setPdfName("");
     setUploading(false);
@@ -191,6 +197,7 @@ export function AddResourceDialog({
       formData.set("category_id", categoryId);
       formData.set("source_kind", tab);
       formData.set("read_minutes", String(readMinutes || 5));
+      appendTagFields(formData, tags);
       if (tab === "pdf") {
         if (!storagePath) {
           setError("Upload a PDF before saving.");
@@ -459,6 +466,12 @@ export function AddResourceDialog({
               />
             </div>
           </div>
+
+          <ResourceTagPicker
+            value={tags}
+            onChange={setTags}
+            disabled={submitting}
+          />
 
           {error && (
             <p className="rounded-md border border-danger/40 bg-danger/10 px-3 py-2 text-xs text-danger">

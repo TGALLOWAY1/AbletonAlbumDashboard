@@ -42,6 +42,13 @@ export interface ResourceItem {
   content?: string | null;
   thumbnailUrl?: string | null;
   readMinutes: number;
+  /**
+   * Instrument/role words in storage form (see src/lib/resource-tags.ts) —
+   * the axis that cuts across categories. Always an array: migration 0032
+   * defaults the column to '{}', and a database without the column reads as
+   * untagged rather than undefined.
+   */
+  tags: string[];
   addedAt: string;
   bookmarked?: boolean;
   featured?: boolean;
@@ -155,6 +162,7 @@ export const SEED_RESOURCES: ResourceItem[] = [
     sourceKind: "url",
     url: "https://www.youtube.com/watch?v=dQw4w9WgXcQ",
     readMinutes: 11,
+    tags: ["arrangement"],
     addedAt: "2024-05-13",
   },
   {
@@ -167,6 +175,7 @@ export const SEED_RESOURCES: ResourceItem[] = [
     content:
       "# Creative Chord Progressions\n\nTry borrowed chords from parallel modes, secondary dominants, and chromatic passing chords.",
     readMinutes: 12,
+    tags: ["chords", "keys"],
     addedAt: "2024-05-15",
   },
   {
@@ -179,6 +188,7 @@ export const SEED_RESOURCES: ResourceItem[] = [
     content:
       "# Reference Tracks\n\nLevel-match before A/B. Pick references in the same genre and tonal balance you want.",
     readMinutes: 5,
+    tags: [],
     addedAt: "2024-05-16",
   },
   {
@@ -191,6 +201,7 @@ export const SEED_RESOURCES: ResourceItem[] = [
     content:
       "# A Producer's Routine\n\nBlock 90 minutes daily. End each session with one specific next action. Keep a finish list, not a to-do list.",
     readMinutes: 6,
+    tags: [],
     addedAt: "2024-05-17",
   },
   {
@@ -202,6 +213,7 @@ export const SEED_RESOURCES: ResourceItem[] = [
     sourceKind: "url",
     url: "https://www.youtube.com/watch?v=dQw4w9WgXcQ",
     readMinutes: 9,
+    tags: ["synthesis", "lead"],
     addedAt: "2024-05-18",
   },
   {
@@ -214,6 +226,7 @@ export const SEED_RESOURCES: ResourceItem[] = [
     content:
       "# Mixing Drums\n\nFocus on transient shaping before you reach for compression. EQ kicks at 60Hz and 4kHz, snares at 200Hz and 5kHz.",
     readMinutes: 7,
+    tags: ["drums"],
     addedAt: "2024-05-19",
   },
   {
@@ -226,6 +239,7 @@ export const SEED_RESOURCES: ResourceItem[] = [
     content:
       "# Sidechain Compression\n\nUse a fast attack, medium release, 4-6dB of gain reduction. Source: kick. Target: bass or pads.",
     readMinutes: 6,
+    tags: ["bass", "drums", "modulation"],
     addedAt: "2024-05-20",
   },
   {
@@ -238,6 +252,7 @@ export const SEED_RESOURCES: ResourceItem[] = [
     content:
       "# Building Atmospheric Pads\n\n1. Start with a soft saw or sine layer.\n2. Add a detuned octave to fatten the body.\n3. Bring in a bell or chime layer high up.\n4. Slow modulate filters and pan.\n5. Reverb tail, then EQ the low end out.",
     readMinutes: 8,
+    tags: ["pad", "texture"],
     addedAt: "2024-05-21",
   },
   {
@@ -249,6 +264,7 @@ export const SEED_RESOURCES: ResourceItem[] = [
     sourceKind: "url",
     url: "https://www.youtube.com/watch?v=dQw4w9WgXcQ",
     readMinutes: 10,
+    tags: ["drums", "synthesis"],
     addedAt: "2024-05-22",
   },
   {
@@ -261,6 +277,7 @@ export const SEED_RESOURCES: ResourceItem[] = [
     content:
       "# Push 3 Session View\n\nLaunch clips from the pads, capture takes into new scenes, and use the touch strip to ride filters while you play.",
     readMinutes: 9,
+    tags: ["performance"],
     addedAt: "2024-05-23",
   },
   {
@@ -273,6 +290,7 @@ export const SEED_RESOURCES: ResourceItem[] = [
     content:
       "# Push 3 Drum Rack\n\nLay a kit across the 16 pads, sample straight into a slot, then use step sequencing and per-pad accents to build the groove.",
     readMinutes: 8,
+    tags: ["drums", "sampling"],
     addedAt: "2024-05-24",
   },
   {
@@ -285,6 +303,7 @@ export const SEED_RESOURCES: ResourceItem[] = [
     content:
       "# Push 3 Live Looping\n\nArm a track, set a fixed loop length, and overdub layer by layer. Keep one clip free for improvised fills.",
     readMinutes: 10,
+    tags: ["sampling", "performance"],
     addedAt: "2024-05-25",
   },
   {
@@ -297,6 +316,7 @@ export const SEED_RESOURCES: ResourceItem[] = [
     content:
       "# DJing with Live\n\nWarp every track before the set, lay them out in Session View by energy, and map a crossfader plus EQ kills to your controller.",
     readMinutes: 12,
+    tags: ["performance"],
     addedAt: "2024-05-26",
   },
 ];

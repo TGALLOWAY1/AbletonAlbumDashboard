@@ -12,11 +12,14 @@ import {
 } from "@/lib/data/resources";
 import {
   isCheckViolation,
+  isMissingColumn,
   MIGRATION_0026_MISSING_MESSAGE,
+  MIGRATION_0032_MISSING_MESSAGE,
   RESOURCES_CATEGORY_CONSTRAINT,
 } from "@/lib/migration-errors";
 import { logSupabaseError } from "@/lib/supabase/log-error";
 import { planResourceCategoryMove } from "@/lib/resource-category-move";
+import { MAX_TAG_LENGTH, normalizeTags } from "@/lib/resource-tags";
 import { revalidateResourceSurfaces } from "@/lib/revalidate-resources";
 import {
   getYouTubeThumbnailUrl,
@@ -54,7 +57,22 @@ const baseSchema = z.object({
   url: z.string().url("Must be a valid URL").optional().nullable(),
   // optional override; auto-derived for YouTube urls
   thumbnail_url: z.string().url().optional().nullable(),
+  // Free-form instrument/role words. No enum: the point of 0032 is that adding
+  // a word never needs a migration. The shape is bounded, the vocabulary is
+  // not; `normalizeTags` then puts them in storage form.
+  tags: z
+    .array(z.string().max(MAX_TAG_LENGTH * 2))
+    .max(50)
+    .optional()
+    .default([]),
 });
+
+/** Repeated `tags` fields on the form, in the order the user picked them. */
+function readTagsField(formData: FormData): string[] {
+  return formData
+    .getAll("tags")
+    .filter((value): value is string => typeof value === "string");
+}
 
 // Errors are *returned*, not thrown: a production build replaces the message of
 // anything a server action throws with a generic string, which would strand the
@@ -75,6 +93,7 @@ export async function createResource(
     content: formData.get("content") || null,
     url: formData.get("url") || null,
     thumbnail_url: formData.get("thumbnail_url") || null,
+    tags: readTagsField(formData),
   };
   const result = baseSchema.safeParse(raw);
   if (!result.success) {
@@ -102,8 +121,9 @@ export async function createResource(
     }
   }
 
+  const tags = normalizeTags(parsed.tags);
   const supabase = getServerSupabase();
-  const { error } = await supabase.from("resources").insert({
+  const row = {
     owner_id: OWNER_ID,
     title: parsed.title,
     description: parsed.description,
@@ -118,7 +138,16 @@ export async function createResource(
     thumbnail_url: thumbnailUrl,
     read_minutes: parsed.read_minutes,
     featured: parsed.featured,
-  });
+  };
+  let { error } = await supabase.from("resources").insert({ ...row, tags });
+  if (error && isMissingColumn(error)) {
+    // A build can reach a database that has not had 0032 applied yet. Adding a
+    // resource is not a tagging feature, so an untagged add still goes through
+    // without the column; only an add that would *lose* the user's tags is
+    // refused, with the file to run.
+    if (tags.length > 0) return { error: MIGRATION_0032_MISSING_MESSAGE };
+    ({ error } = await supabase.from("resources").insert(row));
+  }
   if (error) {
     // The database still only accepts the original six categories.
     if (isCheckViolation(error, RESOURCES_CATEGORY_CONSTRAINT)) {
@@ -130,6 +159,118 @@ export async function createResource(
 
   revalidateResourceSurfaces({
     categoryIds: [asCategoryId(parsed.category_id)],
+  });
+  return {};
+}
+
+// Everything about a resource that can change after it is saved. The category
+// is not here — it is part of the resource's URL, so moving one is its own
+// action (`updateResourceCategory`) that has to tell the caller where to go.
+// Nor is `source_kind`: a markdown note and an uploaded PDF are different
+// objects, and re-pointing one at the other would strand a stored file.
+const updateSchema = baseSchema
+  .omit({ category_id: true, source_kind: true, storage_path: true })
+  .extend({ featured: z.coerce.boolean().optional() });
+
+/**
+ * Edit a saved resource in place: its title, description, type, read time,
+ * thumbnail, tags, and whichever body field matches the row's own
+ * `source_kind` — the link for a url, the markdown for a note. A PDF's storage
+ * path is deliberately not editable; replacing the file is an upload, not a
+ * text edit.
+ */
+export async function updateResource(
+  id: string,
+  formData: FormData,
+): Promise<{ error?: string }> {
+  if (id.startsWith("seed-")) {
+    return {
+      error: "Sample resources can't be edited. Add your own to change it.",
+    };
+  }
+
+  const supabase = getServerSupabase();
+  const { data: existing, error: readError } = await supabase
+    .from("resources")
+    .select("category_id, source_kind")
+    .eq("owner_id", OWNER_ID)
+    .eq("id", id)
+    .maybeSingle();
+  if (readError) {
+    logSupabaseError("updateResource.read", readError);
+    return { error: "Could not save your changes. Try again." };
+  }
+  if (!existing) return { error: "Resource not found." };
+
+  const result = updateSchema.safeParse({
+    title: formData.get("title"),
+    description: formData.get("description") ?? "",
+    type: formData.get("type"),
+    read_minutes: formData.get("read_minutes") ?? 5,
+    content: formData.get("content") || null,
+    url: formData.get("url") || null,
+    thumbnail_url: formData.get("thumbnail_url") || null,
+    tags: readTagsField(formData),
+  });
+  if (!result.success) {
+    return {
+      error: result.error.issues[0]?.message ?? "That resource isn't valid.",
+    };
+  }
+  const parsed = result.data;
+  const sourceKind = existing.source_kind;
+
+  if (sourceKind === "url" && !parsed.url) {
+    return { error: "URL is required." };
+  }
+  if (sourceKind === "markdown" && !parsed.content) {
+    return { error: "Markdown content is required." };
+  }
+
+  // Same rule as creating one: a YouTube link carries its own thumbnail unless
+  // the user has set another.
+  let thumbnailUrl = parsed.thumbnail_url ?? null;
+  if (!thumbnailUrl && sourceKind === "url" && parsed.url) {
+    const videoId = getYouTubeVideoId(parsed.url);
+    if (videoId) thumbnailUrl = getYouTubeThumbnailUrl(videoId);
+  }
+
+  const tags = normalizeTags(parsed.tags);
+  const patch = {
+    title: parsed.title,
+    description: parsed.description,
+    type: parsed.type,
+    read_minutes: parsed.read_minutes,
+    thumbnail_url: thumbnailUrl,
+    // Only the field this row's kind actually uses; the others stay as they
+    // are rather than being nulled out by an edit that never showed them.
+    ...(sourceKind === "url" ? { url: parsed.url } : {}),
+    ...(sourceKind === "markdown" ? { content: parsed.content } : {}),
+  };
+
+  let { error } = await supabase
+    .from("resources")
+    .update({ ...patch, tags })
+    .eq("owner_id", OWNER_ID)
+    .eq("id", id);
+  if (error && isMissingColumn(error)) {
+    // 0032 not applied yet: save the rest of the edit rather than losing it,
+    // unless the edit was about tags — then say which file to run.
+    if (tags.length > 0) return { error: MIGRATION_0032_MISSING_MESSAGE };
+    ({ error } = await supabase
+      .from("resources")
+      .update(patch)
+      .eq("owner_id", OWNER_ID)
+      .eq("id", id));
+  }
+  if (error) {
+    logSupabaseError("updateResource", error);
+    return { error: "Could not save your changes. Try again." };
+  }
+
+  revalidateResourceSurfaces({
+    categoryIds: [asCategoryId(existing.category_id)],
+    resourceId: id,
   });
   return {};
 }

@@ -687,6 +687,7 @@ export type Database = {
           read_minutes: number;
           source_kind: string;
           storage_path: string | null;
+          tags: string[];
           thumbnail_url: string | null;
           title: string;
           type: string;
@@ -705,6 +706,7 @@ export type Database = {
           read_minutes?: number;
           source_kind: string;
           storage_path?: string | null;
+          tags?: string[];
           thumbnail_url?: string | null;
           title: string;
           type: string;
@@ -723,6 +725,7 @@ export type Database = {
           read_minutes?: number;
           source_kind?: string;
           storage_path?: string | null;
+          tags?: string[];
           thumbnail_url?: string | null;
           title?: string;
           type?: string;

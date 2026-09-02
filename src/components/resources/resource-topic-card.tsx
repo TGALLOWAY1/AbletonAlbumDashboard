@@ -7,6 +7,10 @@ import {
 } from "lucide-react";
 import { CoverArt } from "@/components/cover-art";
 import type { ResourceItem } from "@/lib/data/resources";
+import { formatTag } from "@/lib/resource-tags";
+
+/** Enough to say what a card is about; more would compete with the title. */
+const MAX_CARD_TAGS = 3;
 
 // Opaque pastels (the shared /15-alpha tiles would go muddy over imagery),
 // rotated by position so the numbered sequence reads as a curated set.
@@ -69,6 +73,26 @@ export function ResourceTopicCard({
             aria-hidden
           />
         </div>
+        {resource.tags.length > 0 && (
+          // Quiet on purpose: the tags say what a card is about, they are not
+          // the card's own controls — filtering happens in the chip row above
+          // the gallery.
+          <ul className="flex flex-wrap gap-1 pt-0.5">
+            {resource.tags.slice(0, MAX_CARD_TAGS).map((tag) => (
+              <li
+                key={tag}
+                className="rounded-full bg-surface-2 px-1.5 py-0.5 text-[10px] font-medium leading-tight text-muted-foreground"
+              >
+                {formatTag(tag)}
+              </li>
+            ))}
+            {resource.tags.length > MAX_CARD_TAGS && (
+              <li className="px-0.5 py-0.5 text-[10px] leading-tight text-muted-foreground/70">
+                +{resource.tags.length - MAX_CARD_TAGS}
+              </li>
+            )}
+          </ul>
+        )}
       </div>
     </Link>
   );
