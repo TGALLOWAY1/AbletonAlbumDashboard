@@ -6,14 +6,20 @@ import { Badge } from "@/components/ui/badge";
 import { getServerSupabase } from "@/lib/supabase/server";
 import { OWNER_ID } from "@/lib/owner";
 import { ManualSessionEntry } from "@/components/manual-session-dialog";
+import { SessionActions } from "@/components/sessions/session-actions";
 import { listTrackOptions } from "@/lib/data/tracks";
 import { getSessionTypes } from "@/lib/data/session-types";
 
 type SessionRow = {
   id: string;
   track_id: string | null;
+  session_type_id: string | null;
   duration_seconds: number | null;
   started_at: string;
+  ended_at: string | null;
+  notes_md: string | null;
+  progress_impact_rating: number | null;
+  enjoyment_rating: number | null;
   improved: string | null;
   still_broken: string | null;
   track: { name: string; owner_id: string } | null;
@@ -25,7 +31,9 @@ async function fetchSessions(): Promise<SessionRow[]> {
   const { data } = await supabase
     .from("sessions")
     .select(
-      "id, track_id, duration_seconds, started_at, improved, still_broken, track:tracks!sessions_track_id_fkey(name, owner_id), session_type:session_types(name, color)",
+      // The extra columns are what the edit dialog prefills from; the row is
+      // already being read, so there is no second query for them.
+      "id, track_id, session_type_id, duration_seconds, started_at, ended_at, notes_md, progress_impact_rating, enjoyment_rating, improved, still_broken, track:tracks!sessions_track_id_fkey(name, owner_id), session_type:session_types(name, color)",
     )
     .not("started_at", "is", null)
     .order("started_at", { ascending: false })
@@ -118,6 +126,26 @@ export async function SessionHistory() {
                         addSuffix: true,
                       })}
                     </span>
+                    {/* A mislogged session used to be permanent, and every
+                        figure in the Overview tab is measured off these rows.
+                        This list is the one place that shows all of them, so
+                        it is where the track picker is offered too — a session
+                        logged against the wrong song can be moved from here. */}
+                    <SessionActions
+                      session={{
+                        id: s.id,
+                        trackId: s.track_id,
+                        sessionTypeId: s.session_type_id,
+                        startedAt: s.started_at,
+                        endedAt: s.ended_at,
+                        notesMd: s.notes_md,
+                        progressImpactRating: s.progress_impact_rating,
+                        enjoymentRating: s.enjoyment_rating,
+                      }}
+                      durationSeconds={s.duration_seconds ?? 0}
+                      tracks={tracks}
+                      sessionTypes={sessionTypes}
+                    />
                   </div>
                 </div>
                 {(s.improved || s.still_broken) && (
