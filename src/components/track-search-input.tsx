@@ -29,15 +29,36 @@ export function TrackSearchInput({
   const router = useRouter();
   const pathname = usePathname();
   const [draft, setDraft] = React.useState(value);
-  // The URL is the source of truth (a back/forward nav, or another control
-  // clearing filters), so a change there overrides an in-flight local draft.
-  // Adjusted during render rather than in an effect — see
-  // https://react.dev/learn/you-might-not-need-an-effect#adjusting-some-state-when-a-prop-changes.
-  const [prevValue, setPrevValue] = React.useState(value);
-  if (value !== prevValue) {
-    setPrevValue(value);
-    setDraft(value);
-  }
+  // Queries this component has itself pushed to the URL and not yet seen come
+  // back as `value`. A server-rendered page can lag a keystroke or two behind
+  // the input, so when an *older* search of ours commits while a newer draft is
+  // pending, that `value` must not replace the draft. Anything not in this list
+  // is a genuine outside change — back/forward, another control clearing the
+  // query — and does win.
+  const ownNavigations = React.useRef<string[]>([]);
+  // The most recent search we sent, and the `navigate` it went through.
+  // `navigate` changes identity whenever the other controls' params change,
+  // so comparing it tells "already sent with these params" apart from "sent,
+  // but a filter or sort has moved since and it needs sending again".
+  const inFlight = React.useRef<{
+    q: string;
+    nav: (q: string) => void;
+  } | null>(null);
+
+  // An effect rather than the adjust-during-render pattern, because deciding
+  // whether the new URL is ours means reading the refs above, which is not
+  // allowed during render.
+  React.useEffect(() => {
+    const idx = ownNavigations.current.indexOf(value);
+    if (idx === -1) {
+      ownNavigations.current = [];
+      inFlight.current = null;
+      setDraft(value);
+    } else {
+      // Ours: drop it and every older one it superseded, keep the draft.
+      ownNavigations.current = ownNavigations.current.slice(idx + 1);
+    }
+  }, [value]);
 
   const navigate = React.useCallback(
     (q: string) => {
@@ -47,18 +68,32 @@ export function TrackSearchInput({
     [pathname, preserveQuery, router],
   );
 
+  const send = React.useCallback(
+    (q: string) => {
+      ownNavigations.current.push(q);
+      inFlight.current = { q, nav: navigate };
+      navigate(q);
+    },
+    [navigate],
+  );
+
+  // `navigate` is a dependency on purpose: it carries the other controls'
+  // query params, so if a filter or sort changes during the debounce the timer
+  // restarts with the new params instead of navigating with stale ones and
+  // undoing that change. It also re-runs when an older search of ours commits
+  // (`value` changes but the draft stays); the in-flight check keeps that from
+  // re-sending a search that is already on its way with the same params.
   React.useEffect(() => {
     if (draft === value) return;
-    const timer = setTimeout(() => navigate(draft), DEBOUNCE_MS);
+    const last = inFlight.current;
+    if (last && last.q === draft && last.nav === navigate) return;
+    const timer = setTimeout(() => send(draft), DEBOUNCE_MS);
     return () => clearTimeout(timer);
-    // `value` and `navigate` intentionally excluded: this effect only fires
-    // the debounced navigation for the current draft, not on every prop sync.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [draft]);
+  }, [draft, value, navigate, send]);
 
   const clear = () => {
     setDraft("");
-    navigate("");
+    send("");
   };
 
   return (
