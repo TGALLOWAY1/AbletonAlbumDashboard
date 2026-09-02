@@ -14,6 +14,8 @@ import {
   TaskBar,
   TrackActionsMenu,
   TrackCover,
+  TrackStatusBadge,
+  TrackTagChips,
   type SessionStats,
 } from "@/components/track-card-parts";
 import {
@@ -100,12 +102,15 @@ function LargeTile({
         <div className="flex min-w-0 flex-1 flex-col gap-3 p-5">
           <div className="flex items-start gap-3">
             <div className="min-w-0 flex-1">
-              <Link
-                href={`/tracks/${track.id}`}
-                className="text-2xl font-semibold leading-tight hover:underline"
-              >
-                {track.name}
-              </Link>
+              <div className="flex items-start gap-2">
+                <Link
+                  href={`/tracks/${track.id}`}
+                  className="min-w-0 truncate text-2xl font-semibold leading-tight hover:underline"
+                >
+                  {track.name}
+                </Link>
+                <TrackStatusBadge status={track.status} className="mt-1" />
+              </div>
               <div className="mt-2 flex flex-wrap items-center gap-1.5">
                 <SunoStatusToggle
                   trackId={track.id}
@@ -118,6 +123,7 @@ function LargeTile({
                   {meta.join(" · ")}
                 </p>
               )}
+              <TrackTagChips tags={track.tags} className="mt-1.5" />
             </div>
             <ProgressRing value={progress} size={68} />
             <TrackActionsMenu track={track}>
@@ -207,7 +213,10 @@ function MediumTile({ track }: { track: TrackWithDetails }) {
             status={trackSunoStatus(track)}
           />
           <SunoChip suno={track.sunoExperiment} />
+          <TrackStatusBadge status={track.status} />
         </div>
+
+        <TrackTagChips tags={track.tags} max={2} />
 
         {track.nextTask && (
           <p className="line-clamp-2 text-xs text-muted-foreground">
@@ -258,9 +267,15 @@ function SnapshotTile({ track }: { track: TrackWithDetails }) {
       >
         <ProgressStrip value={progress} />
       </TrackCover>
-      <span className="truncate text-xs font-medium leading-tight">
-        {track.name}
-      </span>
+      <div className="flex min-w-0 items-center gap-1.5">
+        <span className="min-w-0 flex-1 truncate text-xs font-medium leading-tight">
+          {track.name}
+        </span>
+        <TrackStatusBadge
+          status={track.status}
+          className="px-1.5 py-0 text-[9px] leading-4"
+        />
+      </div>
     </Link>
   );
 }

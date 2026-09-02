@@ -5,6 +5,8 @@ import { TrackAlbumGroup } from "@/components/track-album-group";
 import { TrackFilterPanel } from "@/components/track-filter-panel";
 import { TrackGalleryView } from "@/components/track-gallery-view";
 import { TrackListView } from "@/components/track-list-view";
+import { TrackSearchInput } from "@/components/track-search-input";
+import { TrackSortSelect } from "@/components/track-sort-select";
 import { ViewModeToggle } from "@/components/view-mode-toggle";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -21,7 +23,20 @@ import {
 } from "@/lib/track-filters";
 import { groupTracksByAlbum } from "@/lib/track-grouping";
 import {
+  parseTrackQuery,
+  searchTracks,
+  serializeTrackQuery,
+  type TrackSearchParams,
+} from "@/lib/track-search";
+import {
+  parseTrackSort,
+  serializeTrackSort,
+  sortTracks,
+  type TrackSortSearchParams,
+} from "@/lib/track-sort";
+import {
   DEFAULT_TRACK_VIEW,
+  mergeQuery,
   parseViewPreference,
   serializeViewPreference,
   type ViewSearchParams,
@@ -76,7 +91,9 @@ function EmptyAlbumShelf({ href }: { href: string }) {
 export default async function AllTracksPage({
   searchParams,
 }: {
-  searchParams: Promise<TrackFilterSearchParams & ViewSearchParams>;
+  searchParams: Promise<
+    TrackFilterSearchParams & ViewSearchParams & TrackSearchParams & TrackSortSearchParams
+  >;
 }) {
   const now = new Date();
   const [params, tracks, albums, sessionStats] = await Promise.all([
@@ -92,9 +109,13 @@ export default async function AllTracksPage({
 
   const filters = parseTrackFilters(params);
   const view = parseViewPreference(params, DEFAULT_TRACK_VIEW);
+  const query = parseTrackQuery(params);
+  const sort = parseTrackSort(params.sort);
   const options = collectFilterOptions(tracks);
-  const filtered = filterTracks(tracks, filters);
-  const filtering = activeFilterCount(filters) > 0;
+  const filtered = searchTracks(filterTracks(tracks, filters), query);
+  // Search narrows the library the same way a filter does, so it gets the
+  // same "no empty album shelves, this is a real result state" treatment.
+  const filtering = activeFilterCount(filters) > 0 || query.trim().length > 0;
 
   // This page is the app's album shelf as well as its track library, so an
   // unfiltered view lists every album — including the ones with no tracks yet.
@@ -102,7 +123,14 @@ export default async function AllTracksPage({
   // entry point, so those drop out.
   const groups = groupTracksByAlbum(filtered, albums, {
     includeEmptyAlbums: !filtering,
-  });
+  }).map((group) => ({ ...group, tracks: sortTracks(group.tracks, sort) }));
+
+  // Every control below owns one query param and hands the rest through, so
+  // switching one never resets another.
+  const filtersQuery = serializeTrackFilters(filters);
+  const viewQuery = serializeViewPreference(view, DEFAULT_TRACK_VIEW);
+  const queryQuery = serializeTrackQuery(query);
+  const sortQuery = serializeTrackSort(sort);
 
   return (
     <div className="flex flex-col gap-6">
@@ -129,30 +157,44 @@ export default async function AllTracksPage({
         </div>
       </header>
 
-      {/* The filter panel and the view toggle each own their own query params
-          and hand the other's through, so neither drops the other. The toggle
-          is passed in as the panel's trailing control so both sit on one row,
-          with the filter chips wrapping underneath. */}
-      <TrackFilterPanel
-        filters={filters}
-        options={options}
-        resultCount={filtered.length}
-        preserveQuery={serializeViewPreference(view, DEFAULT_TRACK_VIEW)}
-        trailing={
-          <ViewModeToggle
-            basePath="/tracks"
-            value={view}
-            defaults={DEFAULT_TRACK_VIEW}
-            preserveQuery={serializeTrackFilters(filters)}
-          />
-        }
-      />
+      {/* Search gets its own row so it stays a full-width, easy target on a
+          phone; the filter/sort/view controls share the row underneath. Every
+          control owns one query param and hands the rest through, so none of
+          them ever resets another. */}
+      <div className="flex flex-col gap-3">
+        <TrackSearchInput
+          value={query}
+          preserveQuery={mergeQuery(filtersQuery, viewQuery, sortQuery)}
+          className="w-full sm:max-w-xs"
+        />
+
+        <TrackFilterPanel
+          filters={filters}
+          options={options}
+          resultCount={filtered.length}
+          preserveQuery={mergeQuery(viewQuery, sortQuery, queryQuery)}
+          trailing={
+            <>
+              <TrackSortSelect
+                value={sort}
+                preserveQuery={mergeQuery(filtersQuery, viewQuery, queryQuery)}
+              />
+              <ViewModeToggle
+                basePath="/tracks"
+                value={view}
+                defaults={DEFAULT_TRACK_VIEW}
+                preserveQuery={mergeQuery(filtersQuery, sortQuery, queryQuery)}
+              />
+            </>
+          }
+        />
+      </div>
 
       {groups.length === 0 ? (
         <Card>
           <CardContent className="p-8 text-sm text-muted-foreground">
             {filtering
-              ? "No tracks match these filters."
+              ? "No tracks match your filters or search."
               : "Nothing here yet. Add a track, or create an album to group them under."}
           </CardContent>
         </Card>
