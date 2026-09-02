@@ -35,9 +35,10 @@ import {
   toggleTrackTodo,
 } from "@/app/actions/track-todos";
 import { useToast } from "@/components/toast";
+import { SessionActions } from "@/components/sessions/session-actions";
 import { PRODUCTION_ACTIVITIES } from "@/lib/production-activities";
 import type { TrackSessionWithActivities } from "@/lib/data/sessions";
-import type { ActionRow, VersionRow } from "@/lib/types";
+import type { ActionRow, SessionTypeRow, VersionRow } from "@/lib/types";
 import { formatDuration } from "@/lib/utils";
 import { cn } from "@/lib/utils";
 
@@ -81,6 +82,7 @@ export function TrackLogPane({
   versions,
   sessions,
   completedTasks,
+  sessionTypes = [],
   suno,
   variant = "desktop",
 }: {
@@ -88,6 +90,8 @@ export function TrackLogPane({
   versions: VersionRow[];
   sessions: TrackSessionWithActivities[];
   completedTasks: ActionRow[];
+  /** For the edit dialog on a session entry; both track pages already fetch these. */
+  sessionTypes?: SessionTypeRow[];
   suno?: { meta: SunoTrackMeta; open: boolean };
   variant?: "desktop" | "mobile";
 }) {
@@ -293,7 +297,11 @@ export function TrackLogPane({
                     }
                   />
                 ) : entry.kind === "session" ? (
-                  <SessionEntry session={entry.session} />
+                  <SessionEntry
+                    session={entry.session}
+                    sessionTypes={sessionTypes}
+                    variant={variant}
+                  />
                 ) : (
                   <div className="flex items-center gap-2 text-xs">
                     <Check className="h-3.5 w-3.5 shrink-0 text-primary" />
@@ -396,7 +404,15 @@ function entryKey(entry: Entry): string {
   return `t-${entry.task.id}`;
 }
 
-function SessionEntry({ session }: { session: TrackSessionWithActivities }) {
+function SessionEntry({
+  session,
+  sessionTypes,
+  variant,
+}: {
+  session: TrackSessionWithActivities;
+  sessionTypes: SessionTypeRow[];
+  variant: "desktop" | "mobile";
+}) {
   const hasDetail =
     session.activities.length > 0 ||
     !!session.notes_md ||
@@ -417,11 +433,46 @@ function SessionEntry({ session }: { session: TrackSessionWithActivities }) {
     </div>
   );
 
-  if (!hasDetail) return <div className="py-1">{summary}</div>;
+  // No track picker here: this timeline is one track's, and offering to move a
+  // session off it would mean shipping the whole library down to the pane. The
+  // History tab on the dashboard lists every session and does offer it.
+  const actions = (
+    <SessionActions
+      session={{
+        id: session.id,
+        trackId: session.track_id,
+        sessionTypeId: session.session_type_id,
+        startedAt: session.started_at,
+        endedAt: session.ended_at,
+        notesMd: session.notes_md,
+        progressImpactRating: session.progress_impact_rating,
+        enjoymentRating: session.enjoyment_rating,
+      }}
+      durationSeconds={sessionSeconds(session)}
+      sessionTypes={sessionTypes}
+      variant={variant}
+    />
+  );
+
+  if (!hasDetail) {
+    return (
+      <div className="flex items-center justify-between gap-2 py-1">
+        {summary}
+        {actions}
+      </div>
+    );
+  }
 
   return (
     <details className="group rounded-md border border-border bg-surface-2 px-3 py-2 [&_summary]:cursor-pointer [&_summary]:list-none">
-      <summary>{summary}</summary>
+      <summary className="flex items-center justify-between gap-2">
+        {summary}
+        {/* Inside the summary so the row keeps one line, but a click on a
+            button must not also toggle the disclosure — preventing the click's
+            default action is what stops the toggle, and it runs after the
+            button's own handler. */}
+        <span onClick={(e) => e.preventDefault()}>{actions}</span>
+      </summary>
 
       <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted-foreground">
         {session.progress_impact_rating != null && (

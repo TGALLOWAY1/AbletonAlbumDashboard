@@ -1,28 +1,19 @@
 "use client";
 
-import { useMemo, useState, useTransition } from "react";
-import { useRouter } from "next/navigation";
-import { format } from "date-fns";
+import { useState } from "react";
 import { Plus } from "lucide-react";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { Textarea } from "@/components/ui/textarea";
-import { Label } from "@/components/ui/label";
-import { Input } from "@/components/ui/input";
-import { RatingPicker } from "@/components/ui/rating-picker";
-import { TrackPicker, type PickableTrack } from "@/components/track-picker";
-import { SessionTypePicker } from "@/components/session-type-picker";
-import { completeSession } from "@/app/actions/sessions";
-import { useToast } from "@/components/toast";
+import { SessionFormDialog } from "@/components/sessions/session-form-dialog";
+import { type PickableTrack } from "@/components/track-picker";
 import { type SessionTypeRow } from "@/lib/types";
 
+/**
+ * "Log past session" — the trigger for the backfill half of session logging.
+ *
+ * The form itself is `SessionFormDialog`, shared with the edit path so
+ * backfilling a session and correcting one can never disagree about what a
+ * session needs.
+ */
 export function ManualSessionEntry({
   tracks,
   sessionTypes,
@@ -52,7 +43,7 @@ export function ManualSessionEntry({
         <Plus className="h-4 w-4" />
         {variant === "mobile" ? "Log session" : "Log past session"}
       </Button>
-      <ManualSessionDialog
+      <SessionFormDialog
         open={open}
         onOpenChange={setOpen}
         tracks={tracks}
@@ -61,228 +52,4 @@ export function ManualSessionEntry({
       />
     </>
   );
-}
-
-function defaultStart() {
-  return format(new Date(), "yyyy-MM-dd'T'HH:mm");
-}
-
-function ManualSessionDialog({
-  open,
-  onOpenChange,
-  tracks,
-  sessionTypes,
-  fixedTrackId,
-}: {
-  open: boolean;
-  onOpenChange: (open: boolean) => void;
-  tracks: PickableTrack[];
-  sessionTypes: SessionTypeRow[];
-  fixedTrackId: string | null;
-}) {
-  const router = useRouter();
-  const [trackId, setTrackId] = useState<string | null>(fixedTrackId);
-  const [sessionTypeId, setSessionTypeId] = useState<string | null>(null);
-  const [start, setStart] = useState<string>(defaultStart());
-  const [minutes, setMinutes] = useState<string>("");
-  const [progressImpact, setProgressImpact] = useState<number | null>(null);
-  const [enjoyment, setEnjoyment] = useState<number | null>(null);
-  const [notesMd, setNotesMd] = useState("");
-  const [pending, startTx] = useTransition();
-  const { toast } = useToast();
-
-  const durationSec = useMemo(() => {
-    if (!/^\d+$/.test(minutes)) return 0;
-    return parseInt(minutes, 10) * 60;
-  }, [minutes]);
-
-  const startValid = !Number.isNaN(new Date(start).getTime());
-  // Track is optional; a track-less session must be anchored by a session type.
-  // Four hours of general studio work is a real session, but "4 hours of
-  // something" is not — the type is what makes it legible later.
-  const hasTrack = !!trackId || !!fixedTrackId;
-  const hasAnchor = !!trackId || !!sessionTypeId;
-  const canSave = hasAnchor && startValid && durationSec > 0 && !!start;
-
-  // Why Save is greyed out. The dialog used to disable the button silently,
-  // which read as "you must pick a track" — the one thing that is not true.
-  const blockedReason = !startValid || !start
-    ? "Pick when the session started."
-    : durationSec <= 0
-      ? "Enter how many minutes it lasted."
-      : !hasAnchor
-        ? "Pick a session type — a session with no track needs one to mean anything later."
-        : null;
-
-  const reset = () => {
-    setTrackId(fixedTrackId);
-    setSessionTypeId(null);
-    setStart(defaultStart());
-    setMinutes("");
-    setProgressImpact(null);
-    setEnjoyment(null);
-    setNotesMd("");
-  };
-
-  const handleOpenChange = (next: boolean) => {
-    if (!next) reset();
-    onOpenChange(next);
-  };
-
-  const submit = () => {
-    if (!canSave) return;
-    const startDate = new Date(start);
-    const startedAt = startDate.toISOString();
-    const endedAt = new Date(startDate.getTime() + durationSec * 1000).toISOString();
-
-    startTx(async () => {
-      try {
-        await completeSession({
-          trackId,
-          sessionTypeId,
-          startedAt,
-          endedAt,
-          progressImpact,
-          enjoymentRating: enjoyment,
-          notesMd,
-        });
-        reset();
-        onOpenChange(false);
-        router.refresh();
-      } catch (e) {
-        toast((e as Error).message);
-      }
-    });
-  };
-
-  return (
-    <Dialog open={open} onOpenChange={handleOpenChange}>
-      <DialogContent className="max-w-xl">
-        <DialogHeader>
-          <DialogTitle>Log past session</DialogTitle>
-          <DialogDescription>
-            Backfill a session you forgot to time — pick when it happened and how
-            long it lasted.
-          </DialogDescription>
-        </DialogHeader>
-
-        <div className="flex flex-col gap-4">
-          {!fixedTrackId && (
-            <div className="grid gap-2">
-              <Label>Track (optional)</Label>
-              <TrackPicker tracks={tracks} value={trackId} onChange={setTrackId} />
-              <p className="text-xs text-muted-foreground">
-                Leave this empty for general studio work — time that didn’t move
-                one song but set up the next session on all of them.
-              </p>
-            </div>
-          )}
-
-          <div className="grid grid-cols-2 gap-3">
-            <div className="grid gap-1.5">
-              <Label htmlFor="manual-start">When (start)</Label>
-              <Input
-                id="manual-start"
-                type="datetime-local"
-                value={start}
-                onChange={(e) => setStart(e.target.value)}
-              />
-            </div>
-            <div className="grid gap-1.5">
-              <Label htmlFor="manual-minutes">Duration (minutes)</Label>
-              <Input
-                id="manual-minutes"
-                inputMode="numeric"
-                value={minutes}
-                onChange={(e) =>
-                  setMinutes(e.target.value.replace(/[^0-9]/g, ""))
-                }
-                placeholder="e.g. 90"
-              />
-            </div>
-          </div>
-
-          {durationSec > 0 && (
-            <div className="flex items-center justify-between rounded-md bg-surface-2 px-3 py-2 text-sm">
-              <span className="text-muted-foreground">Duration</span>
-              <span className="font-mono text-base">
-                {formatDuration(durationSec)}
-              </span>
-            </div>
-          )}
-
-          {sessionTypes.length > 0 && (
-            <div className="grid gap-2">
-              <Label>
-                Session type{hasTrack ? " (optional)" : ""}
-              </Label>
-              <SessionTypePicker
-                types={sessionTypes}
-                value={sessionTypeId}
-                onChange={setSessionTypeId}
-              />
-            </div>
-          )}
-
-          {/* Same two scales as the focus log page — one outcome schema for
-              every completion path. */}
-          <div className="grid grid-cols-2 gap-4">
-            <RatingPicker
-              label="Progress / Impact"
-              value={progressImpact}
-              onChange={setProgressImpact}
-              hint={
-                hasTrack
-                  ? "How much did the track move?"
-                  : "How much did this move things forward?"
-              }
-            />
-            <RatingPicker
-              label="Enjoyment"
-              value={enjoyment}
-              onChange={setEnjoyment}
-              hint="How much did you enjoy it?"
-            />
-          </div>
-
-          <div className="grid gap-2">
-            <Label htmlFor="manual-notes">Notes for next session</Label>
-            <Textarea
-              id="manual-notes"
-              value={notesMd}
-              onChange={(e) => setNotesMd(e.target.value)}
-              rows={3}
-              placeholder="What you want to do next time…"
-            />
-          </div>
-
-          {blockedReason && (
-            <p className="text-xs text-muted-foreground">{blockedReason}</p>
-          )}
-        </div>
-
-        <DialogFooter>
-          <Button
-            variant="ghost"
-            onClick={() => handleOpenChange(false)}
-            disabled={pending}
-          >
-            Cancel
-          </Button>
-          <Button onClick={submit} disabled={pending || !canSave}>
-            Save session
-          </Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
-  );
-}
-
-function formatDuration(totalSeconds: number) {
-  const h = Math.floor(totalSeconds / 3600);
-  const m = Math.floor((totalSeconds % 3600) / 60);
-  if (h > 0) {
-    return `${h}h ${m.toString().padStart(2, "0")}m`;
-  }
-  return `${m}m`;
 }
