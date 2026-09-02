@@ -456,6 +456,7 @@ export async function getAllTracks(): Promise<TrackWithDetails[]> {
     .from("tracks")
     .select("*")
     .eq("owner_id", OWNER_ID)
+    .order("last_worked_at", { ascending: false, nullsFirst: false })
     .order("created_at", { ascending: false });
   if (error) throw error;
   return attachDetails(data ?? []);
