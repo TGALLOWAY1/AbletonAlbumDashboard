@@ -78,6 +78,10 @@ async function selectOpenActions(
   supabase: ReturnType<typeof getServerSupabase>,
   trackIds: string[],
 ) {
+  // `*` rather than a column list on purpose: the row this returns is the
+  // `ActionRow` every task surface renders, which now includes the optional
+  // `estimated_minutes` and `category` (both there since migration 0001) that
+  // the list draws as chips and `attachDetails` sums below.
   const openActions = () =>
     supabase
       .from("actions")
@@ -170,7 +174,11 @@ async function attachDetails(tracks: TrackRow[]): Promise<TrackWithDetails[]> {
     // that track's list — i.e. its next action.
     if (!nextTaskByTrack.has(trackId)) nextTaskByTrack.set(trackId, a);
     openCountByTrack.set(trackId, (openCountByTrack.get(trackId) ?? 0) + 1);
-    if (a.estimated_minutes != null) {
+    // Remaining time, so open tasks only — which this query already is. The
+    // same rule as `sumOpenEstimates` in src/lib/task-details.ts, which is what
+    // the task list prints above itself: a completed task's estimate is
+    // history, not work left, and the two figures must agree.
+    if (a.estimated_minutes != null && a.estimated_minutes > 0) {
       estMinutesByTrack.set(
         trackId,
         (estMinutesByTrack.get(trackId) ?? 0) + a.estimated_minutes,
@@ -456,6 +464,7 @@ export async function getAllTracks(): Promise<TrackWithDetails[]> {
     .from("tracks")
     .select("*")
     .eq("owner_id", OWNER_ID)
+    .order("last_worked_at", { ascending: false, nullsFirst: false })
     .order("created_at", { ascending: false });
   if (error) throw error;
   return attachDetails(data ?? []);

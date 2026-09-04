@@ -6,7 +6,7 @@ import {
   Hourglass,
   type LucideIcon,
 } from "lucide-react";
-import { Badge } from "@/components/ui/badge";
+import { Badge, type BadgeProps } from "@/components/ui/badge";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -18,8 +18,9 @@ import { CoverArt } from "@/components/cover-art";
 import { TrackCardActions } from "@/components/track-card-actions";
 import { DeleteTrackMenuItem } from "@/components/delete-track-menu-item";
 import { sunoBadgeLabel } from "@/lib/suno";
+import { STATUS_LABELS } from "@/lib/track-filters";
 import type { SessionStats } from "@/lib/data/sessions";
-import type { TrackWithDetails } from "@/lib/types";
+import { TRACK_STATUSES, type TrackStatus, type TrackWithDetails } from "@/lib/types";
 import { cn, formatDuration, formatMinutes } from "@/lib/utils";
 
 // Presentational pieces shared by every way a track is drawn: the list card
@@ -193,6 +194,71 @@ export function SunoChip({ suno }: { suno: TrackWithDetails["sunoExperiment"] })
     <Badge variant={suno.unreviewedCount > 0 ? "warning" : "accent"}>
       {label}
     </Badge>
+  );
+}
+
+// A status badge for everything except "active": active is the default,
+// working state every track starts in, so flagging it on every card would be
+// noise. Backlog/completed/archived are the states worth a glance — muted so
+// they read as a label, not an alert.
+const STATUS_BADGE_VARIANT: Partial<Record<TrackStatus, BadgeProps["variant"]>> = {
+  backlog: "default",
+  completed: "default",
+  archived: "default",
+};
+
+export function TrackStatusBadge({
+  status,
+  className,
+}: {
+  // `TrackRow["status"]` is a plain `string` in the generated Supabase types
+  // (a text column, not a Postgres enum), so this narrows the same way
+  // `trackSunoStatus` does rather than assuming the union.
+  status: string;
+  className?: string;
+}) {
+  if (!TRACK_STATUSES.includes(status as TrackStatus)) return null;
+  const known = status as TrackStatus;
+  if (known === "active") return null;
+  return (
+    <Badge
+      variant={STATUS_BADGE_VARIANT[known] ?? "default"}
+      className={cn("shrink-0", className)}
+    >
+      {STATUS_LABELS[known]}
+    </Badge>
+  );
+}
+
+/** Read-only tag pills for a card — up to `max`, with a "+N" overflow. */
+export function TrackTagChips({
+  tags,
+  max = 3,
+  className,
+}: {
+  tags: string[];
+  max?: number;
+  className?: string;
+}) {
+  if (tags.length === 0) return null;
+  const visible = tags.slice(0, max);
+  const overflow = tags.length - visible.length;
+  return (
+    <div className={cn("flex flex-wrap items-center gap-1", className)}>
+      {visible.map((tag) => (
+        <span
+          key={tag}
+          className="truncate rounded-full border border-border bg-surface-2 px-2 py-0.5 text-[10px] font-medium text-muted-foreground"
+        >
+          {tag}
+        </span>
+      ))}
+      {overflow > 0 && (
+        <span className="text-[10px] font-medium text-muted-foreground">
+          +{overflow}
+        </span>
+      )}
+    </div>
   );
 }
 

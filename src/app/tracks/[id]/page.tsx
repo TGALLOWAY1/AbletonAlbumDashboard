@@ -146,6 +146,7 @@ export default async function TrackDetailPage({
             versions={versions}
             sessions={sessions}
             completedTasks={completedTodos}
+            sessionTypes={sessionTypes}
             suno={{ meta: sunoMeta, open: sunoExperiment !== null }}
           />
         </section>

@@ -129,10 +129,54 @@ Run `pnpm typecheck && pnpm lint && pnpm test` before committing.
   `categoryId`/`categoryTitle` to it and the new resource inherits that category
   (read-only label instead of a picker); omit them on `/resources`, where there
   is no category context, and the user picks one.
+- **A resource's category is its shelf; its tags are what it is about.**
+  `resources.tags` (migration 0032) is a free-form `text[]` — instrument and
+  role words like bass, drums, pad, fx — with *no* check constraint, because
+  adding a word must never need a migration. `src/lib/resource-tags.ts` owns
+  the storage form (trim, lowercase, dedupe, length cap), the suggested
+  vocabulary (seeded from the library's `PRESET_CATEGORIES` so a pad article
+  and a pad preset answer to the same word), the AND-semantics filter and the
+  grouping. Display casing is `formatTag` at render time — never store it.
+- Search, the tag chip row, the group-by-tag toggle and the gallery are one
+  component (`ResourceGalleryView`) mounted by both `/resources` and every
+  category page, so the two scopes cannot drift. The tag selection and the
+  grouping live in the URL (`?tag=a&tag=b`, `?group=tag`) so a filtered view is
+  linkable and the pages stay server components; search is client state.
+  Grouping repeats a two-tag resource in both groups on purpose — it is a way
+  of browsing, not a partition — and untagged items come last.
+- A saved resource is editable (`updateResource` + `EditResourceDialog` off the
+  detail page). Category is *not* part of that form: it is in the resource's
+  URL, so moving one stays `updateResourceCategory`, which returns the
+  destination. Nor is `source_kind` — the body field follows the row's own kind
+  and a PDF's storage path is not editable.
 - Server actions that mutate a resource call `revalidateResourceSurfaces` from
   `src/lib/revalidate-resources.ts` — the sibling of `revalidateTrackSurfaces`.
 - Server actions live under `src/app/actions/`.
 - Data fetchers live under `src/lib/data/`.
+- **A task can carry an estimate and a stage.** `actions.estimated_minutes`
+  and `actions.category` have existed since 0001; `src/lib/task-details.ts`
+  owns their meaning (`formatMinutes`, `sumOpenEstimates`, `toStageKey`).
+  `category` is free text and the Suno round trip stores `"suno"` in it, so
+  reads *narrow* it to one of the five stage keys rather than casting, and
+  `updateTrackTodoDetails` only writes the keys the caller passed — an
+  untouched picker must never erase that marker. Studio tasks (`trackId`
+  null) may have an estimate but never a stage; the action refuses one.
+- **A logged session is editable.** `updateSession` / `deleteSession` in
+  `src/app/actions/sessions.ts` never write `duration_seconds` (generated),
+  and afterwards put `tracks.last_worked_at` back in step with the rule in
+  `src/lib/session-last-worked.ts`, because the insert-only trigger cannot.
+  Backfill and edit share one form, `SessionFormDialog`; the Edit/Delete
+  controls are one `SessionActions` component with a `variant` prop, mounted
+  in the History tab and in the track log on both surfaces.
+- `/tracks` also keeps its sort (`src/lib/track-sort.ts`, default last
+  worked) and name/tag search (`src/lib/track-search.ts`) in the URL, sorted
+  within each album shelf. Every control on that page owns one query param
+  and merges the others through `mergeQuery`, so none resets another.
+- The focus runner's track and session-type pickers are decided by the pure
+  helpers in `src/lib/focus-runner.ts`; switching track mid-session patches
+  the running session in `FocusSessionProvider` *before* the route change so
+  the destination page owns it at once, and the goal re-seeds from the new
+  track unless the user typed their own.
 
 ## Feature parity rule (desktop ↔ mobile)
 
@@ -176,7 +220,13 @@ exception).
   work).
 - Apply with `supabase db push`, never by pasting into the dashboard SQL
   editor. Hand-application is what let production's recorded history drift out
-  of step with the repo — see "Known drift" in README.md.
+  of step with the repo; that drift was repaired on 2026-09-04 and the record
+  now carries one filename-versioned row per file (see "Migration history" in
+  README.md). If a migration has to go in through the Supabase MCP tools, name
+  it exactly after the file and repair its recorded version to the `NNNN`
+  prefix afterwards, so `db push` keeps agreeing with the directory. Never run
+  SQL against production that is not a file in this directory — that is how
+  `tracks.sort_order` appeared with no migration to explain it (0033 removed it).
 - **Reads must degrade, writes must explain.** Vercel deploys on merge and
   migrations are applied separately, so a shipped build can meet a database
   without its column. A read that hits a missing column retries without it or

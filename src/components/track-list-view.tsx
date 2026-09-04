@@ -8,6 +8,8 @@ import {
   SunoChip,
   TrackActionsMenu,
   TrackCover,
+  TrackStatusBadge,
+  TrackTagChips,
   type SessionStats,
 } from "@/components/track-card-parts";
 import {
@@ -112,6 +114,7 @@ function MediumRow({ track }: { track: TrackWithDetails }) {
             status={trackSunoStatus(track)}
           />
           <SunoChip suno={track.sunoExperiment} />
+          <TrackStatusBadge status={track.status} />
         </div>
         {(meta.length > 0 || track.nextTask) && (
           <p className="mt-0.5 truncate text-xs text-muted-foreground">
@@ -120,6 +123,7 @@ function MediumRow({ track }: { track: TrackWithDetails }) {
             {track.nextTask?.description}
           </p>
         )}
+        <TrackTagChips tags={track.tags} max={3} className="mt-1" />
       </div>
 
       <ProgressMeter value={progress} className="hidden sm:flex" />
@@ -168,6 +172,7 @@ function CompactRow({ track }: { track: TrackWithDetails }) {
           {meta.join(" · ")}
         </span>
       )}
+      <TrackStatusBadge status={track.status} className="hidden shrink-0 sm:inline-flex" />
       <ProgressMeter value={progress} className="hidden sm:flex" />
       <ChevronRight className="h-4 w-4 shrink-0 text-muted-foreground" />
     </Link>

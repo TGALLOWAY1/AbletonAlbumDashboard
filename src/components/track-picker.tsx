@@ -3,6 +3,7 @@
 import { useEffect, useId, useMemo, useRef, useState } from "react";
 import { Search, X } from "lucide-react";
 import { Input } from "@/components/ui/input";
+import { CoverArt } from "@/components/cover-art";
 import { cn } from "@/lib/utils";
 import {
   buildTrackPickerOptions,
@@ -17,8 +18,15 @@ import type { TrackRow } from "@/lib/types";
  * All the picker draws. Narrowed from `TrackRow` so callers can hand it the
  * lean `listTrackOptions` rows instead of paying for a full track fetch to
  * render a name in a dropdown; a `TrackRow` still satisfies it.
+ *
+ * `cover_image_url` is optional rather than required: some callers only have
+ * the lean `listTrackOptions` shape (which carries the same artwork under a
+ * camelCased field), and the picker degrades to initials when it's absent
+ * rather than forcing every caller to fetch it.
  */
-export type PickableTrack = Pick<TrackRow, "id" | "name" | "status">;
+export type PickableTrack = Pick<TrackRow, "id" | "name" | "status"> & {
+  cover_image_url?: string | null;
+};
 
 /**
  * A search-and-pick combobox for one track.
@@ -44,12 +52,19 @@ export function TrackPicker({
   value,
   onChange,
   required,
+  /**
+   * "sm" (default) keeps the dense look used in dialogs. "lg" bumps the
+   * input, selected chip and option rows to a 44px minimum tap height for
+   * touch surfaces — see the focus runner's use of it.
+   */
+  size = "sm",
   className,
 }: {
   tracks: PickableTrack[];
   value: string | null;
   onChange: (id: string | null) => void;
   required?: boolean;
+  size?: "sm" | "lg";
   className?: string;
 }) {
   const [query, setQuery] = useState("");
@@ -104,11 +119,13 @@ export function TrackPicker({
     return (
       <div
         className={cn(
-          "flex items-center justify-between rounded-md border border-border bg-surface px-3 py-2 text-sm",
+          "flex items-center justify-between rounded-md border border-border bg-surface text-sm",
+          size === "lg" ? "min-h-11 gap-2 px-3 py-2" : "px-3 py-2",
           className,
         )}
       >
         <div className="flex min-w-0 items-center gap-2">
+          <TrackThumb track={selected} size={size} />
           <span className="text-xs uppercase tracking-wide text-muted-foreground">
             Track
           </span>
@@ -118,10 +135,13 @@ export function TrackPicker({
           <button
             type="button"
             onClick={() => onChange(null)}
-            className="text-muted-foreground hover:text-foreground"
+            className={cn(
+              "flex shrink-0 items-center justify-center text-muted-foreground hover:text-foreground",
+              size === "lg" && "h-11 w-11",
+            )}
             aria-label="Clear track"
           >
-            <X className="h-3.5 w-3.5" />
+            <X className={size === "lg" ? "h-4 w-4" : "h-3.5 w-3.5"} />
           </button>
         )}
       </div>
@@ -155,7 +175,12 @@ export function TrackPicker({
 
   return (
     <div ref={rootRef} className={cn("relative", className)}>
-      <Search className="pointer-events-none absolute left-2 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground" />
+      <Search
+        className={cn(
+          "pointer-events-none absolute left-2 top-1/2 -translate-y-1/2 text-muted-foreground",
+          size === "lg" ? "h-4 w-4" : "h-3.5 w-3.5",
+        )}
+      />
       <Input
         value={query}
         onChange={(e) => {
@@ -166,7 +191,7 @@ export function TrackPicker({
         onFocus={() => setOpen(true)}
         onKeyDown={handleKeyDown}
         placeholder={required ? "Pick a track…" : "Search tracks (optional)"}
-        className="h-8 pl-7"
+        className={size === "lg" ? "h-11 pl-9 text-base" : "h-8 pl-7"}
         role="combobox"
         aria-expanded={open}
         aria-controls={listId}
@@ -202,7 +227,8 @@ export function TrackPicker({
               onClick={() => pick(option.trackId)}
               onMouseMove={() => setHighlight(i)}
               className={cn(
-                "flex w-full items-center gap-2 rounded-sm px-2 py-1.5 text-left text-sm hover:bg-surface-2",
+                "flex w-full items-center gap-2 rounded-sm px-2 text-left text-sm hover:bg-surface-2",
+                size === "lg" ? "min-h-11 py-2" : "py-1.5",
                 i === activeIndex && "bg-surface-2",
                 option.track === null &&
                   "mt-1 border-t border-border pb-1.5 pt-2 text-muted-foreground hover:text-foreground",
@@ -210,8 +236,9 @@ export function TrackPicker({
             >
               {option.track ? (
                 <>
+                  <TrackThumb track={option.track} size={size} />
                   <span className="truncate">{option.track.name}</span>
-                  <span className="ml-auto text-xs text-muted-foreground">
+                  <span className="ml-auto shrink-0 text-xs text-muted-foreground">
                     {option.track.status}
                   </span>
                 </>
@@ -222,6 +249,31 @@ export function TrackPicker({
           ))}
         </div>
       )}
+    </div>
+  );
+}
+
+/** The small cover swatch beside a track's name — initials when there's no artwork. */
+function TrackThumb({
+  track,
+  size,
+}: {
+  track: PickableTrack;
+  size: "sm" | "lg";
+}) {
+  const box = size === "lg" ? "h-7 w-7" : "h-5 w-5";
+  return track.cover_image_url ? (
+    <div className={cn("relative shrink-0 overflow-hidden rounded-sm", box)}>
+      <CoverArt src={track.cover_image_url} sizes="28px" />
+    </div>
+  ) : (
+    <div
+      className={cn(
+        "flex shrink-0 items-center justify-center rounded-sm bg-surface-2 text-[9px] font-bold text-foreground/30",
+        box,
+      )}
+    >
+      {track.name.slice(0, 2).toUpperCase()}
     </div>
   );
 }

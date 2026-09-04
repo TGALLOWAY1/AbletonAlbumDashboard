@@ -14,6 +14,8 @@ import {
   TaskBar,
   TrackActionsMenu,
   TrackCover,
+  TrackStatusBadge,
+  TrackTagChips,
   type SessionStats,
 } from "@/components/track-card-parts";
 import {
@@ -65,12 +67,15 @@ export function TrackCard({
         />
 
         <div className="min-w-0">
-          <Link
-            href={`/tracks/${track.id}`}
-            className="text-base font-semibold leading-tight hover:underline"
-          >
-            {track.name}
-          </Link>
+          <div className="flex items-start gap-2">
+            <Link
+              href={`/tracks/${track.id}`}
+              className="min-w-0 truncate text-base font-semibold leading-tight hover:underline"
+            >
+              {track.name}
+            </Link>
+            <TrackStatusBadge status={track.status} className="mt-0.5" />
+          </div>
           <div className="mt-1.5 flex flex-wrap items-center gap-1.5">
             <SunoStatusToggle trackId={track.id} status={sunoStatus} />
             <SunoChip suno={track.sunoExperiment} />
@@ -80,6 +85,7 @@ export function TrackCard({
               {meta.join(" · ")}
             </p>
           )}
+          <TrackTagChips tags={track.tags} className="mt-1.5" />
           <div className="mt-2">
             <MetaRow
               stats={sessionStats}
