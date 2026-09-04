@@ -93,28 +93,58 @@ Because the app deploys on merge but migrations are applied separately, a
 shipped build can briefly meet a database without its column. Reads must
 degrade rather than throw — see the header of `src/lib/migration-errors.ts`.
 
-### Known drift
+### Migration history (drift repaired 2026-09-04)
 
-The production project's recorded migration history uses timestamp-style
-versions (`20260824173937`) rather than the repo's `NNNN` filenames, with no
-overlap between the two sets. `supabase db push` against production therefore
-reports `Remote migration versions not found in local migrations directory`,
-and migrations cannot yet be applied automatically on merge. Fixing it means a
-one-time repair of `supabase_migrations.schema_migrations` so the recorded
-versions match the filenames — metadata only, no schema change — after
-confirming every migration in the repo is genuinely reflected in the schema.
-Preview branches are unaffected: they are provisioned from the repo and are
-already consistent.
+Production's recorded history now matches this directory one-for-one: one row
+per file, versioned by the file's `NNNN` prefix (`0001` … `0033`), which is
+what `supabase db push` compares against. The next `db push` should report
+nothing to apply and nothing unknown on the remote.
 
-Tables: `tracks`, `track_stages`, `bottlenecks`, `actions`, `sessions`,
-`session_activities` (per-activity time + notes), `track_versions`. Triggers
-seed the 5 stages on track insert and bump
-`tracks.last_worked_at` on session insert. Partial unique indexes enforce
-"one active bottleneck per track" and "one open primary action per track."
+That was not true before. Until 2026-09-04 the recorded versions were
+timestamps with no overlap with the filenames, so `db push` refused to run
+(`Remote migration versions not found in local migrations directory`) and every
+migration was pasted in by hand — which is how the record and the schema drifted
+apart. The repair was done in one sitting and found three things worth knowing:
 
-RLS is intentionally **off** in V1 (single-user, no auth). When you add real
-auth, enable RLS on every table with `using (owner_id = auth.uid())` and
-replace the permissive storage policies in `0003_storage_policies.sql`.
+- **Four merged migrations had never reached production** (0029–0032), even
+  though the app that needed them had already deployed. 0030 and 0031 in
+  particular meant the seven-step finishing checklist and per-variation runs
+  could not have worked. Applied.
+- **0005 (`analytics_fields`) had been skipped entirely** — no `tracks.genre`,
+  `started_at`, `completed_at`, none of its triggers. Nothing in `src/` read
+  them, so nothing was visibly broken. Applied, so the schema matches the repo
+  rather than the repo being edited to match the accident.
+- **Production had a column the repo never defined**: `tracks.sort_order` with
+  an index, from a migration applied directly to the project on 2026-08-25 for
+  a "manual priority order" that never shipped. Removed by
+  `0033_drop_stray_track_sort_order.sql` (a no-op on databases provisioned from
+  the repo), so the repo is once again the only source of schema.
+
+After confirming every file's effects were present, the
+`supabase_migrations.schema_migrations` rows were replaced with the 33
+filename-versioned entries — metadata only, the same thing
+`supabase migration repair --status applied` writes.
+
+Keep it that way: apply with `supabase db push` (or, if a migration must be run
+from the Supabase MCP tools, name it exactly after the file, e.g.
+`0034_whatever`, and then repair the version to `0034` so the record still
+lines up). Never apply a migration to production that is not in this
+directory.
+
+Tables: `tracks`, `track_stages`, `track_finishing_steps`, `track_variations`
+(+ `_steps`), `actions` (tasks, track-level or studio-level), `sessions`,
+`session_activities` (per-activity time + notes), `session_types`,
+`track_versions`, `suno_experiments` / `suno_candidates`, `albums`,
+`resources`, and the `library_*` tables. Triggers seed the 5 stages on track
+insert and bump `tracks.last_worked_at` on session insert. The `bottlenecks`
+table and `actions.is_primary` were dropped in 0024: the next thing to do on a
+track is the top of its task list, not a stored flag.
+
+RLS is **enabled** on every table (0016) but there are no policies: this is a
+single-user app, the server reads with the service-role key, and nothing goes
+through the anon key except the permissive storage policies in
+`0003_storage_policies.sql`. Adding a second user would mean real auth plus
+`using (owner_id = auth.uid())` policies.
 
 ## Scripts
 

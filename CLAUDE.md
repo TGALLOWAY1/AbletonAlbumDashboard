@@ -220,7 +220,13 @@ exception).
   work).
 - Apply with `supabase db push`, never by pasting into the dashboard SQL
   editor. Hand-application is what let production's recorded history drift out
-  of step with the repo — see "Known drift" in README.md.
+  of step with the repo; that drift was repaired on 2026-09-04 and the record
+  now carries one filename-versioned row per file (see "Migration history" in
+  README.md). If a migration has to go in through the Supabase MCP tools, name
+  it exactly after the file and repair its recorded version to the `NNNN`
+  prefix afterwards, so `db push` keeps agreeing with the directory. Never run
+  SQL against production that is not a file in this directory — that is how
+  `tracks.sort_order` appeared with no migration to explain it (0033 removed it).
 - **Reads must degrade, writes must explain.** Vercel deploys on merge and
   migrations are applied separately, so a shipped build can meet a database
   without its column. A read that hits a missing column retries without it or
