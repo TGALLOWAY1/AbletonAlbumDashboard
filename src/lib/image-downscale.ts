@@ -119,3 +119,25 @@ export async function prepareImageUpload(
     bitmap?.close();
   }
 }
+
+/**
+ * Pixel size of an image blob, or null when it cannot be decoded. Used to
+ * record a note image's dimensions at upload so the page can reserve its box
+ * before the bytes arrive; a failure here costs the layout a little shift,
+ * never the upload.
+ */
+export async function readImageDimensions(
+  blob: Blob,
+): Promise<{ width: number; height: number } | null> {
+  if (typeof createImageBitmap !== "function") return null;
+  let bitmap: ImageBitmap | null = null;
+  try {
+    bitmap = await createImageBitmap(blob);
+    if (bitmap.width === 0 || bitmap.height === 0) return null;
+    return { width: bitmap.width, height: bitmap.height };
+  } catch {
+    return null;
+  } finally {
+    bitmap?.close();
+  }
+}

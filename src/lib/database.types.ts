@@ -399,6 +399,66 @@ export type Database = {
           },
         ];
       };
+      track_step_notes: {
+        Row: {
+          content: string | null;
+          created_at: string;
+          id: string;
+          image_height: number | null;
+          image_path: string | null;
+          image_width: number | null;
+          kind: string;
+          step_key: string;
+          title: string;
+          track_id: string;
+          updated_at: string;
+          variation_id: string | null;
+        };
+        Insert: {
+          content?: string | null;
+          created_at?: string;
+          id?: string;
+          image_height?: number | null;
+          image_path?: string | null;
+          image_width?: number | null;
+          kind: string;
+          step_key: string;
+          title?: string;
+          track_id: string;
+          updated_at?: string;
+          variation_id?: string | null;
+        };
+        Update: {
+          content?: string | null;
+          created_at?: string;
+          id?: string;
+          image_height?: number | null;
+          image_path?: string | null;
+          image_width?: number | null;
+          kind?: string;
+          step_key?: string;
+          title?: string;
+          track_id?: string;
+          updated_at?: string;
+          variation_id?: string | null;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "track_step_notes_track_id_fkey";
+            columns: ["track_id"];
+            isOneToOne: false;
+            referencedRelation: "tracks";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "track_step_notes_variation_id_fkey";
+            columns: ["variation_id"];
+            isOneToOne: false;
+            referencedRelation: "track_variations";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
       track_stages: {
         Row: {
           complete: boolean;

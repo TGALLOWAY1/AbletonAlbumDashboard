@@ -12,6 +12,10 @@ import {
   MIGRATION_0031_MISSING_MESSAGE,
 } from "@/lib/migration-errors";
 import { logSupabaseError } from "@/lib/supabase/log-error";
+import {
+  listStepNoteImagePaths,
+  removeStepNoteImages,
+} from "@/lib/data/step-notes";
 import { FINISHING_STEP_KEYS } from "@/lib/types";
 
 const stepSchema = z.enum(FINISHING_STEP_KEYS);
@@ -89,14 +93,17 @@ export async function addTrackVariation(
 }
 
 /**
- * Delete a variation and (via cascade) its checklist run. The caller confirms
- * with the user first — completed ticks go with it.
+ * Delete a variation and (via cascade) its checklist run and its step notes
+ * (migration 0034). The caller confirms with the user first — completed ticks
+ * and notes go with it. The cascade cannot reach storage, so the image notes'
+ * files are listed before the delete and removed after it.
  */
 export async function deleteTrackVariation(
   trackId: string,
   variationId: string,
 ): Promise<{ error?: string }> {
   const supabase = getServerSupabase();
+  const imagePaths = await listStepNoteImagePaths(supabase, { variationId });
   const { error } = await supabase
     .from("track_variations")
     .delete()
@@ -109,6 +116,7 @@ export async function deleteTrackVariation(
     return { error: "Could not delete that variation. Try again." };
   }
 
+  await removeStepNoteImages(supabase, imagePaths);
   revalidateTrackSurfaces(trackId);
   return {};
 }
