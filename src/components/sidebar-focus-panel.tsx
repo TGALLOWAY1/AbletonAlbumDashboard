@@ -5,14 +5,42 @@ import { getTracksByStatus } from "@/lib/data/tracks";
 import { getSessionCountsByTrackSince } from "@/lib/data/sessions";
 import { getSessionTypes } from "@/lib/data/session-types";
 import { recommendTrack } from "@/lib/recommend";
+import { logSupabaseError } from "@/lib/supabase/log-error";
+import { SidebarFocusLink } from "@/components/sidebar-focus-link";
 import { StartSessionButton } from "@/components/start-session-button";
 
+/**
+ * The three reads behind the recommendation, or null when any of them
+ * failed.
+ *
+ * This panel is root-layout chrome, rendered on every page (and on the
+ * server for phones too, where CSS hides it). A throw here has no page
+ * boundary above it — it reaches `global-error.tsx` and replaces the whole
+ * app, whichever page the user was on. That is how a transient Supabase
+ * "Gateway Timeout" during a resources-page refresh became a full-screen
+ * "Something went wrong" for a save that had already succeeded. The fetchers
+ * themselves keep throwing, because on their own pages a failed read *should*
+ * reach that page's error boundary; the chrome is what has to degrade.
+ */
+async function loadFocusPanel() {
+  try {
+    const [active, sessionTypes, recentCounts] = await Promise.all([
+      getTracksByStatus("active"),
+      getSessionTypes(),
+      getSessionCountsByTrackSince(7),
+    ]);
+    return { active, sessionTypes, recentCounts };
+  } catch (e) {
+    logSupabaseError("SidebarFocusPanel", e);
+    return null;
+  }
+}
+
 export async function SidebarFocusPanel() {
-  const [active, sessionTypes, recentCounts] = await Promise.all([
-    getTracksByStatus("active"),
-    getSessionTypes(),
-    getSessionCountsByTrackSince(7),
-  ]);
+  const data = await loadFocusPanel();
+  // No recommendation to offer, but starting a session never depended on one.
+  if (!data) return <SidebarFocusLink />;
+  const { active, sessionTypes, recentCounts } = data;
   const recommendation = recommendTrack(active, recentCounts);
 
   return (

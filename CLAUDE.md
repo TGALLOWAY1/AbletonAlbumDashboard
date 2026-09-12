@@ -256,6 +256,18 @@ exception).
 ## Conventions
 
 - Server components are the default; mark client components with `"use client"` only when they need state, refs, or browser APIs.
+- **Root-layout chrome never throws on a read.** The sidebar's data panels
+  (`SidebarFocusPanel`, `SidebarStats`) render inside `src/app/layout.tsx` on
+  every page, including on phones where CSS merely hides them. A throw there
+  has no page-level `error.tsx` above it: it reaches `global-error.tsx` and
+  replaces the whole app, whatever page the user was on — which is how one
+  transient Supabase "Gateway Timeout" during a resources-page refresh became
+  a full-screen "Something went wrong" for a save that had already succeeded.
+  So the chrome catches, logs (`logSupabaseError`) and degrades: the focus
+  panel to the plain `SidebarFocusLink`, the stats block to "Unavailable right
+  now" rather than confident zeros. The fetchers they call keep throwing — on
+  their own pages a failed read *should* reach that page's boundary.
+  `layout-chrome-reads.test.ts` asserts the catch.
 - Server actions that mutate track-level data must call `revalidateTrackSurfaces(trackId)` from `src/lib/revalidate-track.ts`, which revalidates **both** route shapes plus the dashboard/focus/session surfaces. Do not hand-roll `revalidatePath` lists.
 - User-facing errors in client components go through `useToast()` (`src/components/toast.tsx`, provider mounted in the root layout) — never `window.alert()`.
 - Optimistic UI uses React 19's `useOptimistic` (see `TrackTodoList`).
