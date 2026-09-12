@@ -291,3 +291,49 @@ describe("step-note actions error contract", () => {
     expect(SOURCE).toContain(".remove([existing.image_path])");
   });
 });
+
+// A track or a variation is deleted as a parent row and its notes cascade
+// away in the database, which never tells storage. Each deleting action has
+// to list the image keys before the delete and remove them after it — that
+// order, so a delete that fails cannot leave notes pointing at missing files.
+describe("parent deletion sweeps note images", () => {
+  function body(source: string, name: string): string {
+    const start = source.indexOf(`export async function ${name}(`);
+    expect(start, `${name} present`).toBeGreaterThan(-1);
+    const next = source.indexOf("\nexport ", start + 1);
+    return source.slice(start, next === -1 ? undefined : next);
+  }
+
+  it.each([
+    ["deleteTrackVariation", "../../app/actions/finishing-steps.ts", "{ variationId }"],
+    ["deleteTrack", "../../app/actions/tracks.ts", "trackId: id"],
+  ])("%s lists the keys, deletes, then removes the files", (name, file, scope) => {
+    const action = body(
+      readFileSync(path.resolve(__dirname, file), "utf8"),
+      name,
+    );
+    const list = action.indexOf("listStepNoteImagePaths(");
+    const del = action.indexOf(".delete()");
+    const remove = action.indexOf("removeStepNoteImages(");
+    expect(list, "lists before deleting").toBeGreaterThan(-1);
+    expect(del).toBeGreaterThan(list);
+    expect(remove, "removes after deleting").toBeGreaterThan(del);
+    expect(action).toContain(scope);
+  });
+});
+
+// While an image is uploading, or a note is saving, closing the add dialog
+// would remove an upload that is about to belong to a row.
+describe("add-note dialog", () => {
+  const SOURCE = readFileSync(
+    path.resolve(
+      __dirname,
+      "../../components/step-notes/add-step-note-dialog.tsx",
+    ),
+    "utf8",
+  );
+
+  it("refuses to close while an upload or a save is in flight", () => {
+    expect(SOURCE).toContain("if (!next && (submitting || uploading)) return;");
+  });
+});

@@ -1,5 +1,6 @@
 import { getServerSupabase } from "@/lib/supabase/server";
 import { isMissingTable } from "@/lib/migration-errors";
+import { logSupabaseError } from "@/lib/supabase/log-error";
 import {
   STEP_NOTE_IMAGE_BUCKET,
   stepNoteFromRow,
@@ -66,4 +67,60 @@ export async function getStepNotes(
     if (note) notes.push(note);
   }
   return notes;
+}
+
+type ServerSupabase = ReturnType<typeof getServerSupabase>;
+
+/** Which notes' images to sweep: every note on a track, or one variation's. */
+export type StepNoteImageScope = { trackId: string } | { variationId: string };
+
+/**
+ * Object keys of every image note in `scope`, for the parent-deletion path.
+ *
+ * `deleteStepNote` removes a note's file itself, but a track or a variation
+ * is deleted as a parent row and its notes go with it by cascade — the
+ * database never tells storage. So the deleting action lists the keys first,
+ * deletes the parent, then removes the objects (`removeStepNoteImages`), in
+ * that order: a delete that fails after the sweep would leave notes pointing
+ * at files that no longer exist, while a sweep that fails after the delete
+ * leaves only orphans in a public bucket.
+ *
+ * Never throws. A database without 0034 has no notes to sweep, and any other
+ * failure here must not block deleting the track — it is logged and the
+ * files are left behind, which is the state every pre-0034 delete left them
+ * in anyway.
+ */
+export async function listStepNoteImagePaths(
+  supabase: ServerSupabase,
+  scope: StepNoteImageScope,
+): Promise<string[]> {
+  const base = supabase
+    .from("track_step_notes")
+    .select("image_path")
+    .not("image_path", "is", null);
+  const { data, error } =
+    "variationId" in scope
+      ? await base.eq("variation_id", scope.variationId)
+      : await base.eq("track_id", scope.trackId);
+  if (error) {
+    if (!isMissingTable(error)) {
+      logSupabaseError("listStepNoteImagePaths", error);
+    }
+    return [];
+  }
+  return (data ?? [])
+    .map((row) => row.image_path)
+    .filter((path): path is string => typeof path === "string" && path.length > 0);
+}
+
+/** Best-effort removal of note images by key; a failure is logged, not thrown. */
+export async function removeStepNoteImages(
+  supabase: ServerSupabase,
+  paths: string[],
+): Promise<void> {
+  if (paths.length === 0) return;
+  const { error } = await supabase.storage
+    .from(STEP_NOTE_IMAGE_BUCKET)
+    .remove(paths);
+  if (error) logSupabaseError("removeStepNoteImages", error);
 }

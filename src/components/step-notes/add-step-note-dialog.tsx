@@ -102,6 +102,12 @@ export function AddStepNoteDialog({
   }
 
   function handleOpenChange(next: boolean) {
+    // Closing runs the reset, and the reset removes an unsaved upload. While
+    // a save is in flight that upload may be about to become a row, and
+    // while an upload is in flight there is nothing to remove yet — so the
+    // dialog stays put (Escape, the overlay and the close control included)
+    // until the request has answered.
+    if (!next && (submitting || uploading)) return;
     setOpen(next);
     if (!next) reset();
   }
@@ -331,7 +337,7 @@ export function AddStepNoteDialog({
               type="button"
               variant="outline"
               onClick={() => handleOpenChange(false)}
-              disabled={submitting}
+              disabled={submitting || uploading}
             >
               Cancel
             </Button>

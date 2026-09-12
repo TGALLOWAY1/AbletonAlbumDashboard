@@ -6,6 +6,10 @@ import { getServerSupabase } from "@/lib/supabase/server";
 import { logSupabaseError } from "@/lib/supabase/log-error";
 import { OWNER_ID } from "@/lib/owner";
 import {
+  listStepNoteImagePaths,
+  removeStepNoteImages,
+} from "@/lib/data/step-notes";
+import {
   assignTracksToAlbumSchema,
   isPinnableStatus,
   MAX_PINNED_TRACKS,
@@ -418,12 +422,20 @@ export async function deleteTrack(id: string) {
     .maybeSingle();
   if (readError) throw readError;
 
+  // Step notes (migration 0034) cascade with the track, but the images behind
+  // them live in storage, which the cascade never reaches: list the keys now,
+  // remove the files once the row is gone.
+  const noteImagePaths = await listStepNoteImagePaths(supabase, {
+    trackId: id,
+  });
+
   const { error } = await supabase
     .from("tracks")
     .delete()
     .eq("owner_id", OWNER_ID)
     .eq("id", id);
   if (error) throw error;
+  await removeStepNoteImages(supabase, noteImagePaths);
   revalidateTrackSurfaces(id, { albumIds: [previous?.album_id] });
 }
 

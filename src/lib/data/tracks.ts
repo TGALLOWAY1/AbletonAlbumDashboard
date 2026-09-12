@@ -1,6 +1,6 @@
 import { getServerSupabase } from "@/lib/supabase/server";
 import { OWNER_ID } from "@/lib/owner";
-import { isMissingColumn } from "@/lib/migration-errors";
+import { isMissingColumn, isMissingTable } from "@/lib/migration-errors";
 import type { SunoExperimentStatus } from "@/lib/suno";
 import { countStepNotes } from "@/lib/step-notes";
 import {
@@ -219,11 +219,23 @@ async function attachDetails(tracks: TrackRow[]): Promise<TrackWithDetails[]> {
     finishingByTrack.set(row.track_id, list);
   });
   if (stepNotesRes.error) {
-    console.warn(
-      "[tracks] could not load step notes — apply supabase/migrations/" +
-        "0034_track_step_notes.sql to enable finishing-step notes: " +
+    // A count is a badge on a row, not the notes themselves (the notes page
+    // fails loudly through `getStepNotes`), so neither failure takes down
+    // every track surface — but only a missing table is the migration's
+    // fault, and only that gets the "apply 0034" hint.
+    if (isMissingTable(stepNotesRes.error)) {
+      console.warn(
+        "[tracks] could not load step notes — apply supabase/migrations/" +
+          "0034_track_step_notes.sql to enable finishing-step notes: " +
+          stepNotesRes.error.message,
+      );
+    } else {
+      console.error(
+        "[tracks] step-note counts unavailable; every step reads as having " +
+          "no notes until this clears:",
         stepNotesRes.error.message,
-    );
+      );
+    }
   }
   const noteCounts = countStepNotes(stepNotesRes.data ?? []);
   const variationsByTrack = new Map<string, TrackVariation[]>();
