@@ -48,3 +48,31 @@ describe("root-layout chrome never throws on a read", () => {
     expect(source("sidebar-chrome.tsx")).toContain("<SidebarFocusLink />");
   });
 });
+
+// The catch above only helps if the fetchers under it surface a failure.
+// The two session aggregates used to destructure `{ data }` alone, so a
+// failed read came back as an empty map: the sidebar then recommended a
+// track as if nothing had been worked on all week, and the dashboard and
+// /tracks printed "Never" on every card — with nothing logged either way.
+describe("session aggregates surface a failed read", () => {
+  const SOURCE = readFileSync(
+    path.resolve(__dirname, "../data/sessions.ts"),
+    "utf8",
+  );
+
+  function body(name: string): string {
+    const start = SOURCE.indexOf(`export async function ${name}(`);
+    expect(start, `${name} present`).toBeGreaterThan(-1);
+    const next = SOURCE.indexOf("\nexport ", start + 1);
+    return SOURCE.slice(start, next === -1 ? undefined : next);
+  }
+
+  it.each(["getSessionStatsByTrack", "getSessionCountsByTrackSince"])(
+    "%s throws on error instead of reading it as no sessions",
+    (name) => {
+      const fn = body(name);
+      expect(fn).toContain("const { data, error } = await supabase");
+      expect(fn).toContain("if (error) throw error;");
+    },
+  );
+});

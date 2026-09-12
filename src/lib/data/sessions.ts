@@ -38,10 +38,13 @@ export async function getSessionStatsByTrack(): Promise<
   Map<string, SessionStats>
 > {
   const supabase = getServerSupabase();
-  const { data } = await supabase
+  const { data, error } = await supabase
     .from("sessions")
     .select("track_id, duration_seconds, tracks!inner(owner_id)")
     .eq("tracks.owner_id", OWNER_ID);
+  // Like every other read here: a failure is thrown, not read as "no
+  // sessions". An empty map here would print "Never" on every track card.
+  if (error) throw error;
 
   const map = new Map<string, SessionStats>();
   (data ?? []).forEach((row) => {
@@ -62,12 +65,16 @@ export async function getSessionCountsByTrackSince(
 ): Promise<Map<string, number>> {
   const supabase = getServerSupabase();
   const sinceIso = new Date(Date.now() - days * 86_400_000).toISOString();
-  const { data } = await supabase
+  const { data, error } = await supabase
     .from("sessions")
     .select("track_id, tracks!inner(owner_id)")
     .eq("tracks.owner_id", OWNER_ID)
     .eq("status", "completed")
     .gte("started_at", sinceIso);
+  // Thrown rather than swallowed: an empty map would let the sidebar
+  // recommend a track as if nothing had been worked on all week, with no
+  // log and no fallback. `SidebarFocusPanel` catches this and degrades.
+  if (error) throw error;
 
   const map = new Map<string, number>();
   (data ?? []).forEach((row) => {
