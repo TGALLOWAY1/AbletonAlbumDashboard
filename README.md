@@ -125,8 +125,12 @@ After confirming every file's effects were present, the
 filename-versioned entries — metadata only, the same thing
 `supabase migration repair --status applied` writes.
 
-Migrations landed since the repair (0034 onwards) are ordinary: `db push`
-applies them and records the filename version, nothing else to do.
+Migrations landed since the repair are ordinary: `db push` applies them and
+records the filename version, nothing else to do. The one exception so far is
+0034 (`track_step_notes`), applied on 2026-09-12 through the Supabase MCP
+tools, which record a timestamp version; its row was repaired to `0034`
+straight afterwards, per the rule below, so the record still reads
+`0001` … `0034` and `db push` has nothing to apply.
 
 Keep it that way: apply with `supabase db push` (or, if a migration must be run
 from the Supabase MCP tools, name it exactly after the file, e.g.
