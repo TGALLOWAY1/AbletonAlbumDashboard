@@ -1,7 +1,31 @@
 import { getServerSupabase } from "@/lib/supabase/server";
+import { logSupabaseError } from "@/lib/supabase/log-error";
 import { OWNER_ID } from "@/lib/owner";
 
-async function fetchStats() {
+type Stats = {
+  activeCount: number;
+  completedCount: number;
+  totalHours: number;
+  sessionCount: number;
+  completionRate: number;
+};
+
+/**
+ * Root-layout chrome, so it must never throw (see `SidebarFocusPanel`), and
+ * it must not lie either: a failed count used to fall through `?? 0` and
+ * print "0 tracks, 0 hours" as if that were true. Any failed read now makes
+ * the whole block read as unavailable, with the real error in the log.
+ */
+async function fetchStats(): Promise<Stats | null> {
+  try {
+    return await queryStats();
+  } catch (e) {
+    logSupabaseError("SidebarStats", e);
+    return null;
+  }
+}
+
+async function queryStats(): Promise<Stats | null> {
   const supabase = getServerSupabase();
   const [active, completed, totalTracks, sessions] = await Promise.all([
     supabase
@@ -23,6 +47,12 @@ async function fetchStats() {
       .select("duration_seconds, id, track:tracks!sessions_track_id_fkey(owner_id)")
       .not("started_at", "is", null),
   ]);
+
+  const failed = [active, completed, totalTracks, sessions].find((r) => r.error);
+  if (failed) {
+    logSupabaseError("SidebarStats", failed.error);
+    return null;
+  }
 
   // Left join: keep track-less rows, and (single-user) only the owner's tracks.
   const sessionRows = ((sessions.data ?? []) as unknown as Array<{
@@ -47,6 +77,18 @@ async function fetchStats() {
 
 export async function SidebarStats() {
   const s = await fetchStats();
+  if (!s) {
+    return (
+      <section>
+        <div className="mb-2 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+          Stats
+        </div>
+        <p className="text-sm text-muted-foreground">
+          Unavailable right now.
+        </p>
+      </section>
+    );
+  }
   const rows: Array<[string, string]> = [
     ["Tracks in Progress", s.activeCount.toString()],
     ["Tracks Finished", s.completedCount.toString()],
