@@ -125,6 +125,9 @@ After confirming every file's effects were present, the
 filename-versioned entries — metadata only, the same thing
 `supabase migration repair --status applied` writes.
 
+Migrations landed since the repair (0034 onwards) are ordinary: `db push`
+applies them and records the filename version, nothing else to do.
+
 Keep it that way: apply with `supabase db push` (or, if a migration must be run
 from the Supabase MCP tools, name it exactly after the file, e.g.
 `0034_whatever`, and then repair the version to `0034` so the record still
@@ -132,7 +135,8 @@ lines up). Never apply a migration to production that is not in this
 directory.
 
 Tables: `tracks`, `track_stages`, `track_finishing_steps`, `track_variations`
-(+ `_steps`), `actions` (tasks, track-level or studio-level), `sessions`,
+(+ `_steps`), `track_step_notes` (markdown or image notes on one checklist
+row), `actions` (tasks, track-level or studio-level), `sessions`,
 `session_activities` (per-activity time + notes), `session_types`,
 `track_versions`, `suno_experiments` / `suno_candidates`, `albums`,
 `resources`, and the `library_*` tables. Triggers seed the 5 stages on track

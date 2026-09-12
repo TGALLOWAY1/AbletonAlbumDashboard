@@ -1,20 +1,9 @@
 "use client";
 
 import { useOptimistic, useRef, useState, useTransition } from "react";
+import Link from "next/link";
 import { format } from "date-fns";
-import {
-  AudioWaveform,
-  Check,
-  Download,
-  MessageCircleMore,
-  Palette,
-  Plus,
-  SlidersHorizontal,
-  Sparkles,
-  Star,
-  Trash2,
-  type LucideIcon,
-} from "lucide-react";
+import { Check, ChevronRight, Plus, Trash2 } from "lucide-react";
 import {
   addTrackVariation,
   deleteTrackVariation,
@@ -22,10 +11,11 @@ import {
   setVariationStep,
 } from "@/app/actions/finishing-steps";
 import { useToast } from "@/components/toast";
+import { STEP_ICON, STEP_ICON_TONE } from "@/components/finishing-step-icons";
+import { stepNotesHref } from "@/lib/step-notes";
 import {
   FINISHING_STEP_LABELS,
   type FinishingStep,
-  type FinishingStepKey,
   type TrackVariation,
 } from "@/lib/types";
 import { cn } from "@/lib/utils";
@@ -38,59 +28,59 @@ import { cn } from "@/lib/utils";
  * variations happens right here for the same reason ticking does: the card is
  * a working surface, not a read-out.
  *
+ * Each row is also the way into that step's notes (migration 0034): the label,
+ * date and chevron are one link to the step's notes page, with the tick kept
+ * as its own control beside it. The icons live in `finishing-step-icons.ts`
+ * so the notes page can draw the same one.
+ *
  * `variant` controls sizing only (CLAUDE.md's shared-component rule): `card`
  * is the 44px-tap-target treatment for the large mobile card, `compact` the
  * denser one for desktop widths.
  */
 
-const STEP_ICON: Record<FinishingStepKey, LucideIcon> = {
-  suno_variations: Sparkles,
-  arrangement_favorites: Star,
-  sound_palette: Palette,
-  core_elements: AudioWaveform,
-  mixing_tips: MessageCircleMore,
-  stems_midi: Download,
-  ableton_cleanup: SlidersHorizontal,
-};
-
-// Restrained: steps that produce something get an accent, the tidy-up stays
-// neutral. The two accents alternate through the Suno workflow so a seven-row
-// list still reads as rows, not a rainbow. Icons carry the colour so the
-// labels can all read as plain text.
-const STEP_ICON_TONE: Record<FinishingStepKey, string> = {
-  suno_variations: "text-primary",
-  arrangement_favorites: "text-accent",
-  sound_palette: "text-primary",
-  core_elements: "text-accent",
-  mixing_tips: "text-primary",
-  stems_midi: "text-accent",
-  ableton_cleanup: "text-muted-foreground",
-};
-
 type Variant = "card" | "compact";
 
 const SIZING: Record<
   Variant,
-  { row: string; hit: string; box: string; icon: string; label: string; date: string }
+  {
+    row: string;
+    hit: string;
+    box: string;
+    icon: string;
+    link: string;
+    label: string;
+    date: string;
+    count: string;
+    chevron: string;
+  }
 > = {
   // The 44px tap target is wider than the 22px box it holds, so the hit area
   // is pulled left by the difference — the box lines up with the card's text
-  // column while the target still spills into the padding.
+  // column while the target still spills into the padding. The notes link
+  // stretches to the row's full height for the same reason.
   card: {
     row: "flex min-h-[44px] items-center gap-2.5",
     hit: "-ml-[11px] flex h-11 w-11 shrink-0 items-center justify-center",
     box: "h-[22px] w-[22px] rounded-[6px]",
     icon: "h-[18px] w-[18px] shrink-0",
+    link: "flex min-h-[44px] min-w-0 flex-1 items-center gap-2 self-stretch",
     label: "min-w-0 flex-1 truncate text-[15px] leading-snug",
     date: "shrink-0 text-[13px] tabular-nums",
+    count:
+      "shrink-0 rounded-full bg-muted px-1.5 py-px text-[11px] font-medium tabular-nums text-muted-foreground",
+    chevron: "-mr-1 h-[18px] w-[18px] shrink-0",
   },
   compact: {
     row: "flex min-h-[34px] items-center gap-2",
     hit: "-ml-[7px] flex h-8 w-8 shrink-0 items-center justify-center",
     box: "h-[18px] w-[18px] rounded-[5px]",
     icon: "h-4 w-4 shrink-0",
+    link: "flex min-h-[34px] min-w-0 flex-1 items-center gap-1.5 self-stretch",
     label: "min-w-0 flex-1 truncate text-sm leading-snug",
     date: "shrink-0 text-xs tabular-nums",
+    count:
+      "shrink-0 rounded-full bg-muted px-1.5 py-px text-[10px] font-medium tabular-nums text-muted-foreground",
+    chevron: "-mr-0.5 h-4 w-4 shrink-0",
   },
 };
 
@@ -178,7 +168,7 @@ export function TrackFinishingSteps({
     const complete = step.completedAt === null;
     startTransition(async () => {
       const next: FinishingStep = {
-        key: step.key,
+        ...step,
         completedAt: complete ? new Date().toISOString() : null,
       };
       applyOptimistic(
@@ -279,27 +269,57 @@ export function TrackFinishingSteps({
           aria-hidden
         />
 
-        <span
+        {/* Everything right of the icon is the way into this step's notes.
+            The tick is not inside it: ticking and reading are different
+            intents, and a row-wide link would swallow the checkbox. */}
+        <Link
+          href={stepNotesHref(trackId, step.key, variationId)}
+          aria-label={
+            step.noteCount > 0
+              ? `Notes for "${label}" (${step.noteCount})`
+              : `Notes for "${label}"`
+          }
           className={cn(
-            sizing.label,
-            done && "text-muted-foreground line-through",
+            sizing.link,
+            "group rounded-md text-foreground transition-colors hover:text-primary",
           )}
         >
-          {label}
-        </span>
+          <span
+            className={cn(
+              sizing.label,
+              done && "text-muted-foreground line-through",
+            )}
+          >
+            {label}
+          </span>
 
-        {/* Completion date, or an em dash so the column still reads as a
-            column on the rows that have nothing to show. */}
-        <span
-          className={cn(
-            sizing.date,
-            done ? "text-muted-foreground" : "text-muted-foreground/50",
+          {step.noteCount > 0 && (
+            <span className={sizing.count} aria-hidden>
+              {step.noteCount}
+            </span>
           )}
-        >
-          {step.completedAt
-            ? format(new Date(step.completedAt), "MMM d")
-            : "—"}
-        </span>
+
+          {/* Completion date, or an em dash so the column still reads as a
+              column on the rows that have nothing to show. */}
+          <span
+            className={cn(
+              sizing.date,
+              done ? "text-muted-foreground" : "text-muted-foreground/50",
+            )}
+          >
+            {step.completedAt
+              ? format(new Date(step.completedAt), "MMM d")
+              : "—"}
+          </span>
+
+          <ChevronRight
+            className={cn(
+              sizing.chevron,
+              "text-muted-foreground/60 transition-colors group-hover:text-primary",
+            )}
+            aria-hidden
+          />
+        </Link>
       </li>
     );
   };

@@ -226,7 +226,16 @@ export type FinishingStep = {
   key: FinishingStepKey;
   /** ISO timestamp of the tick, or null while the step is outstanding. */
   completedAt: string | null;
+  /**
+   * How many notes (migration 0034, `src/lib/step-notes.ts`) hang off this
+   * row, so the checklist can say which steps have something behind their
+   * chevron without loading the notes themselves.
+   */
+  noteCount: number;
 };
+
+/** Note counts for one checklist run, keyed by step; an absent key is zero. */
+export type StepNoteCounts = Partial<Record<FinishingStepKey, number>>;
 
 /**
  * Every step in render order. A track with no rows yet (never ticked, or a
@@ -235,15 +244,18 @@ export type FinishingStep = {
  *
  * Takes only the columns it reads so the same gap-filling serves both row
  * shapes: track_finishing_steps (keyed by track) and track_variation_steps
- * (keyed by variation, migration 0031).
+ * (keyed by variation, migration 0031). `noteCounts` is optional for the same
+ * reason: a database without 0034 has no notes, not a broken checklist.
  */
 export function finishingStepsFromRows(
   rows: Pick<FinishingStepRow, "step_key" | "completed_at">[] = [],
+  noteCounts: StepNoteCounts = {},
 ): FinishingStep[] {
   const byKey = new Map(rows.map((r) => [r.step_key, r]));
   return FINISHING_STEP_KEYS.map((key) => ({
     key,
     completedAt: byKey.get(key)?.completed_at ?? null,
+    noteCount: noteCounts[key] ?? 0,
   }));
 }
 
@@ -264,12 +276,13 @@ export type TrackVariation = {
 export function trackVariationFromRow(
   row: TrackVariationRow,
   steps: TrackVariationStepRow[] = [],
+  noteCounts: StepNoteCounts = {},
 ): TrackVariation {
   return {
     id: row.id,
     name: row.name,
     createdAt: row.created_at,
-    steps: finishingStepsFromRows(steps),
+    steps: finishingStepsFromRows(steps, noteCounts),
   };
 }
 

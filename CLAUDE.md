@@ -43,6 +43,20 @@ Run `pnpm typecheck && pnpm lint && pnpm test` before committing.
   arrow keys) and `reorderTrackTodos` writes an explicit 0..n-1. The list-shaped
   move helpers live in `src/lib/task-order.ts` so the drag and keyboard paths
   cannot drift.
+- **Every finishing-step row opens its own notes.** The label, date and
+  chevron on a `TrackFinishingSteps` row are one link to
+  `/tracks/[id]/finishing/[stepKey]` (`?variation=<id>` for a variation's run);
+  the tick stays a separate control. Notes live in `track_step_notes`
+  (migration 0034), each one either **markdown** typed in or an **image**
+  uploaded to the public `track-images` bucket under `step-notes/<track>/` —
+  the resources `source_kind` shape, narrowed to two kinds. Any number of notes
+  per step, newest first, so `variation_id` can be nullable without 0031's
+  upsert problem. `src/lib/step-notes.ts` owns the shapes, the href, the row
+  mapping, the counts and the action schemas; `attachDetails` loads only the
+  keys and puts a `noteCount` on every `FinishingStep`. The page is one
+  responsive route for both surfaces, like `/tracks/[id]/edit`; only its back
+  link is decided per user agent. Stored markdown renders through
+  `MarkdownBody` (`src/components/markdown-body.tsx`), shared with resources.
 - Bounces, logged sessions and completed tasks are one timeline
   (`src/components/track/track-log-pane.tsx`) — they all answer "what happened to
   this track", so they are not three sections.
@@ -205,8 +219,9 @@ The `src/components/mobile/` directory currently holds components used on **both
 None currently. Both `/tracks/[id]` and `/m/[trackId]` mount the same
 `TrackHeaderBar`, `TrackTodoList`, `NotesEditor` and `TrackLogPane` (including
 bounce upload and the Suno round-trip), and link to the shared metadata editor at
-`/tracks/[id]/edit`. The only difference is arrangement — three columns vs. three
-tabs — which is a viewport constraint, not a feature gap. The `.als` file-path copy
+`/tracks/[id]/edit` and the shared finishing-step notes at
+`/tracks/[id]/finishing/[stepKey]`. The only difference is arrangement — three
+columns vs. three tabs — which is a viewport constraint, not a feature gap. The `.als` file-path copy
 renders in the desktop header only; it is meaningless on a phone (documented
 exception).
 

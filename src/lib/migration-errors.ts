@@ -102,6 +102,18 @@ export const MIGRATION_0032_MISSING_MESSAGE =
   "Supabase project — resources have nowhere to record a tag yet. Run it, " +
   "then try again.";
 
+/**
+ * 0034 names its step_key check explicitly so a list narrower than
+ * FINISHING_STEP_KEYS is distinguishable from any other failure — the same
+ * reason 0030 re-added the finishing-steps constraint under a known name.
+ */
+export const STEP_NOTE_STEP_CONSTRAINT = "track_step_notes_step_key_check";
+
+export const MIGRATION_0034_MISSING_MESSAGE =
+  "This needs supabase/migrations/0034_track_step_notes.sql applied to your " +
+  "Supabase project — finishing-step notes have nowhere to save yet. Run it, " +
+  "then try again.";
+
 export const MIGRATION_0029_MISSING_MESSAGE =
   "This needs supabase/migrations/0029_audio_upload_mime_types.sql applied to " +
   "your Supabase project — the storage bucket still rejects this audio " +

@@ -2,6 +2,7 @@ import { getServerSupabase } from "@/lib/supabase/server";
 import { OWNER_ID } from "@/lib/owner";
 import { isMissingColumn } from "@/lib/migration-errors";
 import type { SunoExperimentStatus } from "@/lib/suno";
+import { countStepNotes } from "@/lib/step-notes";
 import {
   comparePinPosition,
   finishingStepsFromRows,
@@ -121,6 +122,7 @@ async function attachDetails(tracks: TrackRow[]): Promise<TrackWithDetails[]> {
     sunoRes,
     finishingRes,
     variationsRes,
+    stepNotesRes,
   ] =
     await Promise.all([
       supabase.from("track_stages").select("*").in("track_id", ids),
@@ -153,6 +155,13 @@ async function attachDetails(tracks: TrackRow[]): Promise<TrackWithDetails[]> {
         .select("*, track_variation_steps(*)")
         .in("track_id", ids)
         .order("created_at", { ascending: true }),
+      // Migration 0034. Only the keys — the checklist prints a count per
+      // step, the notes themselves load on their own page. Same degrade
+      // posture: no table means no counts, not a dead page.
+      supabase
+        .from("track_step_notes")
+        .select("track_id, variation_id, step_key")
+        .in("track_id", ids),
     ]);
 
   const stagesByTrack = new Map<string, StageRow[]>();
@@ -209,6 +218,14 @@ async function attachDetails(tracks: TrackRow[]): Promise<TrackWithDetails[]> {
     list.push(row);
     finishingByTrack.set(row.track_id, list);
   });
+  if (stepNotesRes.error) {
+    console.warn(
+      "[tracks] could not load step notes — apply supabase/migrations/" +
+        "0034_track_step_notes.sql to enable finishing-step notes: " +
+        stepNotesRes.error.message,
+    );
+  }
+  const noteCounts = countStepNotes(stepNotesRes.data ?? []);
   const variationsByTrack = new Map<string, TrackVariation[]>();
   if (variationsRes.error) {
     console.warn(
@@ -219,7 +236,13 @@ async function attachDetails(tracks: TrackRow[]): Promise<TrackWithDetails[]> {
   }
   (variationsRes.data ?? []).forEach((v) => {
     const list = variationsByTrack.get(v.track_id) ?? [];
-    list.push(trackVariationFromRow(v, v.track_variation_steps));
+    list.push(
+      trackVariationFromRow(
+        v,
+        v.track_variation_steps,
+        noteCounts.byVariation.get(v.id),
+      ),
+    );
     variationsByTrack.set(v.track_id, list);
   });
   const sunoByTrack = new Map<string, TrackSunoSummary>();
@@ -237,7 +260,10 @@ async function attachDetails(tracks: TrackRow[]): Promise<TrackWithDetails[]> {
   return tracks.map((t) => ({
     ...t,
     stages: stagesByTrack.get(t.id) ?? [],
-    finishingSteps: finishingStepsFromRows(finishingByTrack.get(t.id) ?? []),
+    finishingSteps: finishingStepsFromRows(
+      finishingByTrack.get(t.id) ?? [],
+      noteCounts.byTrack.get(t.id),
+    ),
     variations: variationsByTrack.get(t.id) ?? [],
     nextTask: nextTaskByTrack.get(t.id) ?? null,
     openTaskCount: openCountByTrack.get(t.id) ?? 0,
