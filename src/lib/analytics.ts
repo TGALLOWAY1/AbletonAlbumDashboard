@@ -23,6 +23,22 @@ export const RANGE_OPTIONS: { key: RangeKey; label: string }[] = [
 
 export const DEFAULT_RANGE: RangeKey = "30d";
 
+/**
+ * The same five windows spelled out, for controls with room for a sentence.
+ *
+ * The Progress panel's tab strip has to fit five options across a phone, so it
+ * uses the abbreviations above; a dropdown does not, and "Last 30 days" is how
+ * the question is actually asked. Same keys, same meaning — only the wording
+ * differs, so the two controls can never offer different windows.
+ */
+export const RANGE_LONG_LABELS: Record<RangeKey, string> = {
+  "7d": "Last 7 days",
+  "30d": "Last 30 days",
+  "3m": "Last 3 months",
+  "6m": "Last 6 months",
+  "1y": "Last year",
+};
+
 export type AnalyticsSession = {
   trackId: string | null;
   startedAt: string;

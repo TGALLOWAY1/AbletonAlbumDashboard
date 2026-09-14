@@ -736,6 +736,7 @@ export type Database = {
 
       resources: {
         Row: {
+          archived_at: string | null;
           bookmarked: boolean;
           category_id: string;
           content: string | null;
@@ -744,6 +745,8 @@ export type Database = {
           featured: boolean;
           id: string;
           owner_id: string;
+          pinned_at: string | null;
+          rating: number | null;
           read_minutes: number;
           source_kind: string;
           storage_path: string | null;
@@ -755,6 +758,7 @@ export type Database = {
           url: string | null;
         };
         Insert: {
+          archived_at?: string | null;
           bookmarked?: boolean;
           category_id: string;
           content?: string | null;
@@ -763,6 +767,8 @@ export type Database = {
           featured?: boolean;
           id?: string;
           owner_id: string;
+          pinned_at?: string | null;
+          rating?: number | null;
           read_minutes?: number;
           source_kind: string;
           storage_path?: string | null;
@@ -774,6 +780,7 @@ export type Database = {
           url?: string | null;
         };
         Update: {
+          archived_at?: string | null;
           bookmarked?: boolean;
           category_id?: string;
           content?: string | null;
@@ -782,6 +789,8 @@ export type Database = {
           featured?: boolean;
           id?: string;
           owner_id?: string;
+          pinned_at?: string | null;
+          rating?: number | null;
           read_minutes?: number;
           source_kind?: string;
           storage_path?: string | null;

@@ -2,7 +2,14 @@
 
 import * as React from "react";
 import { usePathname, useRouter } from "next/navigation";
-import { Bookmark, FolderOpen, Trash2 } from "lucide-react";
+import {
+  Archive,
+  ArchiveRestore,
+  Bookmark,
+  FolderOpen,
+  Pin,
+  Trash2,
+} from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   Select,
@@ -21,14 +28,23 @@ import {
 } from "@/lib/data/resources";
 import {
   deleteResource,
+  setResourceArchived,
+  setResourcePinned,
   toggleResourceBookmark,
   updateResourceCategory,
 } from "@/app/actions/resources";
 import { EditResourceDialog } from "./edit-resource-dialog";
 
 /**
- * Category, edit, bookmark and delete for a single resource, on its own page.
- * Seed entries have no row behind them, so they get none of the four.
+ * Everything you can do to a resource from its own page: move it, edit it,
+ * pin it, bookmark it, mark it learned, delete it. Seed entries have no row
+ * behind them, so they get none of it.
+ *
+ * Pin and Archive are opposites and sit next to each other on purpose. A pin
+ * says "keep this in front of me"; archiving says "I've taken what I need" —
+ * and archiving is the only thing that writes the learning log the activity
+ * map on /resources is drawn from, so it clears the pin as it goes (see
+ * `setResourceArchived`).
  */
 export function ResourceDetailActions({
   resource,
@@ -48,6 +64,8 @@ export function ResourceDetailActions({
   if (resource.id.startsWith("seed-")) return null;
 
   const bookmarked = resource.bookmarked ?? false;
+  const archived = Boolean(resource.archivedAt);
+  const pinned = Boolean(resource.pinnedAt);
 
   // Both actions below navigate off a page that no longer resolves, so they
   // replace rather than push. `router.replace` leaves browser history alone,
@@ -71,6 +89,31 @@ export function ResourceDetailActions({
       // The category is part of this page's path, so the URL the user is on
       // no longer resolves.
       replaceWith(result.destination ?? `/resources/${next}/${resource.id}`);
+    });
+  }
+
+  function handlePin() {
+    startTransition(async () => {
+      const result = await setResourcePinned(resource.id, !pinned);
+      if (result?.error) toast(result.error);
+    });
+  }
+
+  function handleArchive() {
+    startTransition(async () => {
+      const result = await setResourceArchived(resource.id, !archived);
+      if (result?.error) {
+        toast(result.error);
+        return;
+      }
+      // Worth saying out loud: archiving moves the resource off the gallery
+      // and onto the learned shelf, and the number on /resources moves with
+      // it. Silently vanishing from the category would look like a bug.
+      toast(
+        archived
+          ? "Back in the library."
+          : "Marked learned — it's on the Learned shelf now.",
+      );
     });
   }
 
@@ -122,6 +165,36 @@ export function ResourceDetailActions({
         </SelectContent>
       </Select>
       <EditResourceDialog resource={resource} />
+      <Button
+        type="button"
+        variant="outline"
+        size="sm"
+        onClick={handlePin}
+        disabled={pending || archived}
+        aria-pressed={pinned}
+        title={
+          archived
+            ? "Restore it to the library to pin it"
+            : "Show this cover on the shelf at the top of Resources"
+        }
+      >
+        <Pin className={cn("h-3.5 w-3.5", pinned && "fill-current")} />
+        {pinned ? "Pinned" : "Pin"}
+      </Button>
+      <Button
+        type="button"
+        variant={archived ? "outline" : "default"}
+        size="sm"
+        onClick={handleArchive}
+        disabled={pending}
+      >
+        {archived ? (
+          <ArchiveRestore className="h-3.5 w-3.5" />
+        ) : (
+          <Archive className="h-3.5 w-3.5" />
+        )}
+        {archived ? "Restore" : "Mark learned"}
+      </Button>
       <Button
         type="button"
         variant="outline"

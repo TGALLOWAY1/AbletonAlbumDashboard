@@ -3,6 +3,8 @@ import { BackLink } from "@/components/back-link";
 import { AddResourceDialog } from "@/components/resources/add-resource-dialog";
 import { ResourceCategoryNav } from "@/components/resources/resource-category-nav";
 import { ResourceGalleryView } from "@/components/resources/resource-gallery-view";
+import { ResourcePosterShelf } from "@/components/resources/resource-poster-shelf";
+import { ResourcesSectionHeader } from "@/components/resources/resources-section-header";
 import { getResourceCategoryPageData } from "@/lib/data/resources-db";
 import { isResourceCategoryId } from "@/lib/data/resources";
 import { parseTagParam } from "@/lib/resource-tags";
@@ -24,7 +26,8 @@ export default async function ResourceCategoryPage({
   // `?group=tag` is the only grouping there is; anything else is the flat view.
   const groupByTag = (Array.isArray(group) ? group[0] : group) === "tag";
 
-  const { category, topics } = await getResourceCategoryPageData(categoryId);
+  const { category, topics, learned } =
+    await getResourceCategoryPageData(categoryId);
 
   return (
     <div className="flex flex-col gap-5">
@@ -58,6 +61,17 @@ export default async function ResourceCategoryPage({
         showGroupToggle
         emptyMessage={`No topics in ${category.title} yet. Add the first one and it will lead the list.`}
       />
+
+      {/* Archived material has left the gallery above but not the category:
+          it comes back here, so a shelf still accounts for everything filed
+          under it. The same poster shelf /resources uses, captioned by the
+          date it was learned rather than by rank. */}
+      {learned.length > 0 && (
+        <section className="flex flex-col gap-3 border-t border-border pt-5">
+          <ResourcesSectionHeader title={`Learned · ${learned.length}`} />
+          <ResourcePosterShelf resources={learned} caption="learned" />
+        </section>
+      )}
     </div>
   );
 }

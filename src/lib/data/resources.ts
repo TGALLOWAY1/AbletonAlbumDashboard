@@ -52,6 +52,22 @@ export interface ResourceItem {
   addedAt: string;
   bookmarked?: boolean;
   featured?: boolean;
+  /**
+   * 1-5 stars, or null for unrated. Unrated is a real state — a resource you
+   * have not judged yet is not a one-star one — so this is never coerced to 0.
+   * Optional because a database without migration 0035 has no column to read
+   * and the seed entries below have no row at all.
+   */
+  rating?: number | null;
+  /**
+   * When the user marked this learned. It is the whole learning log: the
+   * counter and the activity map on /resources are both read off these
+   * timestamps (see src/lib/resource-shelf.ts), so un-archiving takes the
+   * learning back rather than leaving a stored tally behind.
+   */
+  archivedAt?: string | null;
+  /** On the poster shelf at the top of /resources; ordered by this timestamp. */
+  pinnedAt?: string | null;
 }
 
 export const RESOURCE_TYPE_LABELS: Record<ResourceType, string> = {

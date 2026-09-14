@@ -2,7 +2,12 @@ import { readFileSync } from "node:fs";
 import path from "node:path";
 import { describe, expect, it } from "vitest";
 import { RESOURCE_CATEGORIES, RESOURCE_TYPES } from "@/lib/data/resources";
-import { RESOURCES_CATEGORY_CONSTRAINT } from "@/lib/migration-errors";
+import {
+  MIGRATION_0035_MISSING_MESSAGE,
+  RESOURCES_CATEGORY_CONSTRAINT,
+  RESOURCES_RATING_CONSTRAINT,
+} from "@/lib/migration-errors";
+import { RESOURCE_RATING_VALUES } from "@/lib/resource-shelf";
 
 // Same spirit as library-migration-sync.test.ts: the category list the app
 // writes must stay inside the constraint the database enforces. Drift lets the
@@ -55,5 +60,47 @@ describe("0026 migration ↔ RESOURCE_CATEGORIES sync", () => {
     expect(checkListAfter(migration("0011_resources.sql"), "type")).toEqual([
       ...RESOURCE_TYPES,
     ]);
+  });
+});
+
+describe("0035 migration ↔ the rating/learning/pin columns", () => {
+  const sql = migration("0035_resource_learning.sql");
+
+  it("rating constraint matches the stars the app offers", () => {
+    const allowed = [...sql.matchAll(/rating in \(([^)]+)\)/g)]
+      .flatMap((match) => [...match[1].matchAll(/(\d+)/g)])
+      .map((m) => Number(m[1]));
+    expect(allowed).toEqual([...RESOURCE_RATING_VALUES]);
+  });
+
+  it("names the constraint the rating action matches on", () => {
+    // Unnamed, `setResourceRating` could not tell this violation from any
+    // other and would fall back to a generic "try again" — the lesson 0026
+    // added its own name for.
+    expect(sql).toContain(`add constraint ${RESOURCES_RATING_CONSTRAINT}`);
+  });
+
+  it("adds all three columns this migration's message promises", () => {
+    for (const column of ["rating", "archived_at", "pinned_at"]) {
+      expect(sql).toContain(`add column if not exists ${column}`);
+    }
+  });
+
+  it("leaves every column nullable, so no row needs a backfill", () => {
+    // A `not null` here would fail on an existing library, and a default would
+    // invent a rating (or a learning) for material nobody has judged yet.
+    expect(sql).not.toMatch(/add column if not exists \w+ [^;]*not null/i);
+    expect(sql).not.toMatch(/add column if not exists \w+ [^;]*default/i);
+  });
+
+  it("points the user at its own filename when the column is missing", () => {
+    expect(MIGRATION_0035_MISSING_MESSAGE).toContain(
+      "supabase/migrations/0035_resource_learning.sql",
+    );
+  });
+
+  it("indexes the two partial reads the shelves actually make", () => {
+    expect(sql).toMatch(/resources_owner_archived_idx[\s\S]*archived_at is not null/);
+    expect(sql).toMatch(/resources_owner_pinned_idx[\s\S]*pinned_at is not null/);
   });
 });

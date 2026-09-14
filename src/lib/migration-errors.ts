@@ -114,6 +114,19 @@ export const MIGRATION_0034_MISSING_MESSAGE =
   "Supabase project — finishing-step notes have nowhere to save yet. Run it, " +
   "then try again.";
 
+/**
+ * 0035 names its rating check explicitly, for the reason 0026 learned: an
+ * auto-named constraint is indistinguishable from any other violation, so a
+ * database whose column predates the check would leave the user with a generic
+ * "try again" and no file to run.
+ */
+export const RESOURCES_RATING_CONSTRAINT = "resources_rating_check";
+
+export const MIGRATION_0035_MISSING_MESSAGE =
+  "This needs supabase/migrations/0035_resource_learning.sql applied to your " +
+  "Supabase project — resources have nowhere to record a rating, a learning " +
+  "or a pin yet. Run it, then try again.";
+
 export const MIGRATION_0029_MISSING_MESSAGE =
   "This needs supabase/migrations/0029_audio_upload_mime_types.sql applied to " +
   "your Supabase project — the storage bucket still rejects this audio " +

@@ -1,13 +1,9 @@
 import Link from "next/link";
-import {
-  ChevronRight,
-  FileText,
-  ImageIcon,
-  Link as LinkIcon,
-} from "lucide-react";
-import { CoverArt } from "@/components/cover-art";
+import { ChevronRight } from "lucide-react";
 import type { ResourceItem } from "@/lib/data/resources";
 import { formatTag } from "@/lib/resource-tags";
+import { ResourcePosterArt } from "./resource-poster-art";
+import { ResourceStars } from "./resource-stars";
 
 /** Enough to say what a card is about; more would compete with the title. */
 const MAX_CARD_TAGS = 3;
@@ -30,12 +26,6 @@ export function ResourceTopicCard({
 }) {
   const badge =
     POSITION_BADGE_CLASSES[(position - 1) % POSITION_BADGE_CLASSES.length];
-  const FallbackIcon =
-    resource.sourceKind === "pdf"
-      ? FileText
-      : resource.sourceKind === "url"
-        ? LinkIcon
-        : ImageIcon;
 
   return (
     <Link
@@ -43,17 +33,15 @@ export function ResourceTopicCard({
       className="group flex flex-col overflow-hidden rounded-xl border border-border bg-surface shadow-sm transition-colors hover:border-primary/30"
     >
       <div className="relative aspect-[16/11] w-full overflow-hidden bg-surface-2">
-        {resource.thumbnailUrl ? (
-          <CoverArt
-            src={resource.thumbnailUrl}
-            sizes="(min-width: 1024px) 33vw, (min-width: 640px) 50vw, 100vw"
-            className="transition-transform group-hover:scale-[1.02]"
-          />
-        ) : (
-          <div className="flex h-full w-full items-center justify-center bg-gradient-to-br from-surface-2 to-border text-muted-foreground">
-            <FallbackIcon className="h-8 w-8" aria-hidden />
-          </div>
-        )}
+        {/* A PDF and a markdown note have no picture of their own, so this
+            draws one — see ResourcePosterArt. `tile`, not `poster`: the title
+            is printed under the card already. */}
+        <ResourcePosterArt
+          resource={resource}
+          variant="tile"
+          sizes="(min-width: 1024px) 33vw, (min-width: 640px) 50vw, 100vw"
+          className="transition-transform group-hover:scale-[1.02]"
+        />
         <span
           className={`absolute left-3 top-3 flex h-9 w-9 items-center justify-center rounded-xl text-sm font-semibold shadow-sm ${badge}`}
         >
@@ -64,6 +52,9 @@ export function ResourceTopicCard({
         <h3 className="text-sm font-semibold leading-snug tracking-tight">
           {resource.title}
         </h3>
+        {/* Renders nothing at all when unrated — see ResourceStars on why a row
+            of hollow stars would be a claim the user never made. */}
+        <ResourceStars rating={resource.rating} size="xs" />
         <div className="flex flex-1 items-end justify-between gap-2">
           <p className="line-clamp-2 text-xs leading-snug text-muted-foreground">
             {resource.description}
