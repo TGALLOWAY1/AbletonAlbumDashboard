@@ -12,6 +12,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { cn } from "@/lib/utils";
+import { useIsClient } from "@/lib/use-is-client";
 import {
   DEFAULT_RANGE,
   RANGE_LONG_LABELS,
@@ -73,20 +74,37 @@ export function ResourceActivityCard({
   const [range, setRange] = React.useState<RangeKey>(DEFAULT_RANGE);
   const [view, setView] = React.useState<View>("overall");
 
+  /**
+   * The window is a *local calendar* question — which day is today, where the
+   * last 30 days start — and the browser is the only place that knows the
+   * answer. A client component is still server-rendered first, and on Vercel
+   * that render's calendar is UTC: computing the window there hands anyone
+   * east or west of Greenwich a different set of squares, labels and month
+   * markers than hydration produces, so React throws the tree away and
+   * repaints it. Reading the clock a paint later costs nothing and removes the
+   * mismatch entirely; the body reserves its height until then.
+   */
+  const isClient = useIsClient();
+  const now = React.useMemo(() => (isClient ? new Date() : null), [isClient]);
+
   const strip = React.useMemo(
-    () => buildRangeStrip({ dailyMap: learningDayMap(resources), range }),
-    [resources, range],
+    () =>
+      now
+        ? buildRangeStrip({ dailyMap: learningDayMap(resources), range, now })
+        : null,
+    [resources, range, now],
   );
 
   const byCategory = React.useMemo(() => {
+    if (!now || !strip) return [];
     // Scope to the window first, so a category with nothing in it this month
     // drops out of the list instead of showing an empty row.
     const inWindow = learnedInRange(resources, strip.start, strip.end);
     return learningsByCategory(inWindow).map((entry) => ({
       ...entry,
-      strip: buildRangeStrip({ dailyMap: entry.dailyMap, range }),
+      strip: buildRangeStrip({ dailyMap: entry.dailyMap, range, now }),
     }));
-  }, [resources, range, strip.start, strip.end]);
+  }, [resources, range, now, strip]);
 
   return (
     <Card className={className}>
@@ -118,7 +136,9 @@ export function ResourceActivityCard({
 
         <ViewTabs view={view} onChange={setView} />
 
-        {view === "overall" ? (
+        {!strip ? (
+          <PendingBody />
+        ) : view === "overall" ? (
           <>
             <LearningActivityMap strip={strip} />
             <LearningHeadline strip={strip} archive={resources} />
@@ -128,6 +148,31 @@ export function ResourceActivityCard({
         )}
       </CardContent>
     </Card>
+  );
+}
+
+/**
+ * The first paint, before the browser's clock has been read.
+ *
+ * Holds roughly the height the map and its figures take, so the card does not
+ * jump when they arrive a paint later. Deliberately silent — there is nothing
+ * wrong and nothing to wait for, so a spinner would be a worse lie than an
+ * empty shape.
+ */
+function PendingBody() {
+  return (
+    <div aria-hidden className="flex animate-pulse flex-col gap-4">
+      <div className="h-[18px] w-full rounded bg-surface-2" />
+      <div className="grid grid-cols-2 gap-x-4 gap-y-3 border-t border-border pt-4 sm:grid-cols-4">
+        {[0, 1, 2, 3].map((i) => (
+          <div key={i} className="flex flex-col gap-1.5">
+            <div className="h-2 w-12 rounded bg-surface-2" />
+            <div className="h-5 w-8 rounded bg-surface-2" />
+            <div className="h-2 w-16 rounded bg-surface-2" />
+          </div>
+        ))}
+      </div>
+    </div>
   );
 }
 

@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { format, parseISO } from "date-fns";
+import { LocalDate } from "@/components/local-date";
 import { cn } from "@/lib/utils";
 import type { ResourceItem } from "@/lib/data/resources";
 import { ResourcePosterArt } from "./resource-poster-art";
@@ -88,7 +88,14 @@ function Poster({
           artwork: a generated cover sets its own title along the bottom edge,
           which is exactly where an overlay would land on top of it. */}
       <span className="truncate text-center text-[11px] leading-tight tabular-nums text-muted-foreground">
-        {caption === "position" ? position : learnedOn(resource)}
+        {caption === "position" ? (
+          position
+        ) : resource.archivedAt ? (
+          // Not `format()` here: this is a server component, so it would print
+          // the *server's* calendar day and disagree with the activity map,
+          // which is computed in the browser. See LocalDate.
+          <LocalDate iso={resource.archivedAt} />
+        ) : null}
       </span>
       <ResourceStars
         rating={resource.rating}
@@ -100,11 +107,4 @@ function Poster({
       <span className="sr-only">{resource.title}</span>
     </Link>
   );
-}
-
-/** "12 Sep" — a learning is a date, not a rank. */
-function learnedOn(resource: ResourceItem): string {
-  if (!resource.archivedAt) return "";
-  const date = parseISO(resource.archivedAt);
-  return Number.isNaN(date.getTime()) ? "" : format(date, "d MMM");
 }

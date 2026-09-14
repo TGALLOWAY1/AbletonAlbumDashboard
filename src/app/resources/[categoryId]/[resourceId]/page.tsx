@@ -1,6 +1,7 @@
 import { notFound } from "next/navigation";
 import { Archive, Clock, ExternalLink } from "lucide-react";
 import { BackLink } from "@/components/back-link";
+import { LocalDate } from "@/components/local-date";
 import { Button } from "@/components/ui/button";
 import { ResourceBody } from "@/components/resources/resource-body";
 import { ResourceDetailActions } from "@/components/resources/resource-detail-actions";
@@ -30,9 +31,7 @@ export default async function ResourceTopicPage({
   // Seed entries have no row behind them, so nothing that writes one is
   // offered for them — the same rule ResourceDetailActions follows.
   const editable = !resource.id.startsWith("seed-");
-  const learnedOn = resource.archivedAt
-    ? new Date(resource.archivedAt)
-    : null;
+
 
   return (
     <div className="mx-auto flex w-full max-w-3xl flex-col gap-5">
@@ -53,15 +52,13 @@ export default async function ResourceTopicPage({
           </span>
           {/* Archived is a state worth seeing at the top, not just a button
               label at the bottom: it is why this page is no longer in its
-              category's gallery. */}
-          {learnedOn && !Number.isNaN(learnedOn.getTime()) && (
+              category's gallery. The date goes through LocalDate for the same
+              reason the poster captions do — this page renders on the server,
+              where the calendar is UTC. */}
+          {resource.archivedAt && (
             <span className="inline-flex items-center gap-1.5 rounded-full bg-primary/15 px-2.5 py-0.5 text-xs font-medium text-primary">
               <Archive className="h-3.5 w-3.5" aria-hidden />
-              Learned {learnedOn.toLocaleDateString(undefined, {
-                day: "numeric",
-                month: "short",
-                year: "numeric",
-              })}
+              Learned <LocalDate iso={resource.archivedAt} withYear />
             </span>
           )}
         </div>

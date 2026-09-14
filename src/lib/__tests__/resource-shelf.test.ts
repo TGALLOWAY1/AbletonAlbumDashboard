@@ -159,6 +159,29 @@ describe("learnedInRange", () => {
     );
     expect(kept.map((i) => i.id)).toEqual(["inside"]);
   });
+
+  it("keeps today's, even though the window ends at this morning's midnight", () => {
+    // `buildActivityStrip` normalises its end to the start of the day, so the
+    // strip's own `end` is midnight *this morning*. Comparing instants against
+    // it dropped everything archived since — which made the By Category view
+    // report fewer learnings than Overall for the whole of today.
+    const today = new Date(2026, 7, 24, 15, 30, 0);
+    const kept = learnedInRange(
+      [resource("today", { archivedAt: today.toISOString() })],
+      new Date(2026, 6, 26),
+      new Date(2026, 7, 24), // local midnight, as a strip reports it
+    );
+    expect(kept.map((i) => i.id)).toEqual(["today"]);
+  });
+
+  it("still excludes tomorrow", () => {
+    const kept = learnedInRange(
+      [resource("tomorrow", { archivedAt: archivedOn(2026, 7, 25) })],
+      new Date(2026, 6, 26),
+      new Date(2026, 7, 24),
+    );
+    expect(kept).toEqual([]);
+  });
 });
 
 describe("learningsByCategory", () => {

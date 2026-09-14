@@ -25,6 +25,7 @@
 
 import { getRangeStart, toDayKey, type RangeKey } from "@/lib/analytics";
 import { startOfDay } from "@/lib/heatmap";
+import { MONTH_NAMES } from "@/lib/local-day";
 
 /**
  * What each shade means, for the legend and for screen readers.
@@ -80,21 +81,6 @@ export type ActivityStrip = {
   start: Date;
   end: Date;
 };
-
-const MONTH_NAMES = [
-  "Jan",
-  "Feb",
-  "Mar",
-  "Apr",
-  "May",
-  "Jun",
-  "Jul",
-  "Aug",
-  "Sep",
-  "Oct",
-  "Nov",
-  "Dec",
-];
 
 function sameDay(a: Date, b: Date): boolean {
   return (

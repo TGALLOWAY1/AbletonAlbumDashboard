@@ -136,18 +136,34 @@ export function learningDayMap(
   return map;
 }
 
-/** Archived resources whose learning landed inside `[start, end]`. */
+/**
+ * Archived resources whose learning landed inside `[start, end]`, **compared
+ * by local calendar day** rather than by instant.
+ *
+ * That is not a detail. A window here comes from an activity strip, whose
+ * `end` is normalised to the *start* of the current day — so comparing
+ * timestamps dropped everything archived since this morning's midnight, and
+ * the By Category view reported fewer learnings than Overall for the whole of
+ * every day. Bucketing by `toDayKey` is exactly what `learningDayMap` does, so
+ * the filter and the shading now cannot disagree about which day something
+ * belongs to.
+ *
+ * Day keys are zero-padded `YYYY-MM-DD`, so comparing them as strings is
+ * comparing them as dates.
+ */
 export function learnedInRange(
   items: readonly ResourceItem[],
   start: Date,
   end: Date,
 ): ResourceItem[] {
-  const from = start.getTime();
-  const to = end.getTime();
+  const from = toDayKey(start);
+  const to = toDayKey(end);
   return items.filter((item) => {
     if (!item.archivedAt) return false;
-    const at = new Date(item.archivedAt).getTime();
-    return !Number.isNaN(at) && at >= from && at <= to;
+    const at = new Date(item.archivedAt);
+    if (Number.isNaN(at.getTime())) return false;
+    const key = toDayKey(at);
+    return key >= from && key <= to;
   });
 }
 
