@@ -130,13 +130,60 @@ Run `pnpm typecheck && pnpm lint && pnpm test` before committing.
   the page true.
 - Library (`src/app/library/**`) is likewise a single responsive surface — the feature parity rule below is track-level and does not imply an `/m/library` route. `src/app/library/layout.tsx` mounts the preview player so playback survives navigation between Library routes without leaking an audio element onto every other page.
 - Resources (`src/app/resources/**`) is one system at three scopes: `/resources`
-  is the "All" gallery, `/resources/[categoryId]` is a category, and
+  is the landing page, `/resources/[categoryId]` is a category, and
   `/resources/[categoryId]/[resourceId]` is a single topic. All three share the
   same parts — `ResourceCategoryNav` (the horizontal tab row; `null` means All),
   `ResourceTopicGallery` + `ResourceTopicCard` (the numbered, thumbnail-first
   cards) and `AddResourceDialog`. There is no separate category-directory page:
   the nav *is* the directory. Numbering is positional, off "recommended order"
   (oldest first), not a stored field.
+- **`/resources` is not the "All" gallery any more.** It used to open on every
+  resource the user owned, numbered 1..n — the least useful view in the
+  section, since the category tabs reach the same material organised and search
+  reaches it faster. It now opens on `ResourcesRestingView`: the activity map,
+  then the pinned poster shelf, then the learned one. The gallery is still
+  there and now searches *every* category at once — `ResourceGalleryView` takes
+  a `resting` node and swaps to results the moment a word is typed or a tag
+  picked. A category page passes no `resting`, because there the gallery is the
+  page.
+- **Archiving a resource is the learning event, and there is no counter.**
+  `resources.archived_at` (migration 0035) is the whole log: the figure on
+  `/resources` is `count(archived_at is not null)` and the activity map shades
+  each day by how many landed on it, both derived in
+  `src/lib/resource-shelf.ts`. Nothing increments a stored tally — a tally
+  cannot be un-learned and this can. Archiving also clears the pin
+  (`setResourceArchived`), so nothing is on two shelves at once, and archived
+  material leaves every gallery and comes back as the Learned shelf on
+  `/resources` *and* at the foot of its own category page.
+- The activity map is **not** the work heatmap and does not share its model.
+  `src/lib/heatmap.ts` draws minutes on a Monday-aligned week grid because a
+  producer's week has a shape; `src/lib/learning-activity.ts` draws counts on a
+  single strip of days because what a learning log answers is "did the habit
+  hold". What they do share is `toDayKey` (so both line up with the user's own
+  calendar day), `RangeKey` — one range vocabulary, `RANGE_LONG_LABELS` is just
+  the spelled-out wording for a dropdown — and the invariant that **a cell's
+  size never depends on the range**: fixed `--cell`/`--gap`, scroll when wider
+  than the card, month markers carrying a column index rather than a width
+  share. `ResourceActivityCard` is the one range control for everything on it,
+  Overall and By Category alike.
+- **A resource carries 1-5 stars, and unrated is not zero.** `resources.rating`
+  is nullable; `readRating` reads anything outside 1-5 back as null rather than
+  clamping, and `ResourceStars` renders *nothing at all* when unrated — a row
+  of hollow stars on every card is a judgement the user never made. The only
+  writer is `ResourceRatingControl` on the detail page; everywhere else shows
+  it read-only.
+- Pinned resources are a wall of covers (`ResourcePosterShelf`, 2:3, numbered
+  underneath), capped at `MAX_PINNED_RESOURCES` in `setResourcePinned` — the
+  only writer, for the reason 0027 gives for tracks. Order is the pin timestamp
+  itself, so unlike the dashboard's hand-dragged shortlist there is no
+  `pin_order` to keep in step.
+- **A PDF and a markdown note get a generated cover.** `ResourcePosterArt`
+  falls back to one — the category's colourway (`RESOURCE_POSTER_GRADIENTS`,
+  keyed by category so all seven differ, unlike `ResourceColor` where three
+  share green), the source's icon, and on `poster` the title set on the
+  artwork. `tile` leaves the title off for the gallery card, which prints it
+  underneath already. A thumbnail, when there is one, still goes through
+  `CoverArt`.
 - `AddResourceDialog` renders its own trigger button on purpose. Category pages
   are server components, and an element passed into Radix's `asChild` Slot from
   one hydrates without the props the Slot injects on the client. Pass

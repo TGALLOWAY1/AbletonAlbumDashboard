@@ -15,11 +15,17 @@ import {
   isMissingColumn,
   MIGRATION_0026_MISSING_MESSAGE,
   MIGRATION_0032_MISSING_MESSAGE,
+  MIGRATION_0035_MISSING_MESSAGE,
   RESOURCES_CATEGORY_CONSTRAINT,
+  RESOURCES_RATING_CONSTRAINT,
 } from "@/lib/migration-errors";
 import { logSupabaseError } from "@/lib/supabase/log-error";
 import { planResourceCategoryMove } from "@/lib/resource-category-move";
 import { MAX_TAG_LENGTH, normalizeTags } from "@/lib/resource-tags";
+import {
+  isResourceRating,
+  MAX_PINNED_RESOURCES,
+} from "@/lib/resource-shelf";
 import { revalidateResourceSurfaces } from "@/lib/revalidate-resources";
 import {
   getYouTubeThumbnailUrl,
@@ -396,6 +402,210 @@ export async function deleteResource(id: string): Promise<{ error?: string }> {
   revalidateResourceSurfaces({
     categoryIds: [asCategoryId(existing?.category_id)],
     resourceId: id,
+  });
+  return {};
+}
+
+// ---------------------------------------------------------------------------
+// Rating, learning and pinning (migration 0035)
+// ---------------------------------------------------------------------------
+//
+// Three small writers rather than one "update the row" action, because they
+// are three different gestures with three different failure modes — and
+// because each has to be callable from a card, where there is no form.
+//
+// All three refuse seed ids for the reason `updateResource` does: the seed
+// entries are placeholder content with no row behind them, so a write would
+// report success and change nothing.
+
+/** Shared guard: seed entries, and a well-formed row id. */
+function parseResourceId(id: string): { id?: string; error?: string } {
+  if (id.startsWith("seed-")) {
+    return {
+      error: "Sample resources can't be changed. Add your own to get started.",
+    };
+  }
+  const parsed = z.string().uuid().safeParse(id);
+  if (!parsed.success) return { error: "Resource not found." };
+  return { id: parsed.data };
+}
+
+/** One of the five stars, or null for unrated. `isResourceRating` is the
+ *  single definition of that set, shared with every read. */
+const ratingSchema = z.number().refine(isResourceRating).nullable();
+
+/**
+ * Set or clear a resource's 1-5 stars.
+ *
+ * `null` is a first-class value, not an absence: clearing a rating says "I
+ * haven't judged this", which is different from one star. The picker sends it
+ * when the user taps the star they already chose.
+ */
+export async function setResourceRating(
+  id: string,
+  rating: number | null,
+): Promise<{ error?: string }> {
+  const key = parseResourceId(id);
+  if (!key.id) return { error: key.error };
+
+  const parsed = ratingSchema.safeParse(rating);
+  if (!parsed.success) return { error: "That rating isn't valid." };
+
+  const supabase = getServerSupabase();
+  const { data: updated, error } = await supabase
+    .from("resources")
+    .update({ rating: parsed.data })
+    .eq("owner_id", OWNER_ID)
+    .eq("id", key.id)
+    .select("category_id")
+    .maybeSingle();
+  if (error) {
+    if (isMissingColumn(error)) return { error: MIGRATION_0035_MISSING_MESSAGE };
+    // The column exists but predates 0035's check — a rating outside 1-5 was
+    // possible then, so the constraint is the only thing that would bounce.
+    if (isCheckViolation(error, RESOURCES_RATING_CONSTRAINT)) {
+      return { error: MIGRATION_0035_MISSING_MESSAGE };
+    }
+    logSupabaseError("setResourceRating", error);
+    return { error: "Could not save that rating. Try again." };
+  }
+  if (!updated) return { error: "Resource not found." };
+
+  revalidateResourceSurfaces({
+    categoryIds: [asCategoryId(updated.category_id)],
+    resourceId: key.id,
+  });
+  return {};
+}
+
+/**
+ * Mark a resource learned, or put it back in the library.
+ *
+ * Archiving stamps `archived_at`, and that stamp is the learning: the counter
+ * and the activity map on /resources are both derived from it (see
+ * src/lib/resource-shelf.ts), so there is no tally to increment here and
+ * un-archiving takes the learning back rather than leaving one behind.
+ *
+ * It also clears the pin. A pin is "I want this in front of me"; archiving is
+ * "I'm done with it" — leaving a learned resource on the poster shelf would
+ * make the two shelves contradict each other. Un-archiving does not restore
+ * it: re-pinning is one tap, and silently taking a slot back from a shelf
+ * that may now be full is worse than asking for that tap.
+ */
+export async function setResourceArchived(
+  id: string,
+  archived: boolean,
+): Promise<{ error?: string }> {
+  const key = parseResourceId(id);
+  if (!key.id) return { error: key.error };
+
+  const supabase = getServerSupabase();
+  const { data: updated, error } = await supabase
+    .from("resources")
+    .update(
+      archived
+        ? { archived_at: new Date().toISOString(), pinned_at: null }
+        : { archived_at: null },
+    )
+    .eq("owner_id", OWNER_ID)
+    .eq("id", key.id)
+    .select("category_id")
+    .maybeSingle();
+  if (error) {
+    if (isMissingColumn(error)) return { error: MIGRATION_0035_MISSING_MESSAGE };
+    logSupabaseError("setResourceArchived", error);
+    return {
+      error: archived
+        ? "Could not archive that resource. Try again."
+        : "Could not restore that resource. Try again.",
+    };
+  }
+  if (!updated) return { error: "Resource not found." };
+
+  revalidateResourceSurfaces({
+    categoryIds: [asCategoryId(updated.category_id)],
+    resourceId: key.id,
+  });
+  return {};
+}
+
+/**
+ * Put a resource on the poster shelf, or take it off.
+ *
+ * The cap is checked here because this is the only writer — the same trade
+ * `setTrackPinned` makes, and for the same reason migration 0035 has no
+ * constraint for it. An archived resource cannot be pinned: it has already
+ * left the library, and letting it hold a slot would undo the clearing
+ * `setResourceArchived` just did.
+ */
+export async function setResourcePinned(
+  id: string,
+  pinned: boolean,
+): Promise<{ error?: string }> {
+  const key = parseResourceId(id);
+  if (!key.id) return { error: key.error };
+
+  const supabase = getServerSupabase();
+
+  if (pinned) {
+    const { data: existing, error: readError } = await supabase
+      .from("resources")
+      .select("archived_at")
+      .eq("owner_id", OWNER_ID)
+      .eq("id", key.id)
+      .maybeSingle();
+    if (readError) {
+      if (isMissingColumn(readError)) {
+        return { error: MIGRATION_0035_MISSING_MESSAGE };
+      }
+      logSupabaseError("setResourcePinned.read", readError);
+      return { error: "Could not read that resource. Try again." };
+    }
+    if (!existing) return { error: "Resource not found." };
+    if (existing.archived_at) {
+      return {
+        error: "That resource is archived. Restore it first, then pin it.",
+      };
+    }
+
+    const { count, error: countError } = await supabase
+      .from("resources")
+      .select("*", { count: "exact", head: true })
+      .eq("owner_id", OWNER_ID)
+      .not("pinned_at", "is", null);
+    if (countError) {
+      if (isMissingColumn(countError)) {
+        return { error: MIGRATION_0035_MISSING_MESSAGE };
+      }
+      logSupabaseError("setResourcePinned.count", countError);
+      return { error: "Could not read your pinned resources. Try again." };
+    }
+    if ((count ?? 0) >= MAX_PINNED_RESOURCES) {
+      return {
+        error:
+          `You already have ${MAX_PINNED_RESOURCES} resources pinned. Unpin ` +
+          `one, or archive it once you've learned from it, to make room.`,
+      };
+    }
+  }
+
+  const { data: updated, error } = await supabase
+    .from("resources")
+    .update({ pinned_at: pinned ? new Date().toISOString() : null })
+    .eq("owner_id", OWNER_ID)
+    .eq("id", key.id)
+    .select("category_id")
+    .maybeSingle();
+  if (error) {
+    if (isMissingColumn(error)) return { error: MIGRATION_0035_MISSING_MESSAGE };
+    logSupabaseError("setResourcePinned", error);
+    return { error: "Could not save the pin. Try again." };
+  }
+  if (!updated) return { error: "Resource not found." };
+
+  revalidateResourceSurfaces({
+    categoryIds: [asCategoryId(updated.category_id)],
+    resourceId: key.id,
   });
   return {};
 }

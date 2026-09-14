@@ -37,6 +37,13 @@ const CATEGORY_TITLES = new Map(
  * and the grouping live in the URL so a filtered view is linkable. The page
  * above stays a server component either way: it reads the params, filters
  * nothing, and hands the whole list down.
+ *
+ * `resting` is what /resources shows when nobody is looking for anything: the
+ * activity map and the poster shelves. The gallery is still here — it is the
+ * only thing that searches every category at once — it just is not the default
+ * any more. Type a word or tap a tag and the results take the page over; clear
+ * it and the shelves come back. A category page passes no `resting`, because
+ * there its gallery *is* the page.
  */
 export function ResourceGalleryView({
   topics,
@@ -45,6 +52,8 @@ export function ResourceGalleryView({
   groupByTag = false,
   showGroupToggle = false,
   emptyMessage,
+  resting,
+  searchPlaceholder = "Search resources...",
 }: {
   topics: ResourceItem[];
   basePath: string;
@@ -52,6 +61,8 @@ export function ResourceGalleryView({
   groupByTag?: boolean;
   showGroupToggle?: boolean;
   emptyMessage: string;
+  resting?: React.ReactNode;
+  searchPlaceholder?: string;
 }) {
   const [query, setQuery] = React.useState("");
 
@@ -104,42 +115,15 @@ export function ResourceGalleryView({
       ? "No resources carry every tag you picked."
       : emptyMessage;
 
-  return (
-    <div className="flex flex-col gap-4">
-      <div className="flex flex-wrap items-center gap-2">
-        <div className="relative min-w-0 flex-1 sm:w-64 sm:flex-none">
-          <Search
-            className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground"
-            aria-hidden
-          />
-          <Input
-            type="search"
-            value={query}
-            onChange={(event) => setQuery(event.target.value)}
-            placeholder="Search resources..."
-            aria-label="Search resources"
-            className="pl-9"
-          />
-        </div>
-        {showGroupToggle && (
-          <GroupToggle
-            basePath={basePath}
-            selectedTags={selectedTags}
-            groupByTag={groupByTag}
-          />
-        )}
-      </div>
-
-      <ResourceTagChips
-        basePath={basePath}
-        tags={tagCounts}
-        selected={selectedTags}
-        preserveQuery={groupByTag ? "group=tag" : ""}
-      />
-
+  // A variable, not a nested component: a component declared inside a render
+  // is a new type on every keystroke, which would remount the whole gallery
+  // (and blow away its images) as the user types.
+  const gallery = (
+    <>
       <p className="text-sm font-medium text-muted-foreground">
         {visible.length} topic{visible.length === 1 ? "" : "s"}
-        {selectedTags.length > 0 && ` tagged ${selectedTags.map(formatTag).join(" + ")}`}
+        {selectedTags.length > 0 &&
+          ` tagged ${selectedTags.map(formatTag).join(" + ")}`}
       </p>
 
       {groupByTag ? (
@@ -148,7 +132,10 @@ export function ResourceGalleryView({
         ) : (
           <div className="flex flex-col gap-6">
             {groups.map((group) => (
-              <section key={group.tag ?? "__untagged"} className="flex flex-col gap-3">
+              <section
+                key={group.tag ?? "__untagged"}
+                className="flex flex-col gap-3"
+              >
                 <h2 className="flex items-baseline gap-2 text-sm font-semibold uppercase tracking-wide text-muted-foreground">
                   {group.label}
                   <span className="text-xs font-normal tabular-nums text-muted-foreground/70">
@@ -169,6 +156,48 @@ export function ResourceGalleryView({
           emptyMessage={emptyText}
         />
       )}
+    </>
+  );
+
+  // Nothing typed and no tag picked, on a surface that has something else to
+  // show: rest there instead of listing the whole library.
+  const atRest =
+    resting !== undefined && !searching && selectedTags.length === 0;
+
+  return (
+    <div className="flex flex-col gap-4">
+      <div className="flex flex-wrap items-center gap-2">
+        <div className="relative min-w-0 flex-1 sm:w-64 sm:flex-none">
+          <Search
+            className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground"
+            aria-hidden
+          />
+          <Input
+            type="search"
+            value={query}
+            onChange={(event) => setQuery(event.target.value)}
+            placeholder={searchPlaceholder}
+            aria-label="Search resources"
+            className="pl-9"
+          />
+        </div>
+        {showGroupToggle && (
+          <GroupToggle
+            basePath={basePath}
+            selectedTags={selectedTags}
+            groupByTag={groupByTag}
+          />
+        )}
+      </div>
+
+      <ResourceTagChips
+        basePath={basePath}
+        tags={tagCounts}
+        selected={selectedTags}
+        preserveQuery={groupByTag ? "group=tag" : ""}
+      />
+
+      {atRest ? resting : gallery}
     </div>
   );
 }

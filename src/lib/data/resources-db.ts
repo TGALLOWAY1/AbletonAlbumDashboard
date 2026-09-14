@@ -12,6 +12,12 @@ import {
   type ResourceItem,
 } from "@/lib/data/resources";
 import { normalizeTags } from "@/lib/resource-tags";
+import {
+  activeResources,
+  learnedResources,
+  pinnedResources,
+  readRating,
+} from "@/lib/resource-shelf";
 
 const RESOURCE_FILES_BUCKET = "resource-files";
 
@@ -32,6 +38,10 @@ type ResourceRow = {
   created_at: string;
   /** Absent, not null, on a database without migration 0032. */
   tags?: string[] | null;
+  /** The three from migration 0035; likewise absent, not null, without it. */
+  rating?: number | null;
+  archived_at?: string | null;
+  pinned_at?: string | null;
 };
 
 type ServerSupabase = ReturnType<typeof getServerSupabase>;
@@ -58,6 +68,38 @@ function readTags(row: ResourceRow): string[] {
     return [];
   }
   return Array.isArray(row.tags) ? normalizeTags(row.tags) : [];
+}
+
+/**
+ * The same degrade for migration 0035's three columns, for the same reason: a
+ * build can reach a database that has not had it applied. Without them every
+ * resource reads as unrated, un-archived and unpinned — the state the whole
+ * library was in before 0035 — so the galleries render exactly as they did,
+ * the activity map is empty, and this says once which file to run.
+ */
+let warnedMissingLearning = false;
+function readLearningFields(row: ResourceRow): {
+  rating: number | null;
+  archivedAt: string | null;
+  pinnedAt: string | null;
+} {
+  if (!("archived_at" in row)) {
+    if (!warnedMissingLearning) {
+      warnedMissingLearning = true;
+      console.warn(
+        "[resources] resources.archived_at is missing — every resource reads " +
+          "as unrated, un-archived and unpinned. Apply " +
+          "supabase/migrations/0035_resource_learning.sql to enable stars, " +
+          "the learning log and the poster shelf.",
+      );
+    }
+    return { rating: null, archivedAt: null, pinnedAt: null };
+  }
+  return {
+    rating: readRating(row.rating),
+    archivedAt: row.archived_at ?? null,
+    pinnedAt: row.pinned_at ?? null,
+  };
 }
 
 function rowToItem(supabase: ServerSupabase, row: ResourceRow): ResourceItem | null {
@@ -91,6 +133,7 @@ function rowToItem(supabase: ServerSupabase, row: ResourceRow): ResourceItem | n
     bookmarked: row.bookmarked,
     featured: row.featured,
     addedAt: row.created_at,
+    ...readLearningFields(row),
   };
 }
 
@@ -133,27 +176,51 @@ function byRecommendedOrder(items: ResourceItem[]): ResourceItem[] {
   return [...items].sort((a, b) => a.addedAt.localeCompare(b.addedAt));
 }
 
-/** Every resource, in recommended order — the "All" gallery on /resources. */
-export async function getResourcesGalleryData(): Promise<{
+/**
+ * Everything /resources renders.
+ *
+ * Split here rather than in the page because the split is the same one every
+ * resources surface makes — archived material leaves the gallery and comes
+ * back as a shelf — and the rules for it live in one place
+ * (src/lib/resource-shelf.ts).
+ *
+ * `learned` is the *whole* archive, not a windowed slice: the activity map
+ * picks its own range on the client, the same way the Progress panel does, so
+ * the server sends the series and the range control never costs a round trip.
+ */
+export async function getResourcesLandingData(): Promise<{
   topics: ResourceItem[];
+  pinned: ResourceItem[];
+  learned: ResourceItem[];
 }> {
   const items = await fetchAllResources();
   const source = items.length === 0 ? seedResources() : items;
-  return { topics: byRecommendedOrder(source) };
+  return {
+    topics: byRecommendedOrder(activeResources(source)),
+    pinned: pinnedResources(source),
+    learned: learnedResources(source),
+  };
 }
 
 export async function getResourceCategoryPageData(
   categoryId: ResourceCategoryId,
-): Promise<{ category: ResourceCategory; topics: ResourceItem[] }> {
+): Promise<{
+  category: ResourceCategory;
+  topics: ResourceItem[];
+  learned: ResourceItem[];
+}> {
   const items = await fetchAllResources();
   const source = items.length === 0 ? seedResources() : items;
-  const topics = byRecommendedOrder(
-    source.filter((item) => item.categoryId === categoryId),
-  );
+  const inCategory = source.filter((item) => item.categoryId === categoryId);
+  // Archived material is out of the gallery but not out of the category: it
+  // returns below it as the Learned shelf, so a category still accounts for
+  // everything filed under it.
+  const topics = byRecommendedOrder(activeResources(inCategory));
   const base = RESOURCE_CATEGORIES.find((c) => c.id === categoryId)!;
   return {
     category: { ...base, articleCount: topics.length },
     topics,
+    learned: learnedResources(inCategory),
   };
 }
 
