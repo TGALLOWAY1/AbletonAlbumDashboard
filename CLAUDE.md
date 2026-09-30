@@ -75,9 +75,21 @@ Run `pnpm typecheck && pnpm lint && pnpm test` before committing.
   The expanded body is the existing `TrackCard`, rendered on the server and
   passed down as a `ReactNode` — that is what keeps the drag/collapse wrapper a
   client component without pulling the whole card into the browser bundle.
-  Pinning is reachable from three places: the dashboard row, the pin picker
-  underneath it, and `PinTrackButton` in the shared `TrackHeaderBar` (so both
-  track surfaces get it — parity rule below).
+  Pinning is reachable from three places: the "+" at the top of the
+  shortlist, which opens `PinTrackDialog`
+  (`src/components/home/pin-track-dialog.tsx`); the unpin icon on each row
+  (from `sm:` up — on a phone its width goes to the name and next task, which
+  were truncating); and `PinTrackButton` in the shared `TrackHeaderBar` (so
+  both track surfaces get it — parity rule below). There is no pin-picker
+  section on the page: it sat between the shortlist and the studio tasks and
+  cost most of a phone screen. The dialog lists the shortlist as well as the
+  candidates, so at the cap a swap happens inside it instead of dead-ending on
+  disabled Pin buttons, and its rows hold their order while it is open
+  (`src/lib/pin-picker.ts`) so a toggle never moves a row under the pointer.
+  Finished tracks are left out of its list, so when that is why it offers
+  nothing (`pinPickerDeadEnd`) — or why a search came up empty — it says so
+  and links to `/tracks`: a status can be moved back, and "add a track" would
+  be the wrong advice.
 - There is no active-album card on the dashboard. `albums.is_active` still
   exists and still means "the album a new track defaults into"
   (`resolveAlbumId`, `/tracks/new`, settings) — it just no longer decides what
@@ -128,6 +140,13 @@ Run `pnpm typecheck && pnpm lint && pnpm test` before committing.
   Logging used to sit at the bottom of the page behind the Progress → History
   tab, which is the wrong place for the one control that keeps every number on
   the page true.
+- **The dashboard header is one row.** On a phone every line above the
+  shortlist decides whether the studio tasks make the first screen, so the
+  greeting is desktop-only (`sr-only md:not-sr-only`, where it shares the row),
+  there is no tagline, and the three buttons share `HEADER_BUTTON_CLASS` (with
+  `ManualSessionEntry variant="compact"`) so they fit one row down to a 375px
+  phone. Section headers are likewise one line — a label and at most one
+  control, no explainer sentence under it.
 - Library (`src/app/library/**`) is likewise a single responsive surface — the feature parity rule below is track-level and does not imply an `/m/library` route. `src/app/library/layout.tsx` mounts the preview player so playback survives navigation between Library routes without leaking an audio element onto every other page.
 - Resources (`src/app/resources/**`) is one system at three scopes: `/resources`
   is the landing page, `/resources/[categoryId]` is a category, and

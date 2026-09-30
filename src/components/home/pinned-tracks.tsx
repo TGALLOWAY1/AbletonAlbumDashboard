@@ -11,10 +11,12 @@ import {
   Play,
 } from "lucide-react";
 import { CoverArt } from "@/components/cover-art";
+import { PinTrackDialog } from "@/components/home/pin-track-dialog";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { useToast } from "@/components/toast";
 import { reorderPinnedTracks, setTrackPinned } from "@/app/actions/tracks";
+import type { TrackOption } from "@/lib/data/tracks";
 import { applyOrder, moveItemTo } from "@/lib/task-order";
 import { MAX_PINNED_TRACKS } from "@/lib/types";
 import { cn } from "@/lib/utils";
@@ -57,8 +59,20 @@ export type PinnedTrackItem = {
  * click away. The rows carry the same drag handle as a task list, and moving
  * one writes an explicit `pin_order` (see `reorderPinnedTracks`); the order is
  * the priority, so the top row is the song you have decided matters most.
+ *
+ * The header is one line — the count and the "+" that opens `PinTrackDialog`
+ * — and it renders for an empty shortlist too. That is deliberate: the dialog
+ * lives in the header, so it has to stay mounted when the last pin goes or the
+ * first one lands, or it would vanish mid-use.
  */
-export function PinnedTracks({ items }: { items: PinnedTrackItem[] }) {
+export function PinnedTracks({
+  items,
+  options,
+}: {
+  items: PinnedTrackItem[];
+  /** Every non-archived track — the dialog's candidates. */
+  options: TrackOption[];
+}) {
   const [optimistic, applyOptimistic] = useOptimistic<
     PinnedTrackItem[],
     { kind: "reorder"; ids: string[] } | { kind: "unpin"; id: string }
@@ -69,6 +83,7 @@ export function PinnedTracks({ items }: { items: PinnedTrackItem[] }) {
   );
   const [, startTransition] = useTransition();
   const { toast } = useToast();
+  const [pickerOpen, setPickerOpen] = useState(false);
 
   const [expanded, setExpanded] = useState<Set<string>>(new Set());
   const toggleExpanded = (id: string) =>
@@ -130,55 +145,63 @@ export function PinnedTracks({ items }: { items: PinnedTrackItem[] }) {
   const overIndex = overId ? optimistic.findIndex((i) => i.id === overId) : -1;
 
   return (
-    <section className="flex flex-col gap-3">
-      <div className="flex flex-wrap items-baseline justify-between gap-2">
+    <section className="flex flex-col gap-2">
+      <div className="flex items-center justify-between gap-2">
         <h2 className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
           Pinned · {optimistic.length} of {MAX_PINNED_TRACKS}
         </h2>
-        {optimistic.length > 1 && (
-          <p className="text-xs text-muted-foreground">
-            Drag to set priority — the top track is what matters most right now.
-          </p>
-        )}
+        <PinTrackDialog
+          open={pickerOpen}
+          onOpenChange={setPickerOpen}
+          options={options}
+          pinnedIds={optimistic.map((item) => item.id)}
+        />
       </div>
 
-      <ul className="flex flex-col gap-2">
-        {optimistic.map((item, index) => (
-          <PinnedRow
-            key={item.id}
-            item={item}
-            position={index + 1}
-            total={optimistic.length}
-            expanded={expanded.has(item.id)}
-            dragging={dragId === item.id}
-            dropEdge={
-              dragId && overId === item.id && dragId !== item.id
-                ? dragIndex < overIndex
-                  ? "bottom"
-                  : "top"
-                : null
-            }
-            registerRef={(el) => {
-              if (el) rowRefs.current.set(item.id, el);
-              else rowRefs.current.delete(item.id);
-            }}
-            onDragStart={(e) => {
-              e.currentTarget.setPointerCapture(e.pointerId);
-              setDragId(item.id);
-              setOverId(item.id);
-            }}
-            onDragMove={(e) => {
-              if (!dragId) return;
-              const id = rowIdAtPoint(e.clientY);
-              if (id) setOverId(id);
-            }}
-            onDragEnd={endDrag}
-            onNudge={(delta) => nudge(item.id, delta)}
-            onToggleExpanded={() => toggleExpanded(item.id)}
-            onUnpin={() => unpin(item)}
-          />
-        ))}
-      </ul>
+      {optimistic.length === 0 ? (
+        <PinnedTracksEmpty
+          hasTracks={options.length > 0}
+          onPin={() => setPickerOpen(true)}
+        />
+      ) : (
+        <ul className="flex flex-col gap-2">
+          {optimistic.map((item, index) => (
+            <PinnedRow
+              key={item.id}
+              item={item}
+              position={index + 1}
+              total={optimistic.length}
+              expanded={expanded.has(item.id)}
+              dragging={dragId === item.id}
+              dropEdge={
+                dragId && overId === item.id && dragId !== item.id
+                  ? dragIndex < overIndex
+                    ? "bottom"
+                    : "top"
+                  : null
+              }
+              registerRef={(el) => {
+                if (el) rowRefs.current.set(item.id, el);
+                else rowRefs.current.delete(item.id);
+              }}
+              onDragStart={(e) => {
+                e.currentTarget.setPointerCapture(e.pointerId);
+                setDragId(item.id);
+                setOverId(item.id);
+              }}
+              onDragMove={(e) => {
+                if (!dragId) return;
+                const id = rowIdAtPoint(e.clientY);
+                if (id) setOverId(id);
+              }}
+              onDragEnd={endDrag}
+              onNudge={(delta) => nudge(item.id, delta)}
+              onToggleExpanded={() => toggleExpanded(item.id)}
+              onUnpin={() => unpin(item)}
+            />
+          ))}
+        </ul>
+      )}
     </section>
   );
 }
@@ -332,10 +355,13 @@ function PinnedRow({
               </Link>
             </Button>
 
+            {/* Not on a phone: there, this button's 40px is a quarter of what
+                the name and the next task get, and both were truncating. The
+                "+" dialog lists the shortlist with an Unpin on every row. */}
             <Button
               variant="ghost"
               size="icon"
-              className="h-9 w-9"
+              className="hidden h-9 w-9 sm:inline-flex"
               onClick={onUnpin}
               aria-label={`Unpin ${summary.name}`}
               title="Unpin — takes it off the shortlist, keeps the track"
@@ -369,30 +395,37 @@ function PinnedRow({
   );
 }
 
-/** Empty shortlist — say what a pin is for, and offer the two ways to fill it. */
-export function PinnedTracksEmpty({ hasTracks }: { hasTracks: boolean }) {
+/**
+ * Empty shortlist — say what a pin is for, and offer the two ways to fill it.
+ * "Pin a track" opens the same dialog as the header's "+".
+ */
+function PinnedTracksEmpty({
+  hasTracks,
+  onPin,
+}: {
+  hasTracks: boolean;
+  onPin: () => void;
+}) {
   return (
-    <Card>
-      <div className="flex flex-col items-start gap-3 p-6 sm:p-8">
-        <span className="flex h-10 w-10 items-center justify-center rounded-md bg-primary/12 text-primary">
-          <Pin className="h-5 w-5" />
-        </span>
-        <h3 className="text-lg font-semibold">Nothing pinned yet</h3>
-        <p className="max-w-prose text-sm text-muted-foreground">
-          Pin up to {MAX_PINNED_TRACKS} tracks to say what you are working on
-          right now, in priority order. Pinning is not a commitment — unpin any
-          time, and finishing a track clears its slot for you.
+    <Card className="flex flex-col items-start gap-3 p-4 sm:p-5">
+      <div>
+        <h3 className="text-sm font-semibold">Nothing pinned yet</h3>
+        <p className="mt-1 max-w-prose text-sm text-muted-foreground">
+          Pin up to {MAX_PINNED_TRACKS} tracks you are working on right now,
+          then drag them into priority order. Unpin any time — finishing a
+          track clears its slot for you.
         </p>
-        <div className="flex flex-wrap gap-2">
-          <Button asChild variant={hasTracks ? "outline" : "default"}>
-            <Link href="/tracks">
-              {hasTracks ? "Browse your tracks" : "See the library"}
-            </Link>
+      </div>
+      <div className="flex flex-wrap gap-2">
+        {hasTracks && (
+          <Button size="sm" onClick={onPin}>
+            <Pin className="h-4 w-4" />
+            Pin a track
           </Button>
-          <Button asChild variant={hasTracks ? "default" : "outline"}>
-            <Link href="/tracks/new">Add a track</Link>
-          </Button>
-        </div>
+        )}
+        <Button asChild size="sm" variant={hasTracks ? "outline" : "default"}>
+          <Link href="/tracks/new">Add a track</Link>
+        </Button>
       </div>
     </Card>
   );

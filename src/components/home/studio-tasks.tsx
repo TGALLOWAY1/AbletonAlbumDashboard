@@ -23,16 +23,13 @@ export function StudioTasks({ tasks }: { tasks: ActionRow[] }) {
     .slice(0, 3);
 
   return (
-    <section className="flex flex-col gap-3">
-      <div>
-        <h2 className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
-          Studio tasks
-        </h2>
-        <p className="mt-1 text-sm text-muted-foreground">
-          Production work that isn&apos;t about one song — gear, admin,
-          learning, housekeeping.
-        </p>
-      </div>
+    <section className="flex flex-col gap-2">
+      {/* Just the label: the one-line explainer that used to sit under it
+          ("gear, admin, learning, housekeeping") cost two lines on a phone to
+          say what the tasks themselves show. */}
+      <h2 className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+        Studio tasks
+      </h2>
 
       <Card className="p-4">
         {/* Completed rows stay out of the working list — they are shown as a
