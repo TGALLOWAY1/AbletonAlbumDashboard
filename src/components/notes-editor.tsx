@@ -69,7 +69,9 @@ export function NotesEditor({
             No notes yet. Click Edit to add some.
           </p>
         ) : (
-          <div className="prose prose-invert prose-sm max-w-none text-foreground [&_a]:text-primary [&_code]:text-accent [&_h1,&_h2,&_h3]:text-foreground [&_li]:text-foreground [&_p]:text-foreground [&_strong]:text-foreground">
+          <div className="prose prose-invert prose-sm max-w-none text-foreground wrap-anywhere [&_a]:text-primary [&_code]:text-accent [&_h1,&_h2,&_h3]:text-foreground [&_li]:text-foreground [&_p]:text-foreground [&_pre]:overflow-x-auto [&_strong]:text-foreground">
+            {/* A pasted link wraps and a code line scrolls in place; either
+                used to widen the whole page past a phone's screen. */}
             <ReactMarkdown>{value}</ReactMarkdown>
           </div>
         )}

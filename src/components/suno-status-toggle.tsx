@@ -100,7 +100,10 @@ export function SunoStatusToggle({
             {SUNO_STATUS_LABELS[value]}
           </p>
         </div>
-        <div className="flex shrink-0 flex-wrap gap-1.5">
+        {/* Not `shrink-0`: at full size the three buttons are wider than a
+            phone, and this group has to be able to shrink for them to wrap.
+            Held at full width, it pushed the whole page sideways. */}
+        <div className="flex flex-wrap gap-1.5">
           {SUNO_STATUSES.map((option) => {
             const active = option === value;
             return (
