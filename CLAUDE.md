@@ -146,6 +146,16 @@ Run `pnpm typecheck && pnpm lint && pnpm test` before committing.
   a `resting` node and swaps to results the moment a word is typed or a tag
   picked. A category page passes no `resting`, because there the gallery is the
   page.
+- **The category tabs are rearrangeable, the categories are not editable.** The
+  seven categories stay a list in code (pinned to 0026's check constraint); only
+  their *order* is the user's, stored in `resource_category_order` (migration
+  0036) as one row per placed category. `orderCategories`
+  (`src/lib/resource-category-order.ts`) applies it: unplaced or newly added
+  categories follow the placed ones, stale ids are dropped. "Rearrange" in
+  `ResourceCategoryTabs` drags tabs (Pointer Events, arrow keys too) and
+  `reorderResourceCategories` upserts 0..n-1; "All" always stays first. Only
+  the tab row follows this order — the add dialog and move menu keep the
+  default. Reads degrade to the default order without the table.
 - **Archiving a resource is the learning event, and there is no counter.**
   `resources.archived_at` (migration 0035) is the whole log: the figure on
   `/resources` is `count(archived_at is not null)` and the activity map shades

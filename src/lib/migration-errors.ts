@@ -156,3 +156,8 @@ export function isStorageSizeRejection(error: unknown): boolean {
     text.includes("entity_too_large")
   );
 }
+
+export const MIGRATION_0036_MISSING_MESSAGE =
+  "This needs supabase/migrations/0036_resource_category_order.sql applied to " +
+  "your Supabase project — the category order has nowhere to save yet. Run " +
+  "it, then try again.";
