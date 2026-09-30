@@ -86,6 +86,10 @@ Run `pnpm typecheck && pnpm lint && pnpm test` before committing.
   candidates, so at the cap a swap happens inside it instead of dead-ending on
   disabled Pin buttons, and its rows hold their order while it is open
   (`src/lib/pin-picker.ts`) so a toggle never moves a row under the pointer.
+  Finished tracks are left out of its list, so when that is why it offers
+  nothing (`pinPickerDeadEnd`) — or why a search came up empty — it says so
+  and links to `/tracks`: a status can be moved back, and "add a track" would
+  be the wrong advice.
 - There is no active-album card on the dashboard. `albums.is_active` still
   exists and still means "the album a new track defaults into"
   (`resolveAlbumId`, `/tracks/new`, settings) — it just no longer decides what

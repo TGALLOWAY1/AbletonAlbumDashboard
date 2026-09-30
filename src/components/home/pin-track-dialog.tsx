@@ -17,8 +17,12 @@ import { Input } from "@/components/ui/input";
 import { useToast } from "@/components/toast";
 import { setTrackPinned } from "@/app/actions/tracks";
 import type { TrackOption } from "@/lib/data/tracks";
-import { filterPinPickerRows, orderPinPickerRows } from "@/lib/pin-picker";
-import { MAX_PINNED_TRACKS } from "@/lib/types";
+import {
+  filterPinPickerRows,
+  orderPinPickerRows,
+  pinPickerDeadEnd,
+} from "@/lib/pin-picker";
+import { isPinnableStatus, MAX_PINNED_TRACKS } from "@/lib/types";
 import { cn } from "@/lib/utils";
 
 /** Fewer rows than this are quicker to scan than to search. */
@@ -75,6 +79,8 @@ export function PinTrackDialog({
           // Radix focuses the search box on open. On a touchscreen that
           // raises the keyboard over the list before anyone has asked to
           // type, so focus the dialog itself there; search is one tap away.
+          // `currentTarget` is the content element, which Radix's FocusScope
+          // renders with tabIndex={-1} — that is what lets it take focus.
           if (!window.matchMedia("(pointer: fine)").matches) {
             e.preventDefault();
             (e.currentTarget as HTMLElement | null)?.focus();
@@ -127,6 +133,21 @@ function PinTrackDialogBody({
     [rows, query],
   );
 
+  // Finished tracks are left out of the list (they cannot be pinned), which
+  // must never read as "you have nothing" — a status can be moved back. So
+  // say so when it is why the list offers nothing, or why a search for one
+  // came up empty. Live pins, not the snapshot: unpinning a track in here
+  // makes it a candidate again.
+  const q = query.trim();
+  const deadEnd = pinPickerDeadEnd(options, pinned);
+  const finishedMatchesQuery =
+    q !== "" &&
+    visible.length === 0 &&
+    filterPinPickerRows(
+      options.filter((t) => !isPinnableStatus(t.status)),
+      q,
+    ).length > 0;
+
   const toggle = (track: TrackOption, pin: boolean) => {
     startTransition(async () => {
       applyPin({ id: track.id, pinned: pin });
@@ -165,16 +186,9 @@ function PinTrackDialogBody({
         </div>
       )}
 
-      {rows.length === 0 ? (
+      {rows.length === 0 ? null : visible.length === 0 ? (
         <p className="text-sm text-muted-foreground">
-          Nothing to pin yet.{" "}
-          <Link href="/tracks/new" className="font-medium text-primary hover:underline">
-            Add a track
-          </Link>
-        </p>
-      ) : visible.length === 0 ? (
-        <p className="text-sm text-muted-foreground">
-          No track matches “{query.trim()}”.
+          No track matches “{q}”.
         </p>
       ) : (
         <ul className="-mx-1 flex min-h-0 flex-col overflow-y-auto px-1">
@@ -232,6 +246,24 @@ function PinTrackDialogBody({
             );
           })}
         </ul>
+      )}
+
+      {(deadEnd === "finished" || finishedMatchesQuery) && (
+        <p className="shrink-0 text-sm text-muted-foreground">
+          Finished tracks can&apos;t be pinned — move one back to active or
+          backlog first.{" "}
+          <Link href="/tracks" className="font-medium text-primary hover:underline">
+            Browse your tracks
+          </Link>
+        </p>
+      )}
+      {deadEnd === "none" && q === "" && (
+        <p className="shrink-0 text-sm text-muted-foreground">
+          {rows.length > 0 ? "Nothing else to pin yet." : "Nothing to pin yet."}{" "}
+          <Link href="/tracks/new" className="font-medium text-primary hover:underline">
+            Add a track
+          </Link>
+        </p>
       )}
     </>
   );

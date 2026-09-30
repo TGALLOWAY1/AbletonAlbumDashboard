@@ -1,5 +1,9 @@
 import { describe, expect, it } from "vitest";
-import { filterPinPickerRows, orderPinPickerRows } from "@/lib/pin-picker";
+import {
+  filterPinPickerRows,
+  orderPinPickerRows,
+  pinPickerDeadEnd,
+} from "@/lib/pin-picker";
 
 const track = (id: string, status = "active") => ({ id, name: id, status });
 const ids = (rows: { id: string }[]) => rows.map((r) => r.id);
@@ -48,6 +52,41 @@ describe("orderPinPickerRows", () => {
       "shelved",
       "pinned-first",
     ]);
+  });
+});
+
+describe("pinPickerDeadEnd", () => {
+  it("is null while any unpinned track could be pinned", () => {
+    expect(pinPickerDeadEnd(OPTIONS, ["pinned-first"])).toBeNull();
+    // A backlog track counts — only completed ones cannot be pinned.
+    expect(
+      pinPickerDeadEnd([track("a", "completed"), track("b", "backlog")], []),
+    ).toBeNull();
+  });
+
+  it("says 'finished' when every other track is completed", () => {
+    // The library is not empty, so "add a track" would be the wrong advice:
+    // a finished track can be moved back to active or backlog and pinned.
+    expect(
+      pinPickerDeadEnd(
+        [track("done-1", "completed"), track("done-2", "completed")],
+        [],
+      ),
+    ).toBe("finished");
+    expect(
+      pinPickerDeadEnd(
+        [track("on-list"), track("done", "completed")],
+        ["on-list"],
+      ),
+    ).toBe("finished");
+  });
+
+  it("says 'none' when there is no other track at all", () => {
+    expect(pinPickerDeadEnd([], [])).toBe("none");
+    // Everything there is is already pinned.
+    expect(pinPickerDeadEnd([track("a"), track("b")], ["a", "b"])).toBe(
+      "none",
+    );
   });
 });
 

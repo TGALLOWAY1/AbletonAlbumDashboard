@@ -39,6 +39,26 @@ export function orderPinPickerRows<T extends PinCandidate>(
   ];
 }
 
+/**
+ * Why the dialog has nothing to add, when it has nothing to add — so it can
+ * say what would change that instead of ending on a bare list.
+ *
+ * `"finished"`: other tracks exist but every one is completed. That is not a
+ * dead end — a status can be moved back — so the dialog points at the
+ * library. `"none"`: there is no other track at all, and the way forward is
+ * a new one. `null`: something can be pinned (whether or not the cap allows
+ * it right now; the cap has its own message).
+ */
+export function pinPickerDeadEnd(
+  options: readonly PinCandidate[],
+  pinnedIds: readonly string[],
+): "finished" | "none" | null {
+  const pinned = new Set(pinnedIds);
+  const others = options.filter((t) => !pinned.has(t.id));
+  if (others.some((t) => isPinnableStatus(t.status))) return null;
+  return others.length > 0 ? "finished" : "none";
+}
+
 /** Case-insensitive match anywhere in the name; a blank query matches all. */
 export function filterPinPickerRows<T extends { name: string }>(
   rows: readonly T[],
