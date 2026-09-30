@@ -21,6 +21,14 @@ describe("mobile bottom nav ↔ sidebar nav consistency", () => {
     }
   });
 
+  it("lists the mobile tabs in the sidebar's order", () => {
+    const mobileOrder = MOBILE_NAV_TABS.map((tab) => tab.href);
+    const sidebarOrder = NAV_ITEMS.map((item) => item.href).filter((href) =>
+      mobileOrder.includes(href),
+    );
+    expect(mobileOrder).toEqual(sidebarOrder);
+  });
+
   it("has no nav entry pointing at the retired albums shelf", () => {
     expect(NAV_ITEMS.map((item) => item.href)).not.toContain("/albums");
     expect(MOBILE_NAV_TABS.map((tab) => tab.href)).not.toContain("/albums");
@@ -57,5 +65,27 @@ describe("album routes highlight the Tracks section", () => {
     const tracks = MOBILE_NAV_TABS.find((tab) => tab.href === "/tracks");
     expect(tracks?.match("/m/track-1")).toBe(true);
     expect(isNavActive("/m/track-1", "/tracks")).toBe(true);
+  });
+});
+
+// Resources is one section at three scopes — the landing page, a category and
+// a single topic — so each of them has to light up the Resources tab, and only
+// that tab, on both surfaces.
+describe("resource routes highlight the Resources section", () => {
+  const resourcePaths = [
+    "/resources",
+    "/resources/cat-1",
+    "/resources/cat-1/res-1",
+  ];
+
+  it.each(resourcePaths)("sidebar: %s is under Resources", (path) => {
+    expect(isNavActive(path, "/resources")).toBe(true);
+  });
+
+  it.each(resourcePaths)("mobile: %s lights up only Resources", (path) => {
+    const lit = MOBILE_NAV_TABS.filter((tab) => tab.match(path)).map(
+      (tab) => tab.href,
+    );
+    expect(lit).toEqual(["/resources"]);
   });
 });
