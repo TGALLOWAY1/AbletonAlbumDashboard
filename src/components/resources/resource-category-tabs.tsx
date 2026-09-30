@@ -1,6 +1,12 @@
 "use client";
 
-import { useOptimistic, useRef, useState, useTransition } from "react";
+import {
+  useEffect,
+  useOptimistic,
+  useRef,
+  useState,
+  useTransition,
+} from "react";
 import Link from "next/link";
 import { Check, GripVertical, LayoutGrid, ArrowLeftRight } from "lucide-react";
 import { useToast } from "@/components/toast";
@@ -12,6 +18,10 @@ import { cn } from "@/lib/utils";
 import { RESOURCE_CATEGORY_ICONS } from "./resource-category-icons";
 
 type TabCategory = { id: ResourceCategoryId; title: string };
+
+// While a tab is held within this many px of the row's edge, the row scrolls.
+const EDGE_SCROLL_ZONE = 56;
+const EDGE_SCROLL_STEP = 10;
 
 const TAB_CLASS =
   // -mb-px lets the active underline sit on top of the row's divider.
@@ -45,6 +55,8 @@ export function ResourceCategoryTabs({
   const [dragId, setDragId] = useState<string | null>(null);
   const [overId, setOverId] = useState<string | null>(null);
   const tabRefs = useRef(new Map<string, HTMLElement>());
+  const navRef = useRef<HTMLElement>(null);
+  const pointerX = useRef(0);
   // Keeps the tab you are moving with the keyboard focused across the re-render.
   const focusAfter = useRef<string | null>(null);
 
@@ -64,6 +76,27 @@ export function ResourceCategoryTabs({
     }
     return null;
   };
+
+  // `touch-none` on the tabs stops a drag from panning the page, which also
+  // stops the row panning — so while a tab is held near either edge the row
+  // scrolls itself, and the tab under the pointer is re-read as it moves.
+  useEffect(() => {
+    if (!dragId) return;
+    const timer = window.setInterval(() => {
+      const nav = navRef.current;
+      if (!nav) return;
+      const rect = nav.getBoundingClientRect();
+      const x = pointerX.current;
+      let delta = 0;
+      if (x < rect.left + EDGE_SCROLL_ZONE) delta = -EDGE_SCROLL_STEP;
+      else if (x > rect.right - EDGE_SCROLL_ZONE) delta = EDGE_SCROLL_STEP;
+      if (delta === 0) return;
+      nav.scrollLeft += delta;
+      const id = tabIdAtPoint(x);
+      if (id) setOverId(id);
+    }, 16);
+    return () => window.clearInterval(timer);
+  }, [dragId]);
 
   const endDrag = () => {
     if (dragId && overId && dragId !== overId) {
@@ -87,6 +120,7 @@ export function ResourceCategoryTabs({
   return (
     <div className="flex items-start gap-2">
       <nav
+        ref={navRef}
         aria-label="Resource categories"
         className="-mx-1 min-w-0 flex-1 overflow-x-auto px-1"
       >
@@ -154,12 +188,14 @@ export function ResourceCategoryTabs({
                   }
                 }}
                 onPointerDown={(e) => {
+                  pointerX.current = e.clientX;
                   e.currentTarget.setPointerCapture(e.pointerId);
                   setDragId(category.id);
                   setOverId(category.id);
                 }}
                 onPointerMove={(e) => {
                   if (!dragId) return;
+                  pointerX.current = e.clientX;
                   const id = tabIdAtPoint(e.clientX);
                   if (id) setOverId(id);
                 }}
