@@ -35,15 +35,12 @@ export async function ProgressPanel({ tab }: { tab: ProgressTab }) {
       : { sessions: [], tracks: [], taskCompletions: [] };
 
   return (
-    <section id="progress" className="flex flex-col gap-3">
-      <div>
-        <h2 className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
-          Progress
-        </h2>
-        <p className="mt-1 text-sm text-muted-foreground">
-          Pick a window — every figure below is measured over it.
-        </p>
-      </div>
+    <section id="progress" className="flex flex-col gap-2">
+      {/* No explainer under the label: the range tabs sit directly over the
+          figures they govern, and the heatmap names its own window. */}
+      <h2 className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+        Progress
+      </h2>
 
       <div>
         <div className={TABS_LIST_CLASS} role="tablist">

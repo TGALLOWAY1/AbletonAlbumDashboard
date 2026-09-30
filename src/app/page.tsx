@@ -6,10 +6,8 @@ import { SunoWorkStrip } from "@/components/suno/suno-work-strip";
 import { ManualSessionEntry } from "@/components/manual-session-dialog";
 import {
   PinnedTracks,
-  PinnedTracksEmpty,
   type PinnedTrackItem,
 } from "@/components/home/pinned-tracks";
-import { PinPicker } from "@/components/home/pin-picker";
 import { StudioTasks } from "@/components/home/studio-tasks";
 import { ProgressPanel } from "@/components/home/progress-panel";
 import { Button } from "@/components/ui/button";
@@ -22,9 +20,18 @@ import {
   parseProgressTab,
   type ProgressSearchParams,
 } from "@/lib/progress-tab";
-import { isPinnableStatus, isTrackStale, progressFromStages } from "@/lib/types";
+import { isTrackStale, progressFromStages } from "@/lib/types";
 
 export const dynamic = "force-dynamic";
+
+/**
+ * The header's three buttons, a notch tighter than `size="sm"`, icons
+ * included: at stock padding they needed 361px and wrapped onto a second row
+ * on a 390px phone.
+ * One string so they cannot drift apart — it is the matching sizes that make
+ * the row read as one control strip.
+ */
+const HEADER_BUTTON_CLASS = "gap-1.5 px-2.5 [&_svg]:size-3.5";
 
 function greetingForHour(hour: number) {
   if (hour < 12) return "Good morning";
@@ -44,9 +51,16 @@ function greetingForHour(hour: number) {
  *
  * The three things you do here — start working, write something down, record
  * time — are all reachable without scrolling: focus from any pinned row,
- * studio tasks in the middle, and "Log session" in the header. Logging used to
- * be at the bottom of the page behind a tab, which is a strange place to put
- * the one control that keeps every number on the page true.
+ * studio tasks straight after the shortlist, and "Log session" in the header.
+ * Logging used to be at the bottom of the page behind a tab, which is a
+ * strange place to put the one control that keeps every number on the page
+ * true.
+ *
+ * Space above the shortlist is spent carefully, because on a phone it is what
+ * decides whether the tasks make the first screen. The header is one row of
+ * equal-sized buttons; the greeting shows only on desktop, where it shares
+ * that row; and adding to the shortlist is a "+" that opens a dialog rather
+ * than a picker section between the tracks and the tasks.
  */
 export default async function DashboardPage({
   searchParams,
@@ -94,35 +108,30 @@ export default async function DashboardPage({
     ),
   }));
 
-  const pinnedIds = new Set(pinnedTracks.map((t) => t.id));
-  // Same predicate the server action enforces, so the picker never offers a
-  // pin that `setTrackPinned` would refuse.
-  const pinnable = trackOptions.filter(
-    (t) => !pinnedIds.has(t.id) && isPinnableStatus(t.status),
-  );
-
   const greeting = greetingForHour(now.getHours());
   const dateLabel = format(now, "MMMM d, yyyy");
 
   return (
     <div className="flex flex-col gap-6">
-      <header className="flex flex-wrap items-start justify-between gap-4">
-        <div>
-          <h1 className="text-2xl font-semibold tracking-tight md:text-3xl">
-            {greeting}, producer.
-          </h1>
-          <p className="mt-1 text-sm text-muted-foreground md:text-base">
-            Focus on finishing, not starting.
-          </p>
-        </div>
-        <div className="flex flex-wrap items-center gap-2">
+      <header className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2">
+        {/* Screen-reader-only on a phone, where a heading line would push the
+            shortlist down for nothing the app bar does not already say. */}
+        <h1 className="sr-only text-2xl font-semibold tracking-tight md:not-sr-only">
+          {greeting}, producer.
+        </h1>
+        <div className="flex flex-wrap items-center gap-1.5 md:gap-2">
           <span className="hidden items-center gap-1.5 rounded-full border border-border bg-surface px-3 py-1.5 text-xs font-medium text-muted-foreground lg:inline-flex">
             <Sun className="h-3.5 w-3.5 text-warning" />
             {dateLabel}
           </span>
           {/* The two ways time gets recorded, side by side and above the fold:
               run the timer now, or backfill the session you already did. */}
-          <Button asChild variant="outline" size="sm">
+          <Button
+            asChild
+            variant="outline"
+            size="sm"
+            className={HEADER_BUTTON_CLASS}
+          >
             <Link href="/focus/new">
               <Play className="h-4 w-4" />
               Start session
@@ -131,8 +140,10 @@ export default async function DashboardPage({
           <ManualSessionEntry
             tracks={trackOptions}
             sessionTypes={sessionTypes}
+            variant="compact"
+            className={HEADER_BUTTON_CLASS}
           />
-          <Button asChild size="sm">
+          <Button asChild size="sm" className={HEADER_BUTTON_CLASS}>
             <Link href="/tracks/new">
               <Plus className="h-4 w-4" />
               Add Track
@@ -141,13 +152,7 @@ export default async function DashboardPage({
         </div>
       </header>
 
-      {pinnedItems.length > 0 ? (
-        <PinnedTracks items={pinnedItems} />
-      ) : (
-        <PinnedTracksEmpty hasTracks={trackOptions.length > 0} />
-      )}
-
-      <PinPicker tracks={pinnable} pinnedCount={pinnedItems.length} />
+      <PinnedTracks items={pinnedItems} options={trackOptions} />
 
       <SunoWorkStrip summary={sunoSummary} />
 
