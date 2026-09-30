@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
+  BookOpen,
   Home,
   ListMusic,
   Settings as SettingsIcon,
@@ -19,7 +20,7 @@ export type MobileNavTab = {
 };
 
 // Exported so the nav-consistency test can assert every mobile tab has a
-// matching entry (href + label) in the sidebar's NAV_ITEMS.
+// matching entry (href + label) in the sidebar's NAV_ITEMS, in the same order.
 export const MOBILE_NAV_TABS: MobileNavTab[] = [
   {
     label: "Home",
@@ -36,6 +37,12 @@ export const MOBILE_NAV_TABS: MobileNavTab[] = [
     // neither URL starts with /tracks.
     match: (p) =>
       p.startsWith("/tracks") || p.startsWith("/m/") || p.startsWith("/albums"),
+  },
+  {
+    label: "Resources",
+    href: "/resources",
+    icon: BookOpen,
+    match: (p) => p.startsWith("/resources"),
   },
   {
     label: "Settings",
