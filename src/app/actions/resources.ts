@@ -16,6 +16,8 @@ import {
   MIGRATION_0026_MISSING_MESSAGE,
   MIGRATION_0032_MISSING_MESSAGE,
   MIGRATION_0035_MISSING_MESSAGE,
+  MIGRATION_0036_MISSING_MESSAGE,
+  isMissingTable,
   RESOURCES_CATEGORY_CONSTRAINT,
   RESOURCES_RATING_CONSTRAINT,
 } from "@/lib/migration-errors";
@@ -606,6 +608,45 @@ export async function setResourcePinned(
   revalidateResourceSurfaces({
     categoryIds: [asCategoryId(updated.category_id)],
     resourceId: key.id,
+  });
+  return {};
+}
+
+const reorderCategoriesSchema = z.object({
+  orderedIds: z.array(z.enum(CATEGORY_IDS)).max(CATEGORY_IDS.length),
+});
+
+/**
+ * Save the order of the category tabs. Writes an explicit 0..n-1 for the ids
+ * given (an upsert, since a category is only a row once it has been placed).
+ * Categories are a list in code, so ids are checked against it, and duplicates
+ * collapse to their first position.
+ */
+export async function reorderResourceCategories(input: {
+  orderedIds: string[];
+}): Promise<{ error?: string }> {
+  const parsed = reorderCategoriesSchema.safeParse(input);
+  if (!parsed.success) return { error: "That category order is not valid." };
+  const ids = [...new Set(parsed.data.orderedIds)];
+
+  const { error } = await getServerSupabase()
+    .from("resource_category_order")
+    .upsert(
+      ids.map((category_id, index) => ({
+        owner_id: OWNER_ID,
+        category_id,
+        sort_order: index,
+      })),
+      { onConflict: "owner_id,category_id" },
+    );
+  if (error) {
+    if (isMissingTable(error)) return { error: MIGRATION_0036_MISSING_MESSAGE };
+    logSupabaseError("reorderResourceCategories", error);
+    return { error: "Could not save the new order. Try again." };
+  }
+
+  revalidateResourceSurfaces({
+    categoryIds: RESOURCE_CATEGORIES.map((c) => c.id),
   });
   return {};
 }

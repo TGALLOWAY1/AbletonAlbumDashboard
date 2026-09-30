@@ -734,6 +734,24 @@ export type Database = {
         ];
       };
 
+      resource_category_order: {
+        Row: {
+          category_id: string;
+          owner_id: string;
+          sort_order: number;
+        };
+        Insert: {
+          category_id: string;
+          owner_id: string;
+          sort_order: number;
+        };
+        Update: {
+          category_id?: string;
+          owner_id?: string;
+          sort_order?: number;
+        };
+        Relationships: [];
+      };
       resources: {
         Row: {
           archived_at: string | null;

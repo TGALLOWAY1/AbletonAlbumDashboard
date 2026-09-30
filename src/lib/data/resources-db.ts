@@ -13,6 +13,12 @@ import {
 } from "@/lib/data/resources";
 import { normalizeTags } from "@/lib/resource-tags";
 import {
+  DEFAULT_CATEGORY_ORDER,
+  orderCategories,
+} from "@/lib/resource-category-order";
+import { isMissingTable } from "@/lib/migration-errors";
+import { logSupabaseError } from "@/lib/supabase/log-error";
+import {
   activeResources,
   learnedResources,
   pinnedResources,
@@ -252,4 +258,40 @@ export async function getResourceById(
     console.error("[resources] bad row", id, e);
     return null;
   }
+}
+
+/**
+ * The category tabs in the user's order. Reads degrade: without migration 0036
+ * (or on any read failure) the tabs fall back to the default order rather than
+ * taking every Resources page down over a tab row.
+ */
+let warnedMissingCategoryOrder = false;
+export async function getOrderedResourceCategories(): Promise<
+  ResourceCategory[]
+> {
+  const { data, error } = await getServerSupabase()
+    .from("resource_category_order")
+    .select("category_id")
+    .eq("owner_id", OWNER_ID)
+    .order("sort_order", { ascending: true });
+  if (error) {
+    if (isMissingTable(error)) {
+      if (!warnedMissingCategoryOrder) {
+        warnedMissingCategoryOrder = true;
+        console.warn(
+          "[resources] resource_category_order is missing — categories show " +
+            "in the default order. Apply " +
+            "supabase/migrations/0036_resource_category_order.sql to let them " +
+            "be rearranged.",
+        );
+      }
+    } else {
+      logSupabaseError("getOrderedResourceCategories", error);
+    }
+    return orderCategories(RESOURCE_CATEGORIES, DEFAULT_CATEGORY_ORDER);
+  }
+  return orderCategories(
+    RESOURCE_CATEGORIES,
+    (data ?? []).map((row) => row.category_id as string),
+  );
 }
