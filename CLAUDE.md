@@ -340,6 +340,29 @@ exception).
   (`src/lib/image-downscale.ts`) and are stored with a one-year `cacheControl`,
   since every storage key is unique per upload.
 - Styling: Tailwind utility classes, no CSS modules. Use `cn()` / `tailwind-merge` for conditional classes.
+- **Form fields are 16px on touch screens.** iOS zooms the page in whenever it
+  focuses a field whose text is under 16px, and never zooms back out;
+  client-side navigation then carries the zoom to every later page, which is
+  what "I keep pinching the app back to size on my phone" was. `globals.css`
+  redefines `--text-xs`/`--text-sm` to 1rem on `input`, `textarea` and
+  `select` under `(pointer: coarse)`. Tailwind's size utilities read those
+  variables when they apply, so a field's `text-sm` is 14px with a mouse and
+  16px on a phone with no class change, and a field with no size is floored
+  at `max(1rem, 1em)`. An arbitrary size on a field (`text-[13px]`) skips the
+  variables, so fields do not take one; and a layout that only fits the
+  desktop size breaks on touch (`SessionFormDialog` puts start and minutes
+  side by side only `sm:pointer-fine:`). Never stop the zoom with
+  `maximum-scale=1`: it also stops Android users pinch-zooming at all.
+  `mobile-zoom.test.ts` compiles the stylesheet to check the rule.
+- **Nothing is wider than a phone's screen.** Safari shrinks a page whose
+  content is wider than the viewport to fit it, so one overflowing element
+  reads as the app rescaling itself between pages.
+  Rendered user text wraps (`wrap-anywhere`) and its code blocks scroll in
+  place (`[&_pre]:overflow-x-auto`); `MarkdownBody` and `NotesEditor` carry
+  both. A button-styled label that can hold a name truncates (`BackLink`),
+  since button styles never wrap. A row of full-size buttons has to be allowed
+  to shrink so it can wrap, which is why `SunoStatusToggle`'s group is not
+  `shrink-0`.
 - The track library (`/tracks`) keeps its gallery/list + large/medium/small
   view preference in the URL (`src/lib/view-mode.ts`), so the page stays a server
   component and the choice is linkable. Controls that own their own query params

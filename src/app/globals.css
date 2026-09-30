@@ -41,3 +41,33 @@ body {
   outline: 2px solid var(--color-ring);
   outline-offset: 2px;
 }
+
+/*
+ * Form fields are at least 16px on touch screens.
+ *
+ * iOS zooms the page in whenever the field it focuses has text under 16px,
+ * and never zooms back out. Client-side navigation keeps that zoom, so one tap
+ * into a 14px box left every page after it magnified until it was pinched
+ * back. Tailwind's size utilities read their theme variable when they apply
+ * (`.text-sm { font-size: var(--text-sm) }`), so redefining the two sizes
+ * under 16px on the field itself turns its `text-sm` or `text-xs` into 1rem
+ * with no class change, while a larger size is left alone. The floor covers a
+ * field that sets no size and would inherit a small one (`1em` here is the
+ * parent's size). A mouse or trackpad never triggers the zoom, so those
+ * screens keep the compact sizes.
+ *
+ * An arbitrary size (`text-[13px]`) skips the variables, so fields never take
+ * one. And `maximum-scale=1` on the viewport is not the fix: it stops the zoom
+ * by stopping Android users pinch-zooming at all.
+ */
+@layer base {
+  @media (pointer: coarse) {
+    input,
+    textarea,
+    select {
+      --text-xs: 1rem;
+      --text-sm: 1rem;
+      font-size: max(1rem, 1em);
+    }
+  }
+}

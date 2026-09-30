@@ -236,7 +236,11 @@ export function SessionFormDialog({
             </div>
           )}
 
-          <div className="grid grid-cols-2 gap-3">
+          {/* Side by side only on a wide screen with a mouse or trackpad.
+              Half the dialog is narrower than a date and time on a phone, and
+              on any touch screen once its fields are 16px (globals.css); the
+              start field used to run under the minutes box. */}
+          <div className="grid gap-3 sm:pointer-fine:grid-cols-2">
             <div className="grid gap-1.5">
               <Label htmlFor="manual-start">When (start)</Label>
               <Input
@@ -281,8 +285,9 @@ export function SessionFormDialog({
           )}
 
           {/* Same two scales as the focus log page — one outcome schema for
-              every completion path. */}
-          <div className="grid grid-cols-2 gap-4">
+              every completion path. Stacked on a phone, where five circles
+              are wider than half the dialog and the two rows collided. */}
+          <div className="grid gap-4 sm:grid-cols-2">
             <RatingPicker
               label="Progress / Impact"
               value={progressImpact}

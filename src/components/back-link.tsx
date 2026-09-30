@@ -75,14 +75,20 @@ export function BackLink({
     );
   }
 
+  // The label can be a track's name. Button styles never wrap, so a long one
+  // is cut short with an ellipsis rather than pushing the page sideways.
   return (
     <Link
       href={fallback}
       onClick={handleClick}
-      className={cn(buttonVariants({ variant: "ghost", size: "sm" }), className)}
+      className={cn(
+        buttonVariants({ variant: "ghost", size: "sm" }),
+        "max-w-full",
+        className,
+      )}
     >
-      <ArrowLeft className="h-4 w-4" />
-      {label}
+      <ArrowLeft className="h-4 w-4 shrink-0" />
+      <span className="truncate">{label}</span>
     </Link>
   );
 }
