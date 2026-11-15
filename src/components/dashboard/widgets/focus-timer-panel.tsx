@@ -71,8 +71,9 @@ export type TimerSessionType = {
  *
  * SIZES are CSS (see `widget-parts.tsx`). One DOM, four tiers by height:
  *
- *   base       clock, one primary control, the track's name      (Small)
- *   h3 / phone + track picker; Stop; the session chip
+ *   base       clock, start / pause / resume (and Stop, as an
+ *              icon, once live), the track's name                (Small)
+ *   h3 / phone + track picker; labelled Stop; the session chip
  *   h4 / phone + length presets; what the digits measure         (Medium)
  *   h5 / phone + session type; the goal                          (Large)
  *
@@ -330,9 +331,12 @@ export function FocusTimerPanel({
               data-timer-clock
               className={cn(
                 "font-semibold tabular-nums leading-none tracking-tight",
+                // The Small tier shares its row with two round controls once a
+                // session is live, so its steps are set by what fits beside
+                // them — including "+" and an hour's extra digits.
                 long
-                  ? "text-3xl @xs/widget:text-4xl widget-h3:text-4xl widget-h3:@xs/widget:text-5xl widget-h5:@md/widget:text-6xl dash-stack:text-5xl"
-                  : "text-4xl @xs/widget:text-5xl widget-h3:text-5xl widget-h3:@xs/widget:text-6xl widget-h5:@md/widget:text-7xl dash-stack:text-6xl",
+                  ? "text-2xl @[16rem]/widget:text-3xl @xs/widget:text-4xl widget-h3:text-4xl widget-h3:@xs/widget:text-5xl widget-h5:@md/widget:text-6xl dash-stack:text-5xl"
+                  : "text-3xl @[16rem]/widget:text-4xl @xs/widget:text-5xl widget-h3:text-5xl widget-h3:@xs/widget:text-6xl widget-h5:@md/widget:text-7xl dash-stack:text-6xl",
                 over && "text-amber-300",
               )}
             >
@@ -374,15 +378,18 @@ export function FocusTimerPanel({
                 onClick={() => router.push("/focus/log")}
               />
             )}
+            {/* Present at every size, Small included. While this widget is on
+                screen the floating pill stands down, so if Stop were hidden
+                here nothing on the dashboard could end the session. */}
             {(ctx.phase === "running" || ctx.phase === "paused") && (
               <button
                 type="button"
                 onClick={stopAndLog}
                 aria-label="Stop session and log"
-                className="hidden h-10 shrink-0 items-center justify-center gap-2 rounded-md border border-white/30 bg-white/10 px-3 text-sm font-medium text-white transition-colors hover:bg-white/20 widget-h3:inline-flex dash-stack:inline-flex dash-stack:h-11 dash-stack:px-4"
+                className="inline-flex h-10 w-10 shrink-0 items-center justify-center gap-2 rounded-full border border-white/30 bg-white/10 text-sm font-medium text-white transition-colors hover:bg-white/20 widget-h3:w-auto widget-h3:rounded-md widget-h3:px-3 dash-stack:h-11 dash-stack:w-auto dash-stack:rounded-md dash-stack:px-4"
               >
                 <Square className="h-3.5 w-3.5 fill-current" aria-hidden />
-                <span>
+                <span className="hidden widget-h3:inline dash-stack:inline">
                   Stop
                   <span className="hidden @xs/widget:inline"> &amp; log</span>
                 </span>
@@ -512,8 +519,9 @@ export function FocusTimerPanel({
 }
 
 /**
- * The widget's one always-present button. At Small it is a 44px round icon
- * beside the clock; from three rows up (and on a phone) it becomes the
+ * The widget's one always-present button. At Small it is a 40px round icon
+ * beside the clock (40, not 44, so it and Stop both fit beside the digits in
+ * the narrowest box); from three rows up (and on a phone) it becomes the
  * full-width labelled button of the mockup. Same element either way, so the
  * accessible name does not depend on the size of the box.
  */
@@ -538,7 +546,7 @@ function PrimaryControl({
       onClick={onClick}
       aria-label={label}
       className={cn(
-        "inline-flex h-11 w-11 shrink-0 items-center justify-center gap-2 rounded-full text-sm font-semibold shadow-sm transition-colors",
+        "inline-flex h-10 w-10 shrink-0 items-center justify-center gap-2 rounded-full text-sm font-semibold shadow-sm transition-colors",
         "widget-h3:h-10 widget-h3:w-auto widget-h3:flex-1 widget-h3:rounded-md widget-h3:px-4",
         "dash-stack:h-11 dash-stack:w-auto dash-stack:flex-1 dash-stack:rounded-md dash-stack:px-4",
         tone === "primary"
@@ -578,13 +586,15 @@ function PanelSelect({
   children: React.ReactNode;
 }) {
   return (
-    <label className={cn("relative block min-w-0 flex-1", className)}>
-      <span className="sr-only">{label}</span>
+    // Named with `aria-label` rather than a wrapping <label>: a label that
+    // contains its own <select> takes the option text into the control's name.
+    <div className={cn("relative min-w-0 flex-1", className)}>
       <Icon
         className="pointer-events-none absolute left-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-white/70"
         aria-hidden
       />
       <select
+        aria-label={label}
         value={value}
         onChange={(e) => onChange(e.target.value)}
         className="h-9 w-full cursor-pointer appearance-none truncate rounded-full border border-white/25 bg-white/15 pl-8 pr-8 text-sm font-medium text-white scheme-dark transition-colors hover:bg-white/25 dash-stack:h-11"
@@ -595,6 +605,6 @@ function PanelSelect({
         className="pointer-events-none absolute right-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-white/70"
         aria-hidden
       />
-    </label>
+    </div>
   );
 }

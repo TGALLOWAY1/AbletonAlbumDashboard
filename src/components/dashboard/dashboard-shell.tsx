@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useTransition, type ReactNode } from "react";
+import { useEffect, useRef, useState, useTransition, type ReactNode } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { BarChart3, LayoutGrid, Plus, SlidersHorizontal } from "lucide-react";
@@ -126,21 +126,31 @@ export function DashboardShell({
     return () => clearTimeout(timer);
   }, [highlightId]);
 
+  // Which edit a preview request belongs to. A preview is fetched over the
+  // network, so its answer can arrive after the edit it was for has ended —
+  // and a late answer written into `previews` would repaint a widget with
+  // settings the user just cancelled, outside edit mode, where previews win
+  // over the saved nodes. Ending an edit (cancel or save) moves this on, and
+  // an answer whose number no longer matches is dropped.
+  const editSession = useRef(0);
+
   const requestPreview = (item: LayoutItem) => {
     const name = widgetDefinition(item.type).name;
+    const session = editSession.current;
+    const settle = (node: ReactNode) => {
+      if (editSession.current !== session) return;
+      setPreviews((prev) => ({ ...prev, [item.id]: node }));
+    };
     setPreviews((prev) => ({ ...prev, [item.id]: <WidgetSkeleton name={name} /> }));
     renderWidgetPreview({ type: item.type, config: item.config, instanceId: item.id })
-      .then((node) => setPreviews((prev) => ({ ...prev, [item.id]: node })))
+      .then(settle)
       .catch(() =>
-        setPreviews((prev) => ({
-          ...prev,
-          [item.id]: (
-            <WidgetEmpty
-              title={`${name} will appear when you save`}
-              hint="A preview could not be loaded just now."
-            />
-          ),
-        })),
+        settle(
+          <WidgetEmpty
+            title={`${name} will appear when you save`}
+            hint="A preview could not be loaded just now."
+          />,
+        ),
       );
   };
 
@@ -153,6 +163,7 @@ export function DashboardShell({
   };
 
   const cancel = () => {
+    editSession.current += 1;
     setDraft(null);
     setPreviews({});
     setGalleryOpen(false);
@@ -177,6 +188,9 @@ export function DashboardShell({
         toast(result.error);
         return;
       }
+      // The saved page is about to supply every node itself; a preview
+      // still in flight would only arrive after them and go stale.
+      editSession.current += 1;
       setView(next);
       setDraft(null);
       setAnnouncement("Layout saved.");

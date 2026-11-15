@@ -41,8 +41,18 @@ export function ProgressOverviewBody({
 }) {
   // The window is the reader's calendar, so it waits for the browser — see
   // `useIsClient`. Until then the figures hold their space with no value.
+  //
+  // The series are dependencies on purpose: the window runs *to now*, so a
+  // clock read once at mount would shut out everything logged afterwards.
+  // Ticking a task revalidates the dashboard and hands this still-mounted
+  // component a fresh series; re-reading the clock with it is what lets that
+  // task count without a reload.
   const isClient = useIsClient();
-  const now = useMemo(() => (isClient ? new Date() : null), [isClient]);
+  const now = useMemo(
+    () => (isClient ? new Date() : null),
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- see above
+    [isClient, sessions, taskCompletions],
+  );
   const stats = useMemo(
     () =>
       now ? getRangeStats({ sessions, tasks: taskCompletions, range, now }) : null,

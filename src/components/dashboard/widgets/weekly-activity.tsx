@@ -1,14 +1,25 @@
-import { WidgetBody, WidgetEmpty, WidgetHeader } from "@/components/dashboard/widget-parts";
+import { WeeklyActivityChart } from "@/components/dashboard/widgets/weekly-activity-chart";
+import { trimSeriesToDays } from "@/lib/analytics";
+import { fetchAnalyticsDataCached } from "@/lib/data/dashboard";
 import { WIDGETS, type WidgetProps } from "@/lib/dashboard/widgets";
 
-// STUB — replaced by the real widget. Keep the export name and props.
+/**
+ * This Week — time logged on each day of the current week, Monday to Sunday.
+ *
+ * The week is the reader's own (their local Monday), so the server only
+ * reads the session series and hands over its recent tail; the chart cuts
+ * the week in the browser with `buildWeekActivity`, which measures with the
+ * same helpers as the heatmap. A day's bar here and that day's square there
+ * are one number.
+ */
 export async function WeeklyActivityWidget(_props: WidgetProps<"weekly-activity">) {
+  const { sessions } = await fetchAnalyticsDataCached();
+
   return (
-    <>
-      <WidgetHeader title={WIDGETS["weekly-activity"].name} />
-      <WidgetBody>
-        <WidgetEmpty title="Not built yet" />
-      </WidgetBody>
-    </>
+    <WeeklyActivityChart
+      title={WIDGETS["weekly-activity"].name}
+      // A week is at most seven days back; the helper adds the zone margin.
+      sessions={trimSeriesToDays(sessions, (s) => s.startedAt, 7)}
+    />
   );
 }

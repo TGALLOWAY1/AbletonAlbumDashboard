@@ -128,7 +128,7 @@ function CurrentTrackHero({ track }: { track: TrackWithDetails }) {
       <h2 className="mt-1 text-lg font-semibold leading-tight tracking-tight widget-h3:@md/widget:text-2xl widget-h4:text-xl dash-stack:text-xl">
         <Link
           href={`/tracks/${track.id}`}
-          className="line-clamp-1 rounded-sm outline-none hover:underline focus-visible:ring-2 focus-visible:ring-white widget-h4:line-clamp-2"
+          className="line-clamp-1 rounded-sm outline-none hover:underline focus-visible:ring-2 focus-visible:ring-white widget-h4:line-clamp-2 dash-stack:-my-1.5 dash-stack:py-1.5"
         >
           {track.name}
         </Link>

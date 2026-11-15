@@ -207,7 +207,7 @@ const SIZING: Record<Variant, Sizing> = {
       "flex h-8 w-8 shrink-0 items-center justify-center dash-stack:h-10 dash-stack:w-10",
     checkbox: "h-4 w-4 dash-stack:h-5 dash-stack:w-5",
     label:
-      "min-w-0 flex-1 rounded-md px-1 py-1 text-left text-sm leading-snug break-words dash-stack:py-2",
+      "min-w-0 flex-1 rounded-md px-1 py-1 text-left text-sm leading-snug break-words dash-stack:py-2.5",
     editInput:
       "w-full min-w-0 rounded-md border border-border bg-surface px-2 py-1 text-sm outline-none focus:ring-2 focus:ring-primary dash-stack:py-2",
     deleteBtn: "h-8 w-8 shrink-0 dash-stack:h-10 dash-stack:w-10",

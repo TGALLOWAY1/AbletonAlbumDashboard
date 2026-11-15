@@ -41,7 +41,12 @@ export async function QuickActionsWidget({ config }: WidgetProps<"quick-actions"
       >
         <QuickActionsTiles
           actions={actions}
-          tracks={tracks.map((t) => ({ id: t.id, name: t.name, status: t.status }))}
+          tracks={tracks.map((t) => ({
+            id: t.id,
+            name: t.name,
+            status: t.status,
+            cover_image_url: t.coverImageUrl,
+          }))}
           sessionTypes={sessionTypes}
         />
       </WidgetBody>
