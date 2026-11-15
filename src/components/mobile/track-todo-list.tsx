@@ -106,9 +106,13 @@ function parseMinutesDraft(raw: string): number | null | undefined {
 
 const BAD_MINUTES_MESSAGE = `Estimate must be a whole number of minutes, 0–${MAX_ESTIMATE_MINUTES}.`;
 
-type Variant = "desktop" | "mobile";
+type Variant = "desktop" | "mobile" | "widget";
 
 type Sizing = {
+  /** Vertical rhythm between the heading, the add form and the rows. */
+  root: string;
+  /** The "~2h estimated across 5 tasks" line. */
+  summary: string;
   input: string;
   addBtn: string;
   addIcon: string;
@@ -130,6 +134,8 @@ type Sizing = {
 
 const SIZING: Record<Variant, Sizing> = {
   mobile: {
+    root: "gap-3",
+    summary: "text-xs tabular-nums text-muted-foreground",
     input:
       "h-11 border-0 bg-transparent px-1 text-base shadow-none focus-visible:ring-0",
     addBtn: "h-11 px-4",
@@ -154,6 +160,8 @@ const SIZING: Record<Variant, Sizing> = {
       "h-10 min-w-0 flex-1 rounded-md border border-border bg-surface px-2 text-base text-foreground outline-none focus:ring-2 focus:ring-primary",
   },
   desktop: {
+    root: "gap-3",
+    summary: "text-xs tabular-nums text-muted-foreground",
     input:
       "h-9 border-0 bg-transparent px-1 text-sm shadow-none focus-visible:ring-0",
     addBtn: "h-9 px-3",
@@ -177,6 +185,43 @@ const SIZING: Record<Variant, Sizing> = {
     stageSelect:
       "h-8 min-w-0 flex-1 rounded-md border border-border bg-surface px-2 text-sm text-foreground outline-none focus:ring-2 focus:ring-primary",
   },
+  // A dashboard card. One server render has to serve a mouse and a thumb —
+  // the dashboard does not sniff user agents — so this is the desktop
+  // density with every control stepped up to a 40px target under
+  // `dash-stack:`, the dashboard's single-column phone arrangement
+  // (globals.css). Outside a dashboard those variants never match.
+  //
+  // A card is also short: three or four grid rows under a header. So the
+  // rhythm is tighter, and the estimate line shows only where the box is
+  // five rows tall or stacked — in a shorter one it costs a task's row.
+  widget: {
+    root: "gap-2",
+    summary:
+      "hidden text-xs tabular-nums text-muted-foreground widget-h5:block dash-stack:block",
+    input:
+      "h-9 border-0 bg-transparent px-1 text-sm shadow-none focus-visible:ring-0 dash-stack:h-10",
+    addBtn: "h-9 px-3 dash-stack:h-10",
+    addIcon: "ml-1 h-4 w-4 shrink-0 text-primary",
+    row: "flex min-h-[40px] items-center gap-1.5 border-b border-border/60 py-1 dash-stack:min-h-[48px]",
+    checkCell:
+      "flex h-8 w-8 shrink-0 items-center justify-center dash-stack:h-10 dash-stack:w-10",
+    checkbox: "h-4 w-4 dash-stack:h-5 dash-stack:w-5",
+    label:
+      "min-w-0 flex-1 rounded-md px-1 py-1 text-left text-sm leading-snug break-words dash-stack:py-2",
+    editInput:
+      "w-full min-w-0 rounded-md border border-border bg-surface px-2 py-1 text-sm outline-none focus:ring-2 focus:ring-primary dash-stack:py-2",
+    deleteBtn: "h-8 w-8 shrink-0 dash-stack:h-10 dash-stack:w-10",
+    deleteIcon: "h-4 w-4",
+    handle: "h-8 w-5 dash-stack:h-10 dash-stack:w-7",
+    handleIcon: "h-4 w-4",
+    chip: "text-[10px]",
+    detailToggle: "h-8 w-8 shrink-0 dash-stack:h-10 dash-stack:w-10",
+    detailIcon: "h-4 w-4",
+    minutesInput:
+      "h-8 w-20 rounded-md border border-border bg-surface px-2 text-sm outline-none focus:ring-2 focus:ring-primary dash-stack:h-10",
+    stageSelect:
+      "h-8 min-w-0 flex-1 rounded-md border border-border bg-surface px-2 text-sm text-foreground outline-none focus:ring-2 focus:ring-primary dash-stack:h-10",
+  },
 };
 
 /**
@@ -195,14 +240,32 @@ export function TrackTodoList({
   initial,
   variant = "mobile",
   heading = "Tasks",
+  bare = false,
+  list = "open",
 }: {
   trackId: string | null;
   initial: ActionRow[];
   variant?: Variant;
   /** Overridden by the studio list, which is not "Tasks" on a track. */
   heading?: string;
+  /**
+   * Drop the list's own heading row and its reorder hint, for a host that
+   * already draws a title and a count around it (the dashboard's Tasks
+   * widget, whose card header and tabs say both).
+   */
+  bare?: boolean;
+  /**
+   * Which half of a task list this is. `"open"` is the working list and the
+   * default. `"done"` is for a host that shows finished tasks as their own
+   * list: `initial` is completed rows in the order to show them, and the list
+   * offers un-tick, edit and delete but no add form and no reordering —
+   * `sort_order` is the order of the work that is left, so a finished task
+   * has no position to drag to.
+   */
+  list?: "open" | "done";
 }) {
   const sizing = SIZING[variant];
+  const working = list === "open";
   // Studio tasks belong to no song, so they have no stage to be at.
   const showStage = trackId != null;
   const [optimistic, applyOptimistic] = useOptimistic<TodoItem[], Action>(
@@ -407,80 +470,84 @@ export function TrackTodoList({
   const overIndex = overId ? optimistic.findIndex((t) => t.id === overId) : -1;
 
   return (
-    <div className="flex flex-col gap-3">
-      <div className="flex items-baseline justify-between">
-        <h2 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
-          {heading}
-        </h2>
-        <span className="text-xs text-muted-foreground">{openCount} open</span>
-      </div>
+    <div className={cn("flex flex-col", sizing.root)}>
+      {!bare && (
+        <div className="flex items-baseline justify-between">
+          <h2 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
+            {heading}
+          </h2>
+          <span className="text-xs text-muted-foreground">{openCount} open</span>
+        </div>
+      )}
 
       {/* Still one line to add a task: the estimate and the stage live behind a
           toggle so the fast path stays type-and-Enter. */}
-      <form
-        className="flex flex-col gap-2 rounded-md border border-primary/40 bg-primary/5 p-2"
-        onSubmit={(e) => {
-          e.preventDefault();
-          submitDraft();
-        }}
-      >
-        <div className="flex items-center gap-2">
-          <Plus className={sizing.addIcon} aria-hidden />
-          <Input
-            ref={inputRef}
-            value={draft}
-            onChange={(e) => setDraft(e.target.value)}
-            placeholder="Add a task…"
-            className={sizing.input}
-            enterKeyHint="done"
-            autoComplete="off"
-          />
-          <Button
-            type="button"
-            variant="ghost"
-            size="icon"
-            className={cn(sizing.detailToggle, detailsSet && "text-primary")}
-            onClick={() => setDetailsOpen((open) => !open)}
-            aria-expanded={detailsOpen}
-            aria-controls={detailsPanelId}
-            aria-label={
-              showStage ? "Estimate and stage" : "Estimate for this task"
-            }
-            title={showStage ? "Estimate and stage" : "Estimate"}
-          >
-            <SlidersHorizontal className={sizing.detailIcon} />
-          </Button>
-          <Button
-            type="submit"
-            size="sm"
-            className={sizing.addBtn}
-            disabled={!draft.trim()}
-          >
-            Add
-          </Button>
-        </div>
-
-        {detailsOpen && (
-          <div id={detailsPanelId}>
-            <TaskDetailFields
-              sizing={sizing}
-              showStage={showStage}
-              value={details}
-              onChange={setDetails}
+      {working && (
+        <form
+          className="flex flex-col gap-2 rounded-md border border-primary/40 bg-primary/5 p-2"
+          onSubmit={(e) => {
+            e.preventDefault();
+            submitDraft();
+          }}
+        >
+          <div className="flex items-center gap-2">
+            <Plus className={sizing.addIcon} aria-hidden />
+            <Input
+              ref={inputRef}
+              value={draft}
+              onChange={(e) => setDraft(e.target.value)}
+              placeholder="Add a task…"
+              className={sizing.input}
+              enterKeyHint="done"
+              autoComplete="off"
             />
+            <Button
+              type="button"
+              variant="ghost"
+              size="icon"
+              className={cn(sizing.detailToggle, detailsSet && "text-primary")}
+              onClick={() => setDetailsOpen((open) => !open)}
+              aria-expanded={detailsOpen}
+              aria-controls={detailsPanelId}
+              aria-label={
+                showStage ? "Estimate and stage" : "Estimate for this task"
+              }
+              title={showStage ? "Estimate and stage" : "Estimate"}
+            >
+              <SlidersHorizontal className={sizing.detailIcon} />
+            </Button>
+            <Button
+              type="submit"
+              size="sm"
+              className={sizing.addBtn}
+              disabled={!draft.trim()}
+            >
+              Add
+            </Button>
           </div>
-        )}
-      </form>
 
-      {estimateSummary && (
-        <p className="text-xs tabular-nums text-muted-foreground">
-          {estimateSummary}
-        </p>
+          {detailsOpen && (
+            <div id={detailsPanelId}>
+              <TaskDetailFields
+                sizing={sizing}
+                showStage={showStage}
+                value={details}
+                onChange={setDetails}
+              />
+            </div>
+          )}
+        </form>
+      )}
+
+      {working && estimateSummary && (
+        <p className={sizing.summary}>{estimateSummary}</p>
       )}
 
       {optimistic.length === 0 ? (
         <p className="py-2 text-sm text-muted-foreground">
-          No tasks yet. Type one above and tap Add.
+          {working
+            ? "No tasks yet. Type one above and tap Add."
+            : "Nothing ticked off yet. Finished tasks land here."}
         </p>
       ) : (
         <>
@@ -493,6 +560,7 @@ export function TrackTodoList({
                 total={optimistic.length}
                 sizing={sizing}
                 showStage={showStage}
+                reorderable={working}
                 dragging={dragId === item.id}
                 // The edge sits on the side the row arrives from, so the gap
                 // you see is the gap it lands in.
@@ -517,7 +585,7 @@ export function TrackTodoList({
               />
             ))}
           </ul>
-          {optimistic.length > 1 && (
+          {working && !bare && optimistic.length > 1 && (
             <p className="text-xs text-muted-foreground">
               {trackId
                 ? "Drag the handle to reorder — the top task is the one a focus session starts on."
@@ -621,6 +689,7 @@ function TodoRow({
   total,
   sizing,
   showStage,
+  reorderable,
   dragging,
   dropEdge,
   registerRef,
@@ -637,6 +706,8 @@ function TodoRow({
   total: number;
   sizing: Sizing;
   showStage: boolean;
+  /** False on a list of finished tasks, which has no order to set. */
+  reorderable: boolean;
   dragging: boolean;
   dropEdge: "top" | "bottom" | null;
   registerRef: (el: HTMLLIElement | null) => void;
@@ -698,33 +769,35 @@ function TodoRow({
         dropEdge === "bottom" && "border-b-2 border-b-primary",
       )}
     >
-      <button
-        type="button"
-        disabled={item._temp}
-        onPointerDown={onDragStart}
-        onPointerMove={onDragMove}
-        onPointerUp={onDragEnd}
-        onPointerCancel={onDragEnd}
-        onKeyDown={(e) => {
-          if (e.key === "ArrowUp") {
-            e.preventDefault();
-            onNudge(-1);
-          } else if (e.key === "ArrowDown") {
-            e.preventDefault();
-            onNudge(1);
-          }
-        }}
-        aria-label={`Reorder "${item.description}", position ${index + 1} of ${total}. Use the up and down arrow keys to move it.`}
-        title="Drag to reorder"
-        // `touch-action: none` is what stops the drag from scrolling the page
-        // on a phone — without it the browser claims the gesture first.
-        className={cn(
-          sizing.handle,
-          "flex shrink-0 touch-none cursor-grab items-center justify-center rounded-md text-muted-foreground/50 outline-none hover:text-muted-foreground focus-visible:ring-2 focus-visible:ring-ring active:cursor-grabbing disabled:pointer-events-none disabled:opacity-30",
-        )}
-      >
-        <GripVertical className={sizing.handleIcon} aria-hidden />
-      </button>
+      {reorderable && (
+        <button
+          type="button"
+          disabled={item._temp}
+          onPointerDown={onDragStart}
+          onPointerMove={onDragMove}
+          onPointerUp={onDragEnd}
+          onPointerCancel={onDragEnd}
+          onKeyDown={(e) => {
+            if (e.key === "ArrowUp") {
+              e.preventDefault();
+              onNudge(-1);
+            } else if (e.key === "ArrowDown") {
+              e.preventDefault();
+              onNudge(1);
+            }
+          }}
+          aria-label={`Reorder "${item.description}", position ${index + 1} of ${total}. Use the up and down arrow keys to move it.`}
+          title="Drag to reorder"
+          // `touch-action: none` is what stops the drag from scrolling the page
+          // on a phone — without it the browser claims the gesture first.
+          className={cn(
+            sizing.handle,
+            "flex shrink-0 touch-none cursor-grab items-center justify-center rounded-md text-muted-foreground/50 outline-none hover:text-muted-foreground focus-visible:ring-2 focus-visible:ring-ring active:cursor-grabbing disabled:pointer-events-none disabled:opacity-30",
+          )}
+        >
+          <GripVertical className={sizing.handleIcon} aria-hidden />
+        </button>
+      )}
 
       <label className={sizing.checkCell}>
         <Checkbox

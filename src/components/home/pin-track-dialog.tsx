@@ -29,7 +29,7 @@ import { cn } from "@/lib/utils";
 const SEARCH_MIN_ROWS = 7;
 
 /**
- * The "+" at the top of the shortlist, and the dialog it opens.
+ * The "+" in the Pinned Tracks widget's header, and the dialog it opens.
  *
  * This used to be a "Pin another track" section under the shortlist: a search
  * box and a list that cost most of a phone screen on every visit, to serve an
@@ -60,10 +60,12 @@ export function PinTrackDialog({
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogTrigger asChild>
+        {/* Sized for a widget header: quiet, and 36px under `dash-stack:`
+            (the dashboard's phone arrangement) where it is a thumb target. */}
         <Button
-          variant="outline"
+          variant="ghost"
           size="icon"
-          className="h-8 w-8 shrink-0"
+          className="h-8 w-8 shrink-0 text-muted-foreground hover:text-foreground dash-stack:h-9 dash-stack:w-9"
           aria-label="Pin a track"
           title="Pin a track"
         >

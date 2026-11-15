@@ -18,6 +18,12 @@ export function FloatingFocusBar() {
   const focusPath = ctx.trackId ? `/focus/${ctx.trackId}` : "/focus/new";
   if (pathname === focusPath) return null;
 
+  // The dashboard's Focus Timer widget shows this same session — clock, pause,
+  // stop — so while it is on screen the pill would be a second copy of it.
+  // The widget says when it is (see `showTimerSurface`); everywhere else, and
+  // on a dashboard without the widget or scrolled past it, the pill stays.
+  if (ctx.timerSurfaceShown) return null;
+
   // The Library pins its own persistent mini-player along the bottom edge
   // (above the mobile nav, flush to the viewport on desktop). Lift this pill
   // clear of it there so the two pieces of fixed bottom chrome don't overlap.

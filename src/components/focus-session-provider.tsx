@@ -9,6 +9,7 @@ import {
   useState,
 } from "react";
 import type { ChecklistItem } from "@/components/session-todo-checklist";
+import { readTargetMs } from "@/lib/focus-timer";
 
 const STORAGE_KEY = "finish-five.focus-session";
 
@@ -31,6 +32,12 @@ type FocusSessionState = {
   // Sticky for the rest of the session once the user types their own goal, so
   // a later track switch never clobbers it.
   goalEdited: boolean;
+  // The length the session was started against, or null for an open-ended
+  // one. It is a way of *reading* the stopwatch, not a second clock: nothing
+  // stops when it is reached and the logged duration is still the elapsed
+  // time. The dashboard's Focus Timer widget sets it; the focus runner starts
+  // open-ended sessions and never does. See `src/lib/focus-timer.ts`.
+  targetMs: number | null;
 };
 
 const INITIAL_STATE: FocusSessionState = {
@@ -45,6 +52,7 @@ const INITIAL_STATE: FocusSessionState = {
   goal: "",
   goalTrackId: null,
   goalEdited: false,
+  targetMs: null,
 };
 
 export type StartInput = {
@@ -53,6 +61,8 @@ export type StartInput = {
   sessionTypeId?: string | null;
   initialTodos?: ChecklistItem[];
   goal?: string;
+  /** Count down from this many milliseconds. Omit (or null) for open-ended. */
+  targetMs?: number | null;
 };
 
 type FocusSessionContextValue = FocusSessionState & {
@@ -72,6 +82,18 @@ type FocusSessionContextValue = FocusSessionState & {
   setTrack: (trackId: string | null, trackName: string | null) => void;
   /** Changes the session type mid-session. */
   setSessionType: (sessionTypeId: string | null) => void;
+  /**
+   * True while something on the page is already drawing this session's clock
+   * and controls — the dashboard's Focus Timer widget, when it is on screen.
+   * `FloatingFocusBar` stands down then, so the same timer is not shown twice.
+   */
+  timerSurfaceShown: boolean;
+  /**
+   * Declares such a surface. Returns the function that withdraws it; call it
+   * from the effect's cleanup. Counted rather than flagged so two surfaces,
+   * or React re-running an effect, cannot leave the bar hidden for good.
+   */
+  showTimerSurface: () => () => void;
 };
 
 const FocusSessionContext = createContext<FocusSessionContextValue | null>(null);
@@ -87,6 +109,9 @@ export function useFocusSession() {
 export function FocusSessionProvider({ children }: { children: React.ReactNode }) {
   const [state, setState] = useState<FocusSessionState>(INITIAL_STATE);
   const [, forceTick] = useState(0);
+  // Not part of the session and never persisted: it describes this page, and
+  // a reload starts from "nothing is showing the timer" until a surface says so.
+  const [timerSurfaces, setTimerSurfaces] = useState(0);
   const hydrated = useRef(false);
 
   useEffect(() => {
@@ -95,10 +120,14 @@ export function FocusSessionProvider({ children }: { children: React.ReactNode }
     try {
       const raw = sessionStorage.getItem(STORAGE_KEY);
       if (!raw) return;
-      // `goal` was added after launch; older persisted sessions won't have it.
+      // `goal` and `targetMs` were added after launch; older persisted
+      // sessions won't have them and take the defaults — for `targetMs`, null:
+      // an open-ended session, which is what every one of them was.
+      const stored = JSON.parse(raw) as Partial<FocusSessionState>;
       const parsed = {
         ...INITIAL_STATE,
-        ...(JSON.parse(raw) as Partial<FocusSessionState>),
+        ...stored,
+        targetMs: readTargetMs(stored.targetMs),
       };
       /* eslint-disable react-hooks/set-state-in-effect */
       setState(parsed);
@@ -146,6 +175,7 @@ export function FocusSessionProvider({ children }: { children: React.ReactNode }
       goal: input.goal ?? "",
       goalTrackId: input.trackId,
       goalEdited: false,
+      targetMs: readTargetMs(input.targetMs),
     });
   }, []);
 
@@ -207,6 +237,16 @@ export function FocusSessionProvider({ children }: { children: React.ReactNode }
     setState((prev) => ({ ...prev, sessionTypeId }));
   }, []);
 
+  const showTimerSurface = useCallback(() => {
+    let withdrawn = false;
+    setTimerSurfaces((n) => n + 1);
+    return () => {
+      if (withdrawn) return;
+      withdrawn = true;
+      setTimerSurfaces((n) => Math.max(0, n - 1));
+    };
+  }, []);
+
   const value: FocusSessionContextValue = {
     ...state,
     elapsedMs,
@@ -221,6 +261,8 @@ export function FocusSessionProvider({ children }: { children: React.ReactNode }
     seedGoal,
     setTrack,
     setSessionType,
+    timerSurfaceShown: timerSurfaces > 0,
+    showTimerSurface,
   };
 
   return (

@@ -30,13 +30,13 @@ describe("parseProgressTab", () => {
 });
 
 describe("progressTabHref", () => {
-  // The default tab is what a bare "/" already renders, so it must not add a
-  // param — otherwise every dashboard link would carry a redundant query.
+  // The default tab is what a bare "/analytics" already renders, so it must
+  // not add a param — otherwise every link there would carry a redundant query.
   it("omits the param for the default tab", () => {
-    expect(progressTabHref("overview")).toBe("/#progress");
+    expect(progressTabHref("overview")).toBe("/analytics");
   });
 
-  it("sets the param for a non-default tab and keeps the anchor", () => {
-    expect(progressTabHref("history")).toBe("/?progress=history#progress");
+  it("sets the param for a non-default tab", () => {
+    expect(progressTabHref("history")).toBe("/analytics?progress=history");
   });
 });

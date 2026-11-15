@@ -268,6 +268,110 @@ Run `pnpm typecheck && pnpm lint && pnpm test` before committing.
   the destination page owns it at once, and the goal re-seeds from the new
   track unless the user typed their own.
 
+## Dashboard widgets
+
+The home page is a grid of widgets the user adds, moves, resizes and
+configures, saved as named layouts. Four layers, each ignorant of the ones
+above it:
+
+- **Grid maths — `src/lib/dashboard/grid.ts`.** Rectangles on a 12-column
+  grid: collision, compaction, move, resize, first free slot. Pure and
+  unit-tested, like `task-order.ts`. Two invariants hold for everything it
+  returns: nothing overlaps or leaves the grid (placement is sequential, so
+  this is true by construction even for broken input), and gravity pulls up
+  (no holes). A drag is always computed from the layout **as it was when the
+  drag began**, never from the previous frame — chaining frames lets push
+  order accumulate, so dragging out and back would not restore the layout.
+  Who yields when a widget lands on another is the *centre rule*: the mover
+  takes a widget's place once its centre has crossed that widget's centre
+  (`moveItem`); the keyboard uses `stepItem`, where up/down mean "past the
+  neighbour", because with gravity a one-row nudge just floats back.
+- **The registry — `src/lib/dashboard/widgets.ts`.** What a widget *is*:
+  name, blurb, category, the size presets it offers, whether a second copy
+  makes sense (`multiple`), and a Zod schema plus field descriptors for its
+  settings. Plain data, importable from the browser. The components live
+  apart, in `src/components/dashboard/widgets/index.tsx`, because they are
+  server components; that map is typed `Record<WidgetType, …>`, so a widget
+  with no renderer does not compile. **To add a widget: one entry in
+  `WIDGETS`, one component, one line in the renderer map.** The grid, the
+  gallery, the settings dialog and persistence all iterate the registry and
+  need no change.
+- **The layout document — `src/lib/dashboard/layout.ts`.** A *type* is a kind
+  of widget; an *instance* is one copy on a dashboard with its own id, box and
+  settings (two Tasks widgets, two tracks). A layout is
+  `{ version, items, order }`, stored whole in `dashboard_layouts.layout`
+  (migration 0037) — a document rather than a row per widget because it is
+  saved and cancelled as a unit and nothing queries inside it. **`readLayout`
+  is the only way a stored layout enters the app, and it never throws**: an
+  unknown or future version falls back to the default (flagged, and nothing is
+  overwritten until the user saves); a type that no longer exists is dropped
+  (renames go in `WIDGET_TYPE_ALIASES`); settings that fail the schema read as
+  that widget's defaults; ids, boxes and overlaps are repaired. Changing the
+  stored shape means bumping `LAYOUT_VERSION` and adding a step to `UPGRADES`.
+  The save action runs the same function, so what is stored is always
+  something the reader accepts.
+- **The surface — `src/components/dashboard/`.** `page.tsx` picks the layout
+  (`?layout=<id>`, omitted for the default, like every other view preference),
+  renders one `WidgetHost` per instance **on the server**, and passes them to
+  `DashboardShell` as nodes — the `PinnedTracks`-card trick, at page scale. So
+  the shell and `DashboardGrid` are client components (they hold drag and
+  edit state) while widgets stay server components that each read their own
+  data. `WidgetHost` gives every widget a Suspense skeleton and its own error
+  boundary: a failed query costs one card, not the page, so **a widget throws
+  on a failed read** and never swallows it into zeros. Queries several widgets
+  share are wrapped in `cache()` in `src/lib/data/dashboard.ts`.
+
+Rules that are easy to break:
+
+- **A widget is never told its size.** Its card is a CSS size container named
+  `widget`; it decides what to show with `@sm/widget:`-style width queries and
+  the `widget-h3:` / `widget-h4:` / `widget-h5:` height variants
+  (`globals.css`). That is why content responds *while* the corner is being
+  dragged, with no round trip. A bigger box shows more, not the same thing
+  scaled. `dash-stack:` is the phone arrangement, where the box is as tall as
+  its content and the height variants never match.
+- **Where widgets go is CSS, not measurement.** Each cell carries
+  `--x --y --w --h --mw --o` inline and `.dash-grid` picks the arrangement
+  from a container query on the dashboard's *own* width (the sidebar takes
+  16rem of a desktop viewport and none of a phone's, so the viewport is the
+  wrong thing to ask): 12 columns from 64rem, six flowed columns from 32rem,
+  one column below. Nothing is measured in the browser and nothing moves
+  after hydration. Do not swap this for a library that positions with
+  measured pixel transforms.
+- **Only the 12-column grid is dragged.** There a widget moves by its top bar
+  and resizes from its corner (Pointer Events — one path for mouse, pen and
+  touch — plus arrow keys on the focused grip, Shift to resize). Narrower
+  arrangements have no cells to drag between; they flow in `order`, which the
+  up/down buttons rearrange. `order` is `null` until someone does that, so a
+  desktop-only user's phone follows their desktop layout for free; the default
+  layout sets it explicitly, because the best first screen on a phone
+  (shortcuts, shortlist, tasks) is not the desktop read top to bottom. Which
+  arrangement is live is read from the grid's computed style at the moment of
+  the gesture, never tracked in state.
+- **On a phone a widget is as tall as its content.** No fixed rows and no
+  scrolling inside a card: a scroll box inside a scrolling page traps the
+  thumb. `.dash-scroll` only scrolls where the box has a fixed height.
+- **Edit mode edits a draft.** Nothing reaches the database until Save, which
+  is what makes Cancel honest. A widget added or re-configured mid-edit has
+  no server-rendered node, so `renderWidgetPreview` (a server action that
+  returns the rendered `WidgetHost`) supplies one; previews are dropped when
+  the page re-renders from the saved layout. Widget contents are `inert`
+  while editing.
+- **The options menu is portalled, and React bubbles its events to the drag
+  bar anyway.** The bar's `onPointerDown` checks
+  `currentTarget.contains(target)`; without it a press on a menu item starts
+  a drag, captures the pointer, and the item is never chosen.
+- **Goals are measured, not stored.** A goal is a target over the current
+  week or month in the widget's settings, counted from `sessions` and
+  `actions.completed_at` each time it is drawn — the "no counter" rule the
+  resources shelf follows. There is no goals table.
+- **No rows is a valid state.** With nothing in `dashboard_layouts` the app
+  shows its built-in default ("My Studio", `defaultLayout()`), and the first
+  save creates the row. `createDashboardLayout` writes the built-in first when
+  it is about to create the only row, or "My Studio" would vanish from the
+  switcher. A failed read of the table shows the built-in **read-only** —
+  saving over an unknown set of rows could bury the real ones.
+
 ## Feature parity rule (desktop ↔ mobile)
 
 **Any track-level user-facing feature on `/tracks/[id]` must also work on `/m/[trackId]`, and vice versa.** Add it to both pages in the same PR.

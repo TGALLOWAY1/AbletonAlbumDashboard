@@ -25,17 +25,6 @@ const nextConfig: NextConfig = {
     // long a replaced poster frame can stay stale.
     minimumCacheTTL: 60 * 60 * 24 * 31,
   },
-  async redirects() {
-    return [
-      // The standalone Progress page merged into the dashboard; keep old
-      // bookmarks and links working.
-      {
-        source: "/analytics",
-        destination: "/#progress",
-        permanent: false,
-      },
-    ];
-  },
 };
 
 export default nextConfig;

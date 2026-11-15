@@ -161,3 +161,8 @@ export const MIGRATION_0036_MISSING_MESSAGE =
   "This needs supabase/migrations/0036_resource_category_order.sql applied to " +
   "your Supabase project — the category order has nowhere to save yet. Run " +
   "it, then try again.";
+
+export const MIGRATION_0037_MISSING_MESSAGE =
+  "This needs supabase/migrations/0037_dashboard_layouts.sql applied to your " +
+  "Supabase project — dashboard layouts have nowhere to save yet. Run it, " +
+  "then try again.";

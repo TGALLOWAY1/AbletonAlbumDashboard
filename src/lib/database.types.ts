@@ -95,6 +95,39 @@ export type Database = {
         };
         Relationships: [];
       };
+      dashboard_layouts: {
+        Row: {
+          created_at: string;
+          id: string;
+          is_default: boolean;
+          layout: Json;
+          name: string;
+          owner_id: string;
+          sort_order: number;
+          updated_at: string;
+        };
+        Insert: {
+          created_at?: string;
+          id?: string;
+          is_default?: boolean;
+          layout: Json;
+          name: string;
+          owner_id: string;
+          sort_order?: number;
+          updated_at?: string;
+        };
+        Update: {
+          created_at?: string;
+          id?: string;
+          is_default?: boolean;
+          layout?: Json;
+          name?: string;
+          owner_id?: string;
+          sort_order?: number;
+          updated_at?: string;
+        };
+        Relationships: [];
+      };
       session_recurrences: {
         Row: {
           active_from: string;

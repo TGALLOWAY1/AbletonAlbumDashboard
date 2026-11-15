@@ -86,16 +86,48 @@ export function getRangeStart(range: RangeKey, now: Date = new Date()): Date {
   return start;
 }
 
+/**
+ * Sessions that started inside `[start, end]`, both ends included.
+ *
+ * The one membership rule for "is this session in the window". The range
+ * helpers below are this with the window spelled as a `RangeKey`; the
+ * dashboard's week and month windows (`weekly-activity.ts`, `goals.ts`) call
+ * it directly. Keeping a single rule is what lets a goal's "sessions this
+ * week" and the heatmap's count for the same seven days never differ by the
+ * session that started exactly at midnight.
+ */
+export function getSessionsBetween<T extends { startedAt: string }>(
+  sessions: T[],
+  start: Date,
+  end: Date,
+): T[] {
+  const from = start.getTime();
+  const to = end.getTime();
+  return sessions.filter((s) => {
+    const t = new Date(s.startedAt).getTime();
+    return !Number.isNaN(t) && t >= from && t <= to;
+  });
+}
+
 export function getSessionsInRange<T extends { startedAt: string }>(
   sessions: T[],
   range: RangeKey,
   now: Date = new Date(),
 ): T[] {
-  const start = getRangeStart(range, now).getTime();
-  const end = now.getTime();
-  return sessions.filter((s) => {
-    const t = new Date(s.startedAt).getTime();
-    return !Number.isNaN(t) && t >= start && t <= end;
+  return getSessionsBetween(sessions, getRangeStart(range, now), now);
+}
+
+/** Completed tasks ticked inside `[start, end]` — see `getSessionsBetween`. */
+export function getTasksCompletedBetween(
+  tasks: AnalyticsTaskCompletion[],
+  start: Date,
+  end: Date,
+): AnalyticsTaskCompletion[] {
+  const from = start.getTime();
+  const to = end.getTime();
+  return tasks.filter((t) => {
+    const at = new Date(t.completedAt).getTime();
+    return !Number.isNaN(at) && at >= from && at <= to;
   });
 }
 
@@ -108,12 +140,7 @@ export function getTasksCompletedInRange(
   range: RangeKey,
   now: Date = new Date(),
 ): AnalyticsTaskCompletion[] {
-  const start = getRangeStart(range, now).getTime();
-  const end = now.getTime();
-  return tasks.filter((t) => {
-    const at = new Date(t.completedAt).getTime();
-    return !Number.isNaN(at) && at >= start && at <= end;
-  });
+  return getTasksCompletedBetween(tasks, getRangeStart(range, now), now);
 }
 
 // Local-date key (YYYY-MM-DD) so heatmap squares line up with the user's calendar day.
@@ -325,4 +352,38 @@ export function getRangeStats({
     tracksWorked,
     sessionsPerWeek: getSessionsPerWeek(rangeSessions, range),
   };
+}
+
+/**
+ * How far back a dashboard widget's series has to reach, in days.
+ *
+ * The windows themselves are cut in the browser, on the reader's own calendar
+ * (see `toDayKey`); the server only knows UTC. So a server widget may drop
+ * what no window could reach, but must leave a margin for the zone — a reader
+ * in Auckland starts "today" thirteen hours before the server does. Two days
+ * covers every zone on either side with room to spare.
+ */
+export const SERIES_ZONE_MARGIN_DAYS = 2;
+
+/**
+ * The tail of a series that a window of `days` could still need.
+ *
+ * Purely a payload trim: four widgets read the same session series, and
+ * shipping a few years of rows to the browser so one of them can total this
+ * week is waste. It never decides what counts — every figure is still
+ * filtered again, exactly, by the range helpers above.
+ */
+export function trimSeriesToDays<T>(
+  items: T[],
+  getIso: (item: T) => string,
+  days: number,
+  now: Date = new Date(),
+): T[] {
+  const cutoff =
+    now.getTime() - (days + SERIES_ZONE_MARGIN_DAYS) * 24 * 60 * 60 * 1000;
+  return items.filter((item) => {
+    const t = new Date(getIso(item)).getTime();
+    // Unparseable rows are kept: dropping them is the range helpers' call.
+    return Number.isNaN(t) || t >= cutoff;
+  });
 }
