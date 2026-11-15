@@ -16,12 +16,13 @@ import {
 import { cn, formatMinutes } from "@/lib/utils";
 
 /**
- * Hides `WidgetEmpty`'s icon where the box is two rows tall: the icon, a
- * title, a hint and a button do not fit under a header in 144px, and the
- * icon is the part that says nothing.
+ * `WidgetEmpty` for a box that may be two rows tall. Under a header that
+ * leaves about 100px, which holds a title and one more thing — so the icon
+ * and the outer padding only appear from three rows up (or stacked, where
+ * the box is as tall as it needs to be).
  */
-const EMPTY_ICON_WHEN_ROOM =
-  "[&>span]:hidden widget-h3:[&>span]:flex dash-stack:[&>span]:flex";
+const EMPTY_COMPACT =
+  "py-1 [&>span]:hidden widget-h3:py-3 widget-h3:[&>span]:flex dash-stack:py-3 dash-stack:[&>span]:flex";
 
 /**
  * The song you are on, as the dashboard's hero.
@@ -50,9 +51,16 @@ export async function CurrentTrackWidget({ config }: WidgetProps<"current-track"
           <WidgetBody>
             <WidgetEmpty
               icon={Disc3}
-              className={EMPTY_ICON_WHEN_ROOM}
+              className={EMPTY_COMPACT}
               title="Nothing pinned yet"
-              hint="This follows the top of your pinned shortlist. Pin a track to see it here."
+              hint={
+                // The two-row box keeps the title and the button; the
+                // sentence between them is what it has no room for.
+                <span className="hidden widget-h3:inline dash-stack:inline">
+                  This follows the top of your pinned shortlist. Pin a track
+                  to see it here.
+                </span>
+              }
               action={
                 <Button asChild size="sm" variant="outline" className="dash-stack:h-9">
                   <Link href="/tracks">Pin a track</Link>
@@ -74,7 +82,7 @@ export async function CurrentTrackWidget({ config }: WidgetProps<"current-track"
         <WidgetBody>
           <WidgetEmpty
             icon={Disc3}
-            className={EMPTY_ICON_WHEN_ROOM}
+            className={EMPTY_COMPACT}
             title={track ? "This track is archived" : "This track is gone"}
             // Short enough to fit the two-row box under its header.
             hint="Choose another in this widget's settings: Customize, then its menu."

@@ -86,21 +86,19 @@ export function WorkHeatmapPanel({
   // the browser is the one rendering — see `useIsClient`. The server and the
   // hydration pass both draw the reserved space below.
   //
-  // The series are dependencies on purpose: the window runs *to now*, so a
-  // clock read once at mount would shut out everything logged afterwards.
-  // Ticking a task revalidates the dashboard and hands this still-mounted
-  // component a fresh series; re-reading the clock with it is what lets that
-  // task count without a reload.
+  // The clock is read *inside* the memo, with the series as its inputs, not
+  // once at mount: the window runs to now, so a mount-time "now" would shut
+  // out everything logged afterwards. Ticking a task revalidates the
+  // dashboard and hands this still-mounted component a fresh series;
+  // re-reading the clock along with it is what lets that task count without
+  // a reload.
   const isClient = useIsClient();
-  const now = useMemo(
-    () => (isClient ? new Date() : null),
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- see above
-    [isClient, sessions, taskCompletions],
-  );
   const stats = useMemo(
     () =>
-      now ? getRangeStats({ sessions, tasks: taskCompletions, range, now }) : null,
-    [sessions, taskCompletions, range, now],
+      isClient
+        ? getRangeStats({ sessions, tasks: taskCompletions, range, now: new Date() })
+        : null,
+    [isClient, sessions, taskCompletions, range],
   );
 
   const mode = heatmapMode(range);

@@ -38,20 +38,19 @@ export function GoalsList({
   // the browser is rendering — see `useIsClient`. The rows are drawn straight
   // away with their labels; only the counts and the bars wait.
   //
-  // The series are dependencies on purpose: the window runs *to now*, so a
-  // clock read once at mount would shut out everything logged afterwards.
-  // Ticking a task revalidates the dashboard and hands this still-mounted
-  // component a fresh series; re-reading the clock with it is what lets that
-  // task count without a reload.
+  // The clock is read *inside* the memo, with the series as its inputs, not
+  // once at mount: the window runs to now, so a mount-time "now" would shut
+  // out everything logged afterwards. Ticking a task revalidates the
+  // dashboard and hands this still-mounted component a fresh series;
+  // re-reading the clock along with it is what lets that task count without
+  // a reload.
   const isClient = useIsClient();
-  const now = useMemo(
-    () => (isClient ? new Date() : null),
-    [isClient, sessions, taskCompletions],
-  );
   const progress = useMemo(
     () =>
-      now ? goalsProgress({ goals, sessions, tasks: taskCompletions, now }) : null,
-    [goals, sessions, taskCompletions, now],
+      isClient
+        ? goalsProgress({ goals, sessions, tasks: taskCompletions, now: new Date() })
+        : null,
+    [isClient, goals, sessions, taskCompletions],
   );
   const met = progress?.filter((p) => p.done).length;
 

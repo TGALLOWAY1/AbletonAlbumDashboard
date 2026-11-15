@@ -45,20 +45,15 @@ export function WeeklyActivityChart({
   // Which Monday starts the week is the reader's calendar, so the model is
   // not built until the browser is rendering — see `useIsClient`.
   //
-  // The series is a dependency on purpose: the week runs *to now*, so a clock
-  // read once at mount would shut out a session logged afterwards. Logging
-  // one revalidates the dashboard and hands this still-mounted chart a fresh
-  // series; re-reading the clock with it is what draws that session's bar
-  // without a reload.
+  // The clock is read *inside* the memo, with the series as its input, not
+  // once at mount: the week runs to now, so a mount-time "now" would shut out
+  // a session logged afterwards. Logging one revalidates the dashboard and
+  // hands this still-mounted chart a fresh series; re-reading the clock along
+  // with it is what draws that session's bar without a reload.
   const isClient = useIsClient();
-  const now = useMemo(
-    () => (isClient ? new Date() : null),
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- see above
-    [isClient, sessions],
-  );
   const week = useMemo(
-    () => (now ? buildWeekActivity({ sessions, now }) : null),
-    [sessions, now],
+    () => (isClient ? buildWeekActivity({ sessions, now: new Date() }) : null),
+    [isClient, sessions],
   );
 
   return (

@@ -12,7 +12,7 @@ import { WIDGETS, type WidgetProps } from "@/lib/dashboard/widgets";
  * same helpers as the heatmap. A day's bar here and that day's square there
  * are one number.
  */
-export async function WeeklyActivityWidget(_props: WidgetProps<"weekly-activity">) {
+export async function WeeklyActivityWidget({}: WidgetProps<"weekly-activity">) {
   const { sessions } = await fetchAnalyticsDataCached();
 
   return (
