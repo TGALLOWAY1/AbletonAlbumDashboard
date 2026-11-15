@@ -29,7 +29,7 @@ export async function GoalsWidget({ config }: WidgetProps<"goals">) {
           <WidgetEmpty
             icon={Target}
             // Two rows tall there is room for the words or the icon, not both.
-            className="[&>span]:hidden widget-h3:[&>span]:flex dash-stack:[&>span]:flex"
+            className="min-h-0 dash-stack:min-h-24 [&>span]:hidden widget-h3:[&>span]:flex dash-stack:[&>span]:flex"
             title="No goals set"
             hint="Add one in this widget's settings: Customize, then its “…” menu."
           />

@@ -209,8 +209,11 @@ function WeekChart({ week }: { week: WeekActivity }) {
           </div>
         </div>
 
-        {/* The table view: every value the chart shows, without the chart. */}
-        <table className="sr-only">
+        {/* The table view: every value the chart shows, without the chart.
+            The wrapper is what is hidden: a <table> ignores the height and
+            overflow that `sr-only` relies on. */}
+        <div className="sr-only">
+        <table>
           <caption>Time logged each day this week</caption>
           <thead>
             <tr>
@@ -230,6 +233,7 @@ function WeekChart({ week }: { week: WeekActivity }) {
             ))}
           </tbody>
         </table>
+        </div>
       </div>
 
       {/* A wide box has room to say what the bars add up to. */}

@@ -68,8 +68,10 @@ export async function RecentSessionsWidget({ config }: WidgetProps<"recent-sessi
   );
 }
 
+// 32px rows on the grid, so the default five fit the default box without
+// scrolling; taller wherever a finger is doing the pointing.
 const ROW_CLASS =
-  "-mx-2 flex min-h-10 items-center gap-2.5 rounded-md px-2 py-1.5 dash-stack:min-h-11";
+  "-mx-2 flex min-h-8 items-center gap-2.5 rounded-md px-2 py-1 pointer-coarse:min-h-10 dash-stack:min-h-11";
 
 function SessionRow({ session }: { session: RecentSession }) {
   const type = session.sessionTypeName ?? "Session";

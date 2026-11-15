@@ -84,6 +84,37 @@ export function GoalsList({
   );
 }
 
+/**
+ * "2 / 3", with a tick once the goal is met — so met is a mark and a word
+ * for screen readers, not just a bar that happens to be full.
+ */
+function GoalValue({
+  progress,
+  className,
+}: {
+  progress: GoalProgress | null;
+  className?: string;
+}) {
+  const done = progress?.done ?? false;
+  return (
+    <span
+      className={cn(
+        "flex shrink-0 items-center gap-1 tabular-nums",
+        done ? "font-semibold" : "font-medium",
+        className,
+      )}
+    >
+      {done && (
+        <>
+          <CheckCircle2 className="h-3.5 w-3.5 text-primary" aria-hidden />
+          <span className="sr-only">Met:</span>
+        </>
+      )}
+      {progress?.valueText ?? " "}
+    </span>
+  );
+}
+
 function GoalRow({ goal, progress }: { goal: Goal; progress: GoalProgress | null }) {
   const Icon = METRIC_ICONS[goal.metric];
   const done = progress?.done ?? false;
@@ -114,32 +145,29 @@ function GoalRow({ goal, progress }: { goal: Goal; progress: GoalProgress | null
             </span>
           )}
 
-          <span
-            className={cn(
-              "flex shrink-0 items-center gap-1 tabular-nums",
-              done ? "font-semibold" : "font-medium",
-            )}
-          >
-            {/* Met is a tick and a word for screen readers, not just a full,
-                green bar. */}
-            {done && (
-              <>
-                <CheckCircle2 className="h-3.5 w-3.5 text-primary" aria-hidden />
-                <span className="sr-only">Met:</span>
-              </>
-            )}
-            {progress?.valueText ?? " "}
-          </span>
+          {/* Beside the label — except in a narrow box with room to be
+              taller, where it moves down to the meter's line (below) so the
+              label can keep its "this week". */}
+          <GoalValue
+            progress={progress}
+            className="@max-xs/widget:widget-h3:hidden"
+          />
         </div>
 
-        {/* The meter: the track is a lighter step of the fill's own green. */}
-        <div
-          aria-hidden
-          className="mt-0.5 h-[3px] overflow-hidden rounded-full bg-primary/15 widget-h3:mt-1 widget-h3:h-1.5 dash-stack:mt-1 dash-stack:h-1.5"
-        >
+        <div className="mt-0.5 flex items-center gap-2 widget-h3:mt-1 dash-stack:mt-1">
+          {/* The meter: the track is a lighter step of the fill's own green. */}
           <div
-            className="h-full rounded-full bg-primary transition-[width] duration-300"
-            style={{ width: `${(progress?.fraction ?? 0) * 100}%` }}
+            aria-hidden
+            className="h-[3px] min-w-0 flex-1 overflow-hidden rounded-full bg-primary/15 widget-h3:h-1.5 dash-stack:h-1.5"
+          >
+            <div
+              className="h-full rounded-full bg-primary transition-[width] duration-300"
+              style={{ width: `${(progress?.fraction ?? 0) * 100}%` }}
+            />
+          </div>
+          <GoalValue
+            progress={progress}
+            className="hidden text-xs @max-xs/widget:widget-h3:flex"
           />
         </div>
       </div>

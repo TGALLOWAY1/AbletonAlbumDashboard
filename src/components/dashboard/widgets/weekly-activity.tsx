@@ -1,7 +1,7 @@
 import { WeeklyActivityChart } from "@/components/dashboard/widgets/weekly-activity-chart";
 import { trimSeriesToDays } from "@/lib/analytics";
 import { fetchAnalyticsDataCached } from "@/lib/data/dashboard";
-import { WIDGETS, type WidgetProps } from "@/lib/dashboard/widgets";
+import { WIDGETS } from "@/lib/dashboard/widgets";
 
 /**
  * This Week — time logged on each day of the current week, Monday to Sunday.
@@ -12,7 +12,7 @@ import { WIDGETS, type WidgetProps } from "@/lib/dashboard/widgets";
  * same helpers as the heatmap. A day's bar here and that day's square there
  * are one number.
  */
-export async function WeeklyActivityWidget({}: WidgetProps<"weekly-activity">) {
+export async function WeeklyActivityWidget() {
   const { sessions } = await fetchAnalyticsDataCached();
 
   return (

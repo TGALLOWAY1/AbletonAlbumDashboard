@@ -41,8 +41,9 @@ export async function ProgressOverviewWidget({
         <WidgetBody>
           <WidgetEmpty
             icon={Disc3}
-            // Two rows tall there is room for the words or the icon, not both.
-            className="[&>span]:hidden widget-h3:[&>span]:flex dash-stack:[&>span]:flex"
+            // Two rows tall there is room for the words, not for the icon and
+            // the button as well.
+            className="min-h-0 dash-stack:min-h-24 [&>span]:hidden widget-h3:[&>span]:flex dash-stack:[&>span]:flex [&>div]:hidden widget-h3:[&>div]:block dash-stack:[&>div]:block"
             title="No active tracks"
             hint="Overall is the average across your active tracks."
             action={
