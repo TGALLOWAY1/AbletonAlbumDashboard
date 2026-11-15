@@ -46,8 +46,9 @@ export async function SunoQueueWidget() {
         <WidgetBody>
           <WidgetEmpty
             icon={Sparkles}
-            // No icon in the two-row box: title and hint are what fit there.
-            className="[&>span]:hidden widget-h3:[&>span]:flex dash-stack:[&>span]:flex"
+            // The two-row box has about 100px under the header: room for
+            // the title and the hint, not the icon or the outer padding.
+            className="min-h-0 py-1 [&>span]:hidden widget-h3:min-h-24 widget-h3:py-3 widget-h3:[&>span]:flex dash-stack:min-h-24 dash-stack:py-3 dash-stack:[&>span]:flex"
             title="No open round-trips"
             hint="Start a Suno experiment from a track and it shows here until it is integrated or discarded."
           />

@@ -22,7 +22,7 @@ import { cn, formatMinutes } from "@/lib/utils";
  * the box is as tall as it needs to be).
  */
 const EMPTY_COMPACT =
-  "py-1 [&>span]:hidden widget-h3:py-3 widget-h3:[&>span]:flex dash-stack:py-3 dash-stack:[&>span]:flex";
+  "min-h-0 py-1 [&>span]:hidden widget-h3:min-h-24 widget-h3:py-3 widget-h3:[&>span]:flex dash-stack:min-h-24 dash-stack:py-3 dash-stack:[&>span]:flex";
 
 /**
  * The song you are on, as the dashboard's hero.
