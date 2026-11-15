@@ -102,7 +102,7 @@ export function ProgressOverviewBody({
         aria-label={`Over the ${window}`}
         // Two columns of label-over-value; beside the large ring in a wide box,
         // one column of rows with icons instead.
-        className="hidden min-w-0 grid-cols-2 gap-x-4 gap-y-2 widget-h3:grid dash-stack:grid @md/widget:grid @md/widget:max-w-72 @md/widget:flex-1 @md/widget:widget-h3:grid-cols-1 @md/widget:widget-h3:gap-y-0"
+        className="hidden min-w-0 grid-cols-2 gap-x-4 gap-y-2 widget-h3:grid dash-stack:grid @md/widget:grid @md/widget:max-w-60 @md/widget:flex-1 @md/widget:widget-h3:grid-cols-1 @md/widget:widget-h3:gap-y-0"
       >
         <Figure icon={CheckCircle2} label="Tasks done">
           {stats?.tasksCompleted}
