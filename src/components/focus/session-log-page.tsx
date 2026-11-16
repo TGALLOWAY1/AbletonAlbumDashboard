@@ -27,6 +27,7 @@ import {
 } from "./production-activity-grid";
 import { SessionOutcomeRating } from "./session-outcome-rating";
 import { SessionCompletionSummary } from "./session-completion-summary";
+import { StarterSessionWrapUp } from "@/components/session-starters/session-wrap-up";
 
 const EMPTY_ACTIVITIES: ActivityState = Object.fromEntries(
   PRODUCTION_ACTIVITIES.map((a) => [a.key, { minutes: 0, note: "" }]),
@@ -196,6 +197,8 @@ export function SessionLogPage({
   };
 
   // --- Render guards -------------------------------------------------------
+  if (ctx.starter && ctx.phase === "stopped") return <StarterSessionWrapUp />;
+
   if (!hasSession) {
     if (!settled) {
       return (

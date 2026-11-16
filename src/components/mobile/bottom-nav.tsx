@@ -6,6 +6,7 @@ import {
   BookOpen,
   Home,
   ListMusic,
+  PanelsTopLeft,
   Settings as SettingsIcon,
   type LucideIcon,
 } from "lucide-react";
@@ -37,6 +38,12 @@ export const MOBILE_NAV_TABS: MobileNavTab[] = [
     // neither URL starts with /tracks.
     match: (p) =>
       p.startsWith("/tracks") || p.startsWith("/m/") || p.startsWith("/albums"),
+  },
+  {
+    label: "Session Starters",
+    href: "/session-starters",
+    icon: PanelsTopLeft,
+    match: (p) => p.startsWith("/session-starters") || p === "/focus/starter",
   },
   {
     label: "Resources",
@@ -89,7 +96,7 @@ export function MobileBottomNav() {
                   strokeWidth={active ? 2.5 : 2}
                   fill={active && tab.label === "Home" ? "currentColor" : "none"}
                 />
-                <span>{tab.label}</span>
+                <span>{tab.label === "Session Starters" ? "Starters" : tab.label}</span>
               </Link>
             </li>
           );

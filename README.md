@@ -10,6 +10,10 @@ open first.
 
 ## Features (V1)
 
+- **Session Starters** — a searchable, filterable gallery of editable creative
+  workflows with custom visuals, TikTok inspiration, filming guidance, tracked
+  sessions and lightweight wrap-ups. See [setup and architecture](docs/session-starters.md).
+
 - **Dashboard** — active-five card grid with per-track progress, current
   bottleneck, next action, and last-worked timestamp.
 - **Recommendation engine** — deterministic scoring (progress + momentum −

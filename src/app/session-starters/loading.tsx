@@ -1,0 +1,3 @@
+export default function LoadingSessionStarters() {
+  return <div role="status" aria-label="Loading Session Starters" className="animate-pulse space-y-6"><div className="h-12 w-72 rounded-lg bg-border/50" /><div className="h-24 rounded-xl bg-border/30" /><div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">{Array.from({ length: 6 }, (_, i) => <div key={i} className="h-80 rounded-xl border border-border bg-surface p-2"><div className="h-36 rounded-lg bg-border/50" /><div className="mt-4 h-4 w-3/4 rounded bg-border/50" /><div className="mt-4 h-16 rounded bg-border/25" /></div>)}</div><span className="sr-only">Loading your creative sessions…</span></div>;
+}
