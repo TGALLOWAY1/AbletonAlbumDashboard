@@ -17,13 +17,17 @@ import {
   RANGE_LONG_LABELS,
   RANGE_OPTIONS,
   getRangeStats,
-  parseDayKey,
   type AnalyticsSession,
   type AnalyticsTaskCompletion,
   type RangeKey,
   type RangeStats,
 } from "@/lib/analytics";
-import { heatmapMode, type HeatmapMode } from "@/lib/heatmap";
+import {
+  buildHeatmapGrid,
+  heatmapMode,
+  type HeatmapDay,
+  type HeatmapMode,
+} from "@/lib/heatmap";
 import { ANALYTICS_PATH } from "@/lib/progress-tab";
 import { useIsClient } from "@/lib/use-is-client";
 import { cn, formatDuration } from "@/lib/utils";
@@ -101,6 +105,20 @@ export function WorkHeatmapPanel({
     [isClient, sessions, taskCompletions, range],
   );
 
+  // The window's heaviest day, from the grid model itself — so on a tie this
+  // names the same day the Analytics page's readout does.
+  const busiest = useMemo(
+    () =>
+      stats
+        ? buildHeatmapGrid({
+            start: stats.start,
+            end: stats.end,
+            dailyMap: stats.dailyMap,
+          }).busiest
+        : null,
+    [stats],
+  );
+
   const mode = heatmapMode(range);
   const layout = LAYOUT[mode];
 
@@ -135,23 +153,29 @@ export function WorkHeatmapPanel({
               >
                 <div className={COMPACT_ONLY}>
                   <WorkHeatmap
+                    // Re-keyed by range so a day tapped in one window is not
+                    // still being named in the next.
+                    key={range}
                     dailyMap={stats.dailyMap}
                     startDate={stats.start}
                     endDate={stats.end}
                     range={range}
                     density="compact"
                     followReveal
-                    idleReadout={<IdleReadout stats={stats} layout={layout} />}
+                    holdTap
+                    idleReadout={<IdleReadout stats={stats} busiest={busiest} layout={layout} />}
                   />
                 </div>
                 <div className={cn(ROOMY_ONLY, mode === "calendar" && "w-[19rem]")}>
                   <WorkHeatmap
+                    key={range}
                     dailyMap={stats.dailyMap}
                     startDate={stats.start}
                     endDate={stats.end}
                     range={range}
                     followReveal
-                    idleReadout={<IdleReadout stats={stats} layout={layout} />}
+                    holdTap
+                    idleReadout={<IdleReadout stats={stats} busiest={busiest} layout={layout} />}
                   />
                 </div>
                 <div className="mt-2 hidden widget-h4:flex dash-stack:flex">
@@ -213,7 +237,7 @@ function RangeSelect({
     <Select value={range} onValueChange={(v) => onChange(v as RangeKey)}>
       <SelectTrigger
         aria-label={`Window: ${RANGE_LONG_LABELS[range]}. Change window`}
-        className="h-6 w-auto gap-0.5 rounded-md border-0 bg-transparent py-0 pl-1.5 pr-1 text-xs font-medium text-muted-foreground shadow-none hover:bg-surface-2 hover:text-foreground pointer-coarse:h-9 pointer-coarse:px-2.5 [&>svg]:h-3.5 [&>svg]:w-3.5"
+        className="h-6 w-auto gap-0.5 rounded-md border-0 bg-transparent py-0 pl-1.5 pr-1 text-xs font-medium text-muted-foreground shadow-none hover:bg-surface-2 hover:text-foreground focus:ring-0 pointer-coarse:h-9 pointer-coarse:px-2.5 [&>svg]:h-3.5 [&>svg]:w-3.5"
       >
         <SelectValue>{short}</SelectValue>
       </SelectTrigger>
@@ -241,9 +265,11 @@ function timeText(seconds: number) {
  */
 function IdleReadout({
   stats,
+  busiest,
   layout,
 }: {
   stats: RangeStats;
+  busiest: HeatmapDay | null;
   layout: (typeof LAYOUT)[HeatmapMode];
 }) {
   if (stats.sessionCount === 0) {
@@ -260,11 +286,6 @@ function IdleReadout({
       </>
     );
   }
-
-  const busiest = [...stats.dailyMap.entries()].reduce<[string, number] | null>(
-    (best, entry) => (!best || entry[1] > best[1] ? entry : best),
-    null,
-  );
 
   return (
     <>
@@ -283,10 +304,10 @@ function IdleReadout({
       {busiest && (
         <span className={layout.busiest}>
           <span className="font-medium text-foreground">
-            {format(parseDayKey(busiest[0]), "EEE d MMM")}
+            {format(busiest.date, "EEE d MMM")}
           </span>
           {" · "}
-          {timeText(busiest[1])} · busiest day
+          {timeText(busiest.seconds)} · busiest day
         </span>
       )}
     </>

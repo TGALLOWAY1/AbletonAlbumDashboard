@@ -525,7 +525,7 @@ export function DashboardGrid({
             >
               {editing && (
                 <div
-                  className="dash-drag absolute inset-x-0 top-0 z-10 flex h-11 items-center gap-1 border-b border-border bg-surface/95 pl-1 pr-1.5 backdrop-blur"
+                  className="dash-drag z-10 flex h-11 shrink-0 items-center gap-1 border-b border-border bg-surface/95 pl-1 pr-1.5 backdrop-blur"
                   onPointerDown={(e) => {
                     const target = e.target as HTMLElement;
                     // The options menu is portalled to <body>, but React

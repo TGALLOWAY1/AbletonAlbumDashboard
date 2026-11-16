@@ -169,16 +169,19 @@ function WeekChart({ week }: { week: WeekActivity }) {
 
             {empty && (
               <p className="absolute inset-x-0 top-1/2 -translate-y-1/2 px-2 text-center text-xs text-muted-foreground">
-                Nothing logged this week yet.
-                <span className="hidden widget-h3:inline dash-stack:inline">
-                  {" "}
-                  <Link
-                    href="/focus/new"
-                    className="font-medium text-foreground underline underline-offset-2 hover:text-primary"
-                  >
-                    Start a session
-                  </Link>{" "}
-                  to draw the first bar.
+                {/* On the card's own surface, so it reads over the hatching. */}
+                <span className="rounded-sm bg-surface box-decoration-clone px-1 py-0.5">
+                  Nothing logged this week yet.
+                  <span className="hidden widget-h3:inline dash-stack:inline">
+                    {" "}
+                    <Link
+                      href="/focus/new"
+                      className="font-medium text-foreground underline underline-offset-2 hover:text-primary"
+                    >
+                      Start a session
+                    </Link>{" "}
+                    to draw the first bar.
+                  </span>
                 </span>
               </p>
             )}
@@ -213,26 +216,26 @@ function WeekChart({ week }: { week: WeekActivity }) {
             The wrapper is what is hidden: a <table> ignores the height and
             overflow that `sr-only` relies on. */}
         <div className="sr-only">
-        <table>
-          <caption>Time logged each day this week</caption>
-          <thead>
-            <tr>
-              <th scope="col">Day</th>
-              <th scope="col">Time logged</th>
-            </tr>
-          </thead>
-          <tbody>
-            {week.days.map((day) => (
-              <tr key={day.key}>
-                <th scope="row">
-                  {WEEKDAY_LONG[day.weekday]}
-                  {day.isToday ? " (today)" : ""}
-                </th>
-                <td>{dayValueText(day)}</td>
+          <table>
+            <caption>Time logged each day this week</caption>
+            <thead>
+              <tr>
+                <th scope="col">Day</th>
+                <th scope="col">Time logged</th>
               </tr>
-            ))}
-          </tbody>
-        </table>
+            </thead>
+            <tbody>
+              {week.days.map((day) => (
+                <tr key={day.key}>
+                  <th scope="row">
+                    {WEEKDAY_LONG[day.weekday]}
+                    {day.isToday ? " (today)" : ""}
+                  </th>
+                  <td>{dayValueText(day)}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
         </div>
       </div>
 
@@ -285,7 +288,7 @@ function DayColumn({
     >
       {day.isFuture ? (
         <div
-          className="h-full w-full max-w-6 rounded-t-[4px] opacity-70"
+          className="h-full w-full max-w-6 rounded-t-[4px] opacity-60"
           style={PENDING_HATCH}
         />
       ) : (

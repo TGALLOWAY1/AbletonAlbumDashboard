@@ -282,8 +282,13 @@ export function FocusTimerPanel({
             className="-z-20"
           />
           {/* Flat and heavy on purpose: a cover can be any colour, including
-              white, and every line of text on this card has to clear it. */}
-          <div aria-hidden className="absolute inset-0 -z-10 bg-black/70" />
+              white, and every line of text on this card has to clear it. The
+              slight blur takes the hard edges off busy artwork, which is
+              what small text loses to. */}
+          <div
+            aria-hidden
+            className="absolute inset-0 -z-10 bg-black/70 backdrop-blur-xs"
+          />
         </>
       ) : (
         <div

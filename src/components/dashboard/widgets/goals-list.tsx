@@ -69,7 +69,7 @@ export function GoalsList({
       <WidgetBody>
         {/* Tight rows in the two-row box, so the default three goals fit it
             without scrolling; roomier ones wherever there is height. */}
-        <ul className="flex flex-col gap-[5px] widget-h3:gap-3 dash-stack:gap-3.5">
+        <ul className="flex flex-col gap-[5px] widget-h3:gap-2.5 dash-stack:gap-3.5">
           {goals.map((goal, i) => (
             <GoalRow
               // Goals have no id and two may be identical; position is the key.

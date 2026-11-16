@@ -105,6 +105,7 @@ export function WorkHeatmap({
   density = "regular",
   idleReadout,
   followReveal = false,
+  holdTap = false,
 }: {
   dailyMap: Map<string, number>;
   startDate: Date;
@@ -125,12 +126,24 @@ export function WorkHeatmap({
    * by box size, so one of them is first laid out with no width at all.
    */
   followReveal?: boolean;
+  /**
+   * Keep naming a tapped day after the finger lifts. A touch ends with a
+   * `pointerleave`, which otherwise clears the readout the instant it was
+   * set; with no dates printed in a compact square, the readout is the only
+   * way a phone can ask "which day is that".
+   */
+  holdTap?: boolean;
 }) {
   const grid = useMemo(
     () => buildHeatmapGrid({ start: startDate, end: endDate, dailyMap }),
     [dailyMap, startDate, endDate],
   );
   const [hovered, setHovered] = useState<HeatmapDay | null>(null);
+
+  const onLeave = (pointerType: string) => {
+    if (holdTap && pointerType === "touch") return;
+    setHovered(null);
+  };
 
   const mode = heatmapMode(range);
   const compact = density === "compact";
@@ -144,13 +157,14 @@ export function WorkHeatmap({
           grid={grid}
           range={range}
           onHover={setHovered}
+          onLeave={onLeave}
           compact={compact}
           followReveal={followReveal}
         />
       ) : compact ? (
-        <CompactCalendarGrid grid={grid} onHover={setHovered} />
+        <CompactCalendarGrid grid={grid} onHover={setHovered} onLeave={onLeave} />
       ) : (
-        <CalendarGrid grid={grid} onHover={setHovered} />
+        <CalendarGrid grid={grid} onHover={setHovered} onLeave={onLeave} />
       )}
 
       {/*
@@ -192,14 +206,16 @@ export function WorkHeatmap({
 function CalendarGrid({
   grid,
   onHover,
+  onLeave,
 }: {
   grid: ReturnType<typeof buildHeatmapGrid>;
   onHover: (day: HeatmapDay | null) => void;
+  onLeave: (pointerType: string) => void;
 }) {
   return (
     <div
       className={cn("w-full max-w-[30rem]", CALENDAR_VARS)}
-      onPointerLeave={() => onHover(null)}
+      onPointerLeave={(e) => onLeave(e.pointerType)}
     >
       <div
         className="grid grid-cols-7 gap-[var(--gap)] pb-1 text-center text-[10px] font-medium uppercase tracking-wide text-muted-foreground"
@@ -288,15 +304,17 @@ function CalendarCell({
 function CompactCalendarGrid({
   grid,
   onHover,
+  onLeave,
 }: {
   grid: ReturnType<typeof buildHeatmapGrid>;
   onHover: (day: HeatmapDay | null) => void;
+  onLeave: (pointerType: string) => void;
 }) {
   const columns = "grid grid-cols-[repeat(7,var(--cell))] gap-[var(--gap)]";
   return (
     <div
       className={cn("w-max", CALENDAR_COMPACT_VARS)}
-      onPointerLeave={() => onHover(null)}
+      onPointerLeave={(e) => onLeave(e.pointerType)}
     >
       <div
         className={cn(
@@ -356,12 +374,14 @@ function TrailGrid({
   grid,
   range,
   onHover,
+  onLeave,
   compact = false,
   followReveal = false,
 }: {
   grid: ReturnType<typeof buildHeatmapGrid>;
   range: RangeKey;
   onHover: (day: HeatmapDay | null) => void;
+  onLeave: (pointerType: string) => void;
   compact?: boolean;
   followReveal?: boolean;
 }) {
@@ -397,7 +417,7 @@ function TrailGrid({
         "flex gap-[var(--gap)]",
         compact ? TRAIL_COMPACT_VARS : TRAIL_VARS,
       )}
-      onPointerLeave={() => onHover(null)}
+      onPointerLeave={(e) => onLeave(e.pointerType)}
     >
       <div
         className={cn(

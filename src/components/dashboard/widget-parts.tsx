@@ -45,7 +45,9 @@ export function WidgetHeader({
   return (
     <div
       className={cn(
-        "flex h-11 shrink-0 items-center justify-between gap-2 px-4",
+        // `dash-widget-header`: hidden while customizing on a phone, where
+        // the edit bar takes its place (globals.css).
+        "dash-widget-header flex h-11 shrink-0 items-center justify-between gap-2 px-4",
         className,
       )}
     >

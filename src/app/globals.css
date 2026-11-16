@@ -141,6 +141,18 @@ body {
   touch-action: auto;
 }
 
+/*
+ * Stacked, the edit bar sits *above* the widget, in flow, and the widget's
+ * own header steps aside for it: the card can grow, so nothing needs
+ * covering — and a widget with no header (the featured track, the row of
+ * shortcuts) would otherwise lose its first 44px, which on a one-row widget
+ * is most of it. On the gridded arrangements the card's height is fixed, so
+ * there the bar overlays the header's row instead (see below).
+ */
+.dash-grid[data-editing] .dash-widget-header {
+  display: none;
+}
+
 @container dash (min-width: 32rem) {
   .dash-grid {
     display: grid;
@@ -156,6 +168,15 @@ body {
 
   .dash-widget {
     container-type: size;
+  }
+
+  .dash-drag {
+    position: absolute;
+    inset: 0 0 auto 0;
+  }
+
+  .dash-grid[data-editing] .dash-widget-header {
+    display: flex;
   }
 
   /* Only where the box has a fixed height is there anything to scroll. */
