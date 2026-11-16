@@ -103,3 +103,22 @@ describe("resource routes highlight the Resources section", () => {
     expect(lit).toEqual(["/resources"]);
   });
 });
+
+// A starter's guided run is served from /focus/starter, outside the section's
+// href. The bottom nav's Starters tab already lit up there; the sidebar used
+// to light up nothing, so the two surfaces disagreed about where you were.
+describe("the starter run highlights Session Starters", () => {
+  const starterPaths = ["/session-starters", "/session-starters/st-1", "/focus/starter"];
+
+  it.each(starterPaths)("sidebar and mobile agree: %s is under Session Starters", (path) => {
+    expect(isNavActive(path, "/session-starters")).toBe(true);
+    const lit = MOBILE_NAV_TABS.filter((tab) => tab.match(path)).map((tab) => tab.href);
+    expect(lit).toEqual(["/session-starters"]);
+  });
+
+  it("leaves the ordinary focus routes alone", () => {
+    for (const path of ["/focus/new", "/focus/log", "/focus/track-1"]) {
+      expect(isNavActive(path, "/session-starters")).toBe(false);
+    }
+  });
+});

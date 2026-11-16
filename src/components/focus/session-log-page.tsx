@@ -44,6 +44,11 @@ export function SessionLogPage({
   const ctx = useFocusSession();
   const [pending, startTx] = useTransition();
   const [settled, setSettled] = useState(false);
+  // Set just before the session is reset on the way out (saved or
+  // discarded). The reset lands a render before the route change does, and
+  // without this the page flashed "No session to log" beside the
+  // "Session logged" toast.
+  const [leaving, setLeaving] = useState(false);
   const { toast } = useToast();
 
   // Freeze the start/end window once, when the page first has a session, so the
@@ -146,6 +151,7 @@ export function SessionLogPage({
       )
     )
       return;
+    setLeaving(true);
     ctx.reset();
     router.push(track ? `/tracks/${track.id}` : "/");
     router.refresh();
@@ -187,6 +193,7 @@ export function SessionLogPage({
                 .map((t) => ({ description: t.description.trim(), done: t.done }))
                 .filter((t) => t.description.length > 0),
         });
+        setLeaving(true);
         ctx.reset();
         router.push(track ? `/tracks/${track.id}` : "/");
         router.refresh();
@@ -197,7 +204,19 @@ export function SessionLogPage({
   };
 
   // --- Render guards -------------------------------------------------------
-  if (ctx.starter && ctx.phase === "stopped") return <StarterSessionWrapUp />;
+  if (leaving) {
+    return (
+      <div
+        role="status"
+        className="flex min-h-[60vh] items-center justify-center text-sm text-muted-foreground"
+      >
+        Taking you back…
+      </div>
+    );
+  }
+  if (ctx.starter && ctx.phase === "stopped") {
+    return <StarterSessionWrapUp onLeave={() => setLeaving(true)} />;
+  }
 
   if (!hasSession) {
     if (!settled) {

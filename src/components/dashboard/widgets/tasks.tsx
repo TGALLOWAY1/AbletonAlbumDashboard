@@ -17,9 +17,10 @@ const DONE_LIMIT = 30;
 /**
  * At 28rem and up the tabs move out of the body and into the header row (see
  * `TasksPanel`), so the header keeps that much of its right edge clear. The
- * open-track link, when there is one, ends up just left of them.
+ * open-track link, when there is one, ends up just left of them. Stacked,
+ * the tabs stay in the body at every width, so the header needs no room.
  */
-const HEADER_ROOM_FOR_TABS = "@md/widget:pr-[12.5rem]";
+const HEADER_ROOM_FOR_TABS = "@md/widget:pr-[12.5rem] dash-stack:pr-4";
 
 /**
  * A task list on the dashboard: the studio's (no track — migration 0028) or

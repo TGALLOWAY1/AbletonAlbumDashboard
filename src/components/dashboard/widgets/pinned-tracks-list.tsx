@@ -333,6 +333,8 @@ function PinnedRow({
         <div className="min-w-0 flex-1">
           <Link
             href={`/tracks/${item.id}`}
+            // The name truncates in a narrow card; this is the whole of it.
+            title={item.name}
             className="block truncate text-sm font-medium leading-snug hover:underline"
           >
             {item.name}
@@ -363,7 +365,7 @@ function PinnedRow({
           href={`/focus/${item.id}`}
           aria-label={`Start a focus session on ${item.name}`}
           title="Start a focus session"
-          className="inline-flex h-8 w-8 shrink-0 items-center justify-center gap-1.5 rounded-md bg-primary text-xs font-medium text-primary-foreground shadow-sm outline-none transition-colors hover:bg-primary/90 focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 @md/widget:w-auto @md/widget:px-3 dash-stack:h-9 dash-stack:w-9"
+          className="inline-flex h-8 w-8 shrink-0 items-center justify-center gap-1.5 rounded-md bg-primary text-xs font-medium text-primary-foreground shadow-sm outline-none transition-colors hover:bg-primary/90 focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 @md/widget:w-auto @md/widget:px-3 dash-stack:h-9 dash-stack:min-w-9"
         >
           <Play className="h-3.5 w-3.5" aria-hidden />
           <span className="hidden @md/widget:inline">Focus</span>

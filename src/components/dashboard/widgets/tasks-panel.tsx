@@ -51,7 +51,7 @@ export function TasksPanel({
     >
       <TabsList
         aria-label="Which tasks to show"
-        className="mx-3 mb-2 shrink-0 self-start p-0.5 @md/widget:absolute @md/widget:right-4 @md/widget:top-1.5 @md/widget:m-0"
+        className="mx-3 mb-2 shrink-0 self-start p-0.5 @md/widget:absolute @md/widget:right-4 @md/widget:top-1.5 @md/widget:m-0 dash-stack:static dash-stack:mx-3 dash-stack:mb-2"
       >
         <TasksTab value="todo" label="To do" count={open.length} />
         <TasksTab value="done" label="Done" count={doneTotal} />

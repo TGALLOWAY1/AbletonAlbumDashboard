@@ -30,10 +30,13 @@ export const NAV_ITEMS: NavItem[] = [
  *
  * The track library absorbed the albums shelf, so an album — whether the
  * detail page or the create form — highlights Tracks. Same for the mobile
- * track detail route, which is served from `/m/[trackId]`.
+ * track detail route, which is served from `/m/[trackId]`. A starter's guided
+ * run is served from `/focus/starter`, and lights up Session Starters — the
+ * bottom nav's Starters tab already did, so the sidebar now agrees with it.
  */
 const EXTRA_SECTION_PREFIXES: Record<string, string[]> = {
   "/tracks": ["/albums", "/m/"],
+  "/session-starters": ["/focus/starter"],
 };
 
 /**

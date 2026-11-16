@@ -25,6 +25,10 @@ export function StarterActiveSession() {
   </div>;
 
   const remaining = Math.max(0, run.durationMinutes * 60_000 - session.elapsedMs);
+  // A stopped run is no longer counting down: show what was worked, not a
+  // "time remaining" frozen at the moment Stop was pressed.
+  const stopped = session.phase === "stopped";
+  const counting = remaining > 0 && !stopped;
   const progress = Math.min(100, session.elapsedMs / (run.durationMinutes * 600));
   const end = () => { session.stop(); router.push("/focus/log"); };
 
@@ -36,7 +40,7 @@ export function StarterActiveSession() {
     </header>
     <Card className="overflow-hidden">
       <div className="flex flex-col items-center justify-between gap-5 p-6 sm:flex-row">
-        <div><p className="mb-1 flex items-center gap-2 text-sm text-muted-foreground"><Clock3 className="h-4 w-4" aria-hidden />{remaining > 0 ? "Time remaining" : "Your planned time is complete"}</p><p className="font-mono text-5xl font-medium tracking-tight tabular-nums" role="timer" aria-label={`${formatSessionTime(session.elapsedMs)} worked`}>{formatSessionTime(remaining > 0 ? remaining : session.elapsedMs)}</p><p className="mt-1 text-xs text-muted-foreground">{formatSessionTime(session.elapsedMs)} worked{remaining === 0 ? " · Keep going or wrap up when you're ready." : ""}</p></div>
+        <div><p className="mb-1 flex items-center gap-2 text-sm text-muted-foreground"><Clock3 className="h-4 w-4" aria-hidden />{stopped ? "Time worked" : counting ? "Time remaining" : "Your planned time is complete"}</p><p className="font-mono text-5xl font-medium tracking-tight tabular-nums" role="timer" aria-label={`${formatSessionTime(session.elapsedMs)} worked`}>{formatSessionTime(counting ? remaining : session.elapsedMs)}</p><p className="mt-1 text-xs text-muted-foreground">{stopped ? `${run.durationMinutes} minutes planned · Wrap up when you're ready.` : `${formatSessionTime(session.elapsedMs)} worked${remaining === 0 ? " · Keep going or wrap up when you're ready." : ""}`}</p></div>
         <div className="flex flex-wrap justify-center gap-3">{session.phase === "running" && <Button variant="outline" size="lg" onClick={session.pause}><Pause className="h-4 w-4" />Pause</Button>}{session.phase === "paused" && <Button size="lg" variant="outline" onClick={session.resume}><Play className="h-4 w-4" />Resume</Button>}<Button size="lg" onClick={end}><Square className="h-4 w-4" />{session.phase === "stopped" ? "Wrap up session" : "Finish & log"}</Button></div>
       </div><div role="progressbar" aria-label="Session time" aria-valuenow={Math.floor(progress)} aria-valuemin={0} aria-valuemax={100} className="h-1.5 bg-primary/10"><div className="h-full bg-primary transition-[width]" style={{ width: `${progress}%` }} /></div>
     </Card>
