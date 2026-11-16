@@ -60,8 +60,12 @@ Run `pnpm typecheck && pnpm lint && pnpm test` before committing.
 - Bounces, logged sessions and completed tasks are one timeline
   (`src/components/track/track-log-pane.tsx`) — they all answer "what happened to
   this track", so they are not three sections.
-- Dashboard root (`src/app/page.tsx`) is a single responsive surface using Tailwind `md:` breakpoints — no user-agent sniffing, no separate desktop/mobile route for the home page.
-- **What the dashboard shows is the pinned shortlist** — up to `MAX_PINNED_TRACKS`
+- **The dashboard (`src/app/page.tsx`) is a grid of widgets the user arranges**
+  — see "Dashboard widgets" below. It is still a single responsive surface
+  with no user-agent sniffing and no separate mobile route: the same markup is
+  a 12-column grid, a six-column flow or one column, by the dashboard's own
+  width. Everything the page used to be is a widget in the default layout.
+- **The shortlist is the pinned tracks** — up to `MAX_PINNED_TRACKS`
   (5) tracks carrying `tracks.pinned_at` + `pin_order` (migration 0027), in an
   order you drag. It is deliberately *not* derived from album membership or
   `status`: it used to be the intersection of "in the active album" and
@@ -71,25 +75,27 @@ Run `pnpm typecheck && pnpm lint && pnpm test` before committing.
   unpins it automatically in `setTrackStatus`. `status` means only where a
   track is in its life; nothing caps how many are active. Migration 0027 also
   dropped the never-wired one-track `is_focus` flag from 0012.
-- Pinned rows are **collapsed by default** (`src/components/home/pinned-tracks.tsx`).
-  The expanded body is the existing `TrackCard`, rendered on the server and
-  passed down as a `ReactNode` — that is what keeps the drag/collapse wrapper a
-  client component without pulling the whole card into the browser bundle.
-  Pinning is reachable from three places: the "+" at the top of the
-  shortlist, which opens `PinTrackDialog`
-  (`src/components/home/pin-track-dialog.tsx`); the unpin icon on each row
-  (from `sm:` up — on a phone its width goes to the name and next task, which
-  were truncating); and `PinTrackButton` in the shared `TrackHeaderBar` (so
-  both track surfaces get it — parity rule below). There is no pin-picker
-  section on the page: it sat between the shortlist and the studio tasks and
-  cost most of a phone screen. The dialog lists the shortlist as well as the
-  candidates, so at the cap a swap happens inside it instead of dead-ending on
-  disabled Pin buttons, and its rows hold their order while it is open
-  (`src/lib/pin-picker.ts`) so a toggle never moves a row under the pointer.
-  Finished tracks are left out of its list, so when that is why it offers
-  nothing (`pinPickerDeadEnd`) — or why a search came up empty — it says so
-  and links to `/tracks`: a status can be moved back, and "add a track" would
-  be the wrong advice.
+- The shortlist is the Pinned Tracks widget
+  (`src/components/dashboard/widgets/pinned-tracks-list.tsx`): compact rows
+  with dividers, since the widget is already a card. A row's chevron opens a
+  short inline detail (next task in full, open count, last worked, Open /
+  Unpin) — **not** the full `TrackCard`, which picks its layout from the
+  viewport (`md:`) and would draw four columns inside a quarter-width card.
+  The top row is the song that matters most, and the one the Current Track
+  widget follows when it is not pointed at a specific track.
+  Pinning is reachable from three places: the "+" in the widget's header,
+  which opens `PinTrackDialog`
+  (`src/components/home/pin-track-dialog.tsx`); Unpin in a row's detail (and
+  an icon on the row from 28rem of widget width — narrower, that width goes
+  to the name and next task); and `PinTrackButton` in the shared
+  `TrackHeaderBar` (so both track surfaces get it — parity rule below). The
+  dialog lists the shortlist as well as the candidates, so at the cap a swap
+  happens inside it instead of dead-ending on disabled Pin buttons, and its
+  rows hold their order while it is open (`src/lib/pin-picker.ts`) so a toggle
+  never moves a row under the pointer. Finished tracks are left out of its
+  list, so when that is why it offers nothing (`pinPickerDeadEnd`) — or why a
+  search came up empty — it says so and links to `/tracks`: a status can be
+  moved back, and "add a track" would be the wrong advice.
 - There is no active-album card on the dashboard. `albums.is_active` still
   exists and still means "the album a new track defaults into"
   (`resolveAlbumId`, `/tracks/new`, settings) — it just no longer decides what
@@ -97,17 +103,26 @@ Run `pnpm typecheck && pnpm lint && pnpm test` before committing.
   `/tracks` shelf already files them under `BACKLOG_GROUP_LABEL`.
 - **Tasks do not have to belong to a track.** `actions.track_id` is nullable
   (migration 0028); a row with no track and an `owner_id` is a studio task
-  ("back up the drive", "sort the sample folder") and renders in
-  `src/components/home/studio-tasks.tsx`. It is the *same* `TrackTodoList` and
-  the *same* server actions in `src/app/actions/track-todos.ts`, which all take
-  `trackId: string | null` — never fork the list. Note `scopeToList` there:
-  narrow a studio-task query with `.is("track_id", null)`, never
+  ("back up the drive", "sort the sample folder"). They render in the Tasks
+  widget (`src/components/dashboard/widgets/tasks.tsx` + `tasks-panel.tsx`),
+  whose one setting is which list it shows: the studio's, or a track's. It is
+  the *same* `TrackTodoList` and the *same* server actions in
+  `src/app/actions/track-todos.ts`, which all take `trackId: string | null` —
+  never fork the list. The widget's "To do" / "Done" tabs are two views of
+  that list (`list="open" | "done"`); there is no "In progress", because a
+  task is open or completed and nothing else. Note `scopeToList` in the
+  actions: narrow a studio-task query with `.is("track_id", null)`, never
   `.eq("track_id", null)`, which PostgREST renders as `track_id=eq.null` and
   matches nothing.
-- The dashboard is also the progress surface: it ends with a Progress section
-  (`src/components/home/progress-panel.tsx`, anchor `#progress`) carrying the
-  work heatmap and every figure measured over it. There is no `/analytics` or
-  `/sessions` page — both routes redirect to `/#progress`.
+- **The full progress view is its own page, `/analytics`**
+  (`src/components/home/progress-panel.tsx`): the work heatmap with every
+  figure measured over it, and the session history log behind a tab in the
+  URL (`src/lib/progress-tab.ts`). For a while it was the dashboard's last
+  section (`/#progress`); several widgets are now small windows onto the same
+  data and link here for the whole of it — and editing or deleting a logged
+  session must not depend on which widgets someone kept. `/sessions` and the
+  old `/?progress=history` redirect to it. It is not a nav item: it is reached
+  from the dashboard toolbar and from those widgets.
 - **One range control, one window.** The 7D/30D/3M/6M/1Y tabs govern the
   heatmap *and* the time, session count, tasks-done and streak figures printed
   under it — all read off a single `getRangeStats()` (`src/lib/analytics.ts`).
@@ -116,6 +131,12 @@ Run `pnpm typecheck && pnpm lint && pnpm test` before committing.
   routinely disagreed about what "now" meant. `getWeeklyDelta` is gone for the
   same reason. Tasks-done needs completion timestamps, so `fetchAnalyticsData`
   ships `taskCompletions` alongside sessions and the client filters by range.
+  On the dashboard each analytics widget is its own window and names it in its
+  header, but they all compute through the same `getRangeStats()` — so a
+  widget and `/analytics` set to the same range print the same figure. A
+  widget's reference time ("now") must advance when refreshed data arrives,
+  not be fixed at mount, or a task ticked a moment ago falls outside the
+  window until a reload.
 - **A heatmap cell's size never depends on the range.** It used to: week
   columns were `flex-1` turned square by `aspect-square`, so the fewer columns
   a range had the bigger its squares got — 504px at 7D on a 1080px card, 1.8px
@@ -134,19 +155,28 @@ Run `pnpm typecheck && pnpm lint && pnpm test` before committing.
   square, the month named in place on its 1st — and 3M/6M/1Y as the compact
   `trail`. A date cannot be read off a 14px square, and a `title` tooltip never
   fires on touch, so the trail names the hovered or tapped day in a readout
-  line instead.
-- Time gets recorded two ways and both are in the dashboard header: "Start
-  session" (`/focus/new`, the timer) and `ManualSessionEntry` (backfill).
-  Logging used to sit at the bottom of the page behind the Progress → History
-  tab, which is the wrong place for the one control that keeps every number on
-  the page true.
-- **The dashboard header is one row.** On a phone every line above the
-  shortlist decides whether the studio tasks make the first screen, so the
-  greeting is desktop-only (`sr-only md:not-sr-only`, where it shares the row),
-  there is no tagline, and the three buttons share `HEADER_BUTTON_CLASS` (with
-  `ManualSessionEntry variant="compact"`) so they fit one row down to a 375px
-  phone. Section headers are likewise one line — a label and at most one
-  control, no explainer sentence under it.
+  line instead. `WorkHeatmap` also takes `density="compact"` for a dashboard
+  widget's box, where a 30-day calendar has about 170px of height: fixed
+  small cells that print no dates and lean on the same readout line. It is
+  opt-in and keeps the invariant above — `/analytics` draws `regular`.
+- Time gets recorded three ways, all on the dashboard: the Quick Actions
+  widget's "Start session" (`/focus/new`) and "Log session" (the backfill
+  `SessionFormDialog`), and the Focus Timer widget, which runs the session in
+  place. The timer is not a second clock: it drives the one global session in
+  `FocusSessionProvider` (which is why moving, resizing or re-rendering the
+  widget cannot disturb it) and Stop hands off to `/focus/log` like every
+  other stop. A preset length is `targetMs` on that session — the widget
+  counts down to it and then keeps counting the overtime rather than ending
+  the session. While the widget is on screen it calls `showTimerSurface()`
+  and `FloatingFocusBar` stands down, so the same timer is not drawn twice;
+  for that reason the widget keeps a Stop control at every size.
+- **The dashboard toolbar is one row.** On a phone every line above the
+  first widget decides what makes the first screen, so the row is the layout
+  name (which is the switcher) and three buttons that drop their labels below
+  `sm:` (`TOOLBAR_BUTTON_CLASS` in `dashboard-shell.tsx`), fitting down to a
+  375px phone. There is no greeting and no tagline. The default layout's
+  phone order leads with the shortcuts as a single row, then the shortlist,
+  then the tasks — what the home page has always put first there.
 - Library (`src/app/library/**`) is likewise a single responsive surface — the feature parity rule below is track-level and does not imply an `/m/library` route. `src/app/library/layout.tsx` mounts the preview player so playback survives navigation between Library routes without leaking an audio element onto every other page.
 - Resources (`src/app/resources/**`) is one system at three scopes: `/resources`
   is the landing page, `/resources/[categoryId]` is a category, and
@@ -384,7 +414,7 @@ Reviewers should reject single-platform additions that have no platform-specific
 
 Prefer **one component with a `variant` prop** over forking files. Existing examples:
 
-- `TrackTodoList.variant: "desktop" | "mobile"` — `src/components/mobile/track-todo-list.tsx`
+- `TrackTodoList.variant: "desktop" | "mobile" | "widget"` — `src/components/mobile/track-todo-list.tsx`
 - `TrackHeaderBar.variant: "desktop" | "mobile"` — `src/components/track/track-header-bar.tsx`
 - `TrackStageStrip.variant: "desktop" | "mobile"` — `src/components/track/track-stage-strip.tsx`
 - `TrackLogPane.variant: "desktop" | "mobile"` — `src/components/track/track-log-pane.tsx`

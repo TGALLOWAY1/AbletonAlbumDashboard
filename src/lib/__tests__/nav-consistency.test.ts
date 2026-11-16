@@ -34,7 +34,9 @@ describe("mobile bottom nav ↔ sidebar nav consistency", () => {
     expect(MOBILE_NAV_TABS.map((tab) => tab.href)).not.toContain("/albums");
   });
 
-  it("has no nav entry pointing at the retired progress page", () => {
+  // /analytics is a real page again (the full progress view), but it is
+  // reached from the dashboard's toolbar and widgets, not from the nav.
+  it("keeps the analytics page out of the nav", () => {
     expect(NAV_ITEMS.map((item) => item.href)).not.toContain("/analytics");
     expect(MOBILE_NAV_TABS.map((tab) => tab.href)).not.toContain("/analytics");
   });
