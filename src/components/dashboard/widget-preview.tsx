@@ -81,7 +81,9 @@ function Sketch({ type }: { type: WidgetType }) {
       );
     case "work-heatmap":
       return (
-        <div className="grid w-full grid-cols-9 gap-1">
+        // Capped so its four square rows fit the 6rem frame at any card
+        // width; full-width on a phone, the squares grew past it.
+        <div className="grid w-full max-w-40 grid-cols-9 gap-1">
           {Array.from({ length: 36 }, (_, i) => {
             const level = [0, 2, 1, 3, 0, 4, 2, 1, 3][(i * 5) % 9];
             return (
@@ -159,7 +161,7 @@ export function WidgetPreview({ type }: { type: WidgetType }) {
   return (
     <div
       aria-hidden
-      className="flex h-24 items-center justify-center rounded-md border border-border bg-surface-2/60 p-3"
+      className="flex h-24 items-center justify-center overflow-hidden rounded-md border border-border bg-surface-2/60 p-3"
     >
       <Sketch type={type} />
     </div>

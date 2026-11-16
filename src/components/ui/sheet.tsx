@@ -3,6 +3,7 @@ import * as React from "react";
 import * as DialogPrimitive from "@radix-ui/react-dialog";
 import { X } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { isToastTarget } from "@/components/toast";
 
 export const Sheet = DialogPrimitive.Root;
 export const SheetTrigger = DialogPrimitive.Trigger;
@@ -41,11 +42,17 @@ export const SheetContent = React.forwardRef<
     side?: Side;
     hideCloseButton?: boolean;
   }
->(({ className, children, side = "left", hideCloseButton, ...props }, ref) => (
+>(({ className, children, side = "left", hideCloseButton, onPointerDownOutside, ...props }, ref) => (
   <SheetPortal>
     <SheetOverlay />
     <DialogPrimitive.Content
       ref={ref}
+      // A tap on a toast drawn above the sheet is not a request to close it
+      // (see DialogContent).
+      onPointerDownOutside={(event) => {
+        if (isToastTarget(event.target)) event.preventDefault();
+        onPointerDownOutside?.(event);
+      }}
       className={cn(
         "fixed z-50 flex flex-col gap-4 border-border bg-surface shadow-lg data-[state=open]:animate-in data-[state=closed]:animate-out",
         sideClasses[side],

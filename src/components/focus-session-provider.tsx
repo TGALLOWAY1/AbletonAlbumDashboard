@@ -38,8 +38,9 @@ type FocusSessionState = {
   // The length the session was started against, or null for an open-ended
   // one. It is a way of *reading* the stopwatch, not a second clock: nothing
   // stops when it is reached and the logged duration is still the elapsed
-  // time. The dashboard's Focus Timer widget sets it; the focus runner starts
-  // open-ended sessions and never does. See `src/lib/focus-timer.ts`.
+  // time. The dashboard's Focus Timer widget sets it, and so does a session
+  // starter's launch (its planned length); the focus runner starts open-ended
+  // sessions and never does. See `src/lib/focus-timer.ts`.
   targetMs: number | null;
 };
 

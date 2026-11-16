@@ -108,6 +108,10 @@ export function AnalyticsDashboard({
           {stats ? (
             <>
               <WorkHeatmap
+                // Remount per range so a day tapped in one window is not
+                // still named in the readout after it has left the grid —
+                // the dashboard widget's heatmap does the same.
+                key={range}
                 dailyMap={stats.dailyMap}
                 startDate={stats.start}
                 endDate={stats.end}

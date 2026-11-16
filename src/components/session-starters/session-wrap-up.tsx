@@ -14,7 +14,11 @@ import { CONTENT_STATUS_LABELS, type ContentStatus } from "@/lib/session-starter
 import { formatSessionTime } from "@/lib/starter-run";
 import { useToast } from "@/components/toast";
 
-export function StarterSessionWrapUp() {
+export function StarterSessionWrapUp({ onLeave }: {
+  /** Called just before the session is reset on the way out, so the log page
+   * does not flash its "No session to log" state while the route changes. */
+  onLeave?: () => void;
+} = {}) {
   const ctx = useFocusSession();
   const router = useRouter();
   const [pending, startTransition] = useTransition();
@@ -41,6 +45,7 @@ export function StarterSessionWrapUp() {
       });
       if (result.error || !result.id) { setError(result.error ?? "Could not save this session. Try again."); return; }
       toast("Session logged. A little progress, saved.");
+      onLeave?.();
       ctx.reset();
       router.push("/session-starters");
       router.refresh();
@@ -50,7 +55,7 @@ export function StarterSessionWrapUp() {
     });
   };
 
-  const leave = (path: string) => { ctx.reset(); router.push(path); router.refresh(); };
+  const leave = (path: string) => { onLeave?.(); ctx.reset(); router.push(path); router.refresh(); };
 
   return <div className="mx-auto max-w-2xl space-y-5 pb-8">
     <Link href="/focus/starter" className="text-sm text-muted-foreground hover:text-primary">← Back to session</Link>

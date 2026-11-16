@@ -43,6 +43,10 @@ function EditorForm({ starter, onSaved, onCancel, disabled }: {
   const [outcomes, setOutcomes] = useState(draft.outcomes.join("\n"));
   const [concepts, setConcepts] = useState(draft.videoConcepts.join("\n"));
   const [checklist, setChecklist] = useState(draft.captureChecklist.join("\n"));
+  // The filming section opens on a filmable starter, then belongs to the
+  // user: tying `open` to the checkbox inside it collapsed the section the
+  // moment that box was unticked.
+  const [filmingOpen, setFilmingOpen] = useState(draft.isFilmable);
   const [pending, startTransition] = useTransition();
   const [error, setError] = useState("");
   const patch = (value: Partial<SessionStarter>) => setDraft((prev) => ({ ...prev, ...value }));
@@ -107,7 +111,7 @@ function EditorForm({ starter, onSaved, onCancel, disabled }: {
 
       <details className="rounded-xl border border-border p-4"><summary className="cursor-pointer text-sm font-semibold">Templates, presets &amp; linked resources</summary><div className="pt-4"><ResourceFields resources={draft.resources} onChange={(resources) => patch({ resources })} label="session" /><p className="mt-2 text-xs text-muted-foreground">Use a web link, an app path such as /resources, or a local project path you can copy.</p></div></details>
 
-      <details open={draft.isFilmable} className="rounded-xl border border-border p-4"><summary className="cursor-pointer text-sm font-semibold">Content creation &amp; filming</summary><div className="space-y-4 pt-4">
+      <details open={filmingOpen} onToggle={(event) => setFilmingOpen(event.currentTarget.open)} className="rounded-xl border border-border p-4"><summary className="cursor-pointer text-sm font-semibold">Content creation &amp; filming</summary><div className="space-y-4 pt-4">
         <label className="flex items-center gap-3 text-sm"><input type="checkbox" className="size-4 accent-primary" checked={draft.isFilmable} onChange={(event) => patch({ isFilmable: event.target.checked })} />This session is suitable for filming</label>
         <label className="block space-y-2 text-sm">Suggested video concepts<Textarea rows={2} maxLength={5000} value={concepts} onChange={(event) => setConcepts(event.target.value)} placeholder="Raw vocal to processed hook — one idea per line" /></label>
         <label className="block space-y-2 text-sm">Filming instructions<Textarea rows={2} maxLength={5000} value={draft.filmingInstructions} onChange={(event) => patch({ filmingInstructions: event.target.value })} placeholder="Capture the starting point and the final result." /></label>

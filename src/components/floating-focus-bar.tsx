@@ -29,6 +29,9 @@ export function FloatingFocusBar() {
   // (above the mobile nav, flush to the viewport on desktop). Lift this pill
   // clear of it there so the two pieces of fixed bottom chrome don't overlap.
   const inLibrary = pathname.startsWith("/library");
+  // A starter's detail page pins its own Start Session bar above the mobile
+  // nav below `sm:`; lift the pill clear of that too.
+  const onStarterDetail = /^\/session-starters\/[^/]+$/.test(pathname);
 
   const handleStop = () => {
     ctx.stop();
@@ -39,7 +42,11 @@ export function FloatingFocusBar() {
     <div
       className={cn(
         "fixed right-4 z-50",
-        inLibrary ? "bottom-44 md:bottom-20" : "bottom-24 md:bottom-4",
+        inLibrary
+          ? "bottom-44 md:bottom-20"
+          : onStarterDetail
+            ? "bottom-44 sm:bottom-24 md:bottom-4"
+            : "bottom-24 md:bottom-4",
       )}
       role="status"
       aria-label="Focus session running"
