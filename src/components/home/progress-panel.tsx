@@ -19,7 +19,7 @@ const TAB_LABELS: Record<ProgressTab, string> = {
   history: "History",
 };
 
-// The dashboard's progress section (formerly the standalone /analytics page):
+// The body of the /analytics page (for a while, the dashboard's last section):
 // long-range work patterns plus the focus-session history log.
 //
 // Only the selected panel is rendered. Both are server components, so a

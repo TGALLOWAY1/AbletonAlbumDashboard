@@ -1,10 +1,12 @@
 import { revalidatePath } from "next/cache";
+import { ANALYTICS_PATH } from "@/lib/progress-tab";
 
 // Track-level mutations must refresh every surface that renders track data:
 // both track detail route shapes (desktop + mobile), the focus page, the
-// dashboard (which includes the progress section and session history), and
-// the track library (whose album shelves show membership and status). See
-// CLAUDE.md "Feature parity rule".
+// dashboard (whose widgets draw tracks, tasks and sessions), the analytics
+// page (the heatmap, its figures and the session history), and the track
+// library (whose album shelves show membership and status). See CLAUDE.md
+// "Feature parity rule".
 export function revalidateTrackSurfaces(
   trackId: string,
   opts?: { albumIds?: (string | null | undefined)[] },
@@ -13,6 +15,7 @@ export function revalidateTrackSurfaces(
   revalidatePath(`/tracks/${trackId}`);
   revalidatePath(`/focus/${trackId}`);
   revalidatePath("/");
+  revalidatePath(ANALYTICS_PATH);
   revalidatePath("/tracks");
   // Album detail pages list their member tracks — refresh every album the
   // mutation could have touched (e.g. both the old and new album on a move).
@@ -35,12 +38,14 @@ export function revalidateAlbumSurfaces(albumId?: string | null) {
 }
 
 /**
- * Studio tasks (`actions` rows with no track — migration 0028) live on the
- * dashboard and nowhere else, so they refresh only it. Split out from
- * `revalidateTrackSurfaces` rather than folded into it: that function's whole
- * job is "this track changed, refresh every surface that draws it", and a task
- * with no track has none of those.
+ * Studio tasks (`actions` rows with no track — migration 0028) are drawn on
+ * the dashboard, and ticking one moves the tasks-done figure on the analytics
+ * page, so they refresh those two. Split out from `revalidateTrackSurfaces`
+ * rather than folded into it: that function's whole job is "this track
+ * changed, refresh every surface that draws it", and a task with no track has
+ * none of those.
  */
 export function revalidateGeneralTasks() {
   revalidatePath("/");
+  revalidatePath(ANALYTICS_PATH);
 }

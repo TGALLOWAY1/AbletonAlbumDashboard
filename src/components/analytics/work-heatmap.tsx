@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { format } from "date-fns";
 import { cn, formatDuration } from "@/lib/utils";
 import type { RangeKey } from "@/lib/analytics";
@@ -52,6 +52,29 @@ const GUTTER_ROWS = new Set([0, 2, 4]);
 const TRAIL_VARS = "[--cell:11px] [--gap:3px] md:[--cell:14px]";
 const CALENDAR_VARS = "[--gap:0.375rem]";
 
+/**
+ * The same two drawings at a size that fits a dashboard widget.
+ *
+ * `regular` is the Analytics page, where the heatmap is the page. A widget's
+ * default box leaves it about 165px of height, and a 30-day calendar whose
+ * squares are a seventh of the card is four times that. `compact` is the
+ * answer, and it is opt-in so the page is untouched.
+ *
+ * It keeps the invariant above rather than trading it for a fit: compact
+ * cells are *fixed* too — 16px on the calendar, 11px on the trail at every
+ * viewport — so 7D and 30D, and 3M and 1Y, are still drawn at one scale and a
+ * long trail still scrolls instead of shrinking. What a 16px square cannot
+ * hold is a date, so the compact calendar prints none (ghost days outside the
+ * window are left blank for the same reason) and relies on the readout line,
+ * as the trail always has.
+ */
+export type HeatmapDensity = "regular" | "compact";
+
+const TRAIL_COMPACT_VARS = "[--cell:11px] [--gap:3px]";
+const CALENDAR_COMPACT_VARS = "[--cell:1rem] [--gap:3px]";
+/** One letter per weekday: a 16px column has no room for "Mon". */
+const WEEKDAY_INITIALS = ["M", "T", "W", "T", "F", "S", "S"];
+
 function dayLabel(date: Date) {
   return format(date, "EEE d MMM");
 }
@@ -79,11 +102,37 @@ export function WorkHeatmap({
   startDate,
   endDate,
   range,
+  density = "regular",
+  idleReadout,
+  followReveal = false,
+  holdTap = false,
 }: {
   dailyMap: Map<string, number>;
   startDate: Date;
   endDate: Date;
   range: RangeKey;
+  /** `compact` for a dashboard widget's box — see `HeatmapDensity`. */
+  density?: HeatmapDensity;
+  /**
+   * What the readout line says while no day is hovered or tapped. Left out,
+   * it names the window's busiest day (or says the window is empty), as on
+   * the Analytics page. A widget with no room for a row of figures puts its
+   * essentials here instead, and its empty-window line.
+   */
+  idleReadout?: ReactNode;
+  /**
+   * Re-scroll the trail to today when the heatmap goes from hidden to shown.
+   * A widget keeps a compact and a regular drawing mounted and lets CSS pick
+   * by box size, so one of them is first laid out with no width at all.
+   */
+  followReveal?: boolean;
+  /**
+   * Keep naming a tapped day after the finger lifts. A touch ends with a
+   * `pointerleave`, which otherwise clears the readout the instant it was
+   * set; with no dates printed in a compact square, the readout is the only
+   * way a phone can ask "which day is that".
+   */
+  holdTap?: boolean;
 }) {
   const grid = useMemo(
     () => buildHeatmapGrid({ start: startDate, end: endDate, dailyMap }),
@@ -91,15 +140,31 @@ export function WorkHeatmap({
   );
   const [hovered, setHovered] = useState<HeatmapDay | null>(null);
 
+  const onLeave = (pointerType: string) => {
+    if (holdTap && pointerType === "touch") return;
+    setHovered(null);
+  };
+
   const mode = heatmapMode(range);
-  const shown = hovered ?? grid.busiest;
+  const compact = density === "compact";
+  const shown =
+    hovered ?? (idleReadout === undefined ? grid.busiest : null);
 
   return (
-    <div className="flex flex-col gap-2">
-      {mode === "calendar" ? (
-        <CalendarGrid grid={grid} onHover={setHovered} />
+    <div className={cn("flex flex-col", compact ? "gap-1.5" : "gap-2")}>
+      {mode === "trail" ? (
+        <TrailGrid
+          grid={grid}
+          range={range}
+          onHover={setHovered}
+          onLeave={onLeave}
+          compact={compact}
+          followReveal={followReveal}
+        />
+      ) : compact ? (
+        <CompactCalendarGrid grid={grid} onHover={setHovered} onLeave={onLeave} />
       ) : (
-        <TrailGrid grid={grid} range={range} onHover={setHovered} />
+        <CalendarGrid grid={grid} onHover={setHovered} onLeave={onLeave} />
       )}
 
       {/*
@@ -121,7 +186,7 @@ export function WorkHeatmap({
             {!hovered && shown.seconds > 0 ? " · busiest day" : ""}
           </>
         ) : (
-          "No work logged in this window."
+          (idleReadout ?? "No work logged in this window.")
         )}
       </p>
     </div>
@@ -141,14 +206,16 @@ export function WorkHeatmap({
 function CalendarGrid({
   grid,
   onHover,
+  onLeave,
 }: {
   grid: ReturnType<typeof buildHeatmapGrid>;
   onHover: (day: HeatmapDay | null) => void;
+  onLeave: (pointerType: string) => void;
 }) {
   return (
     <div
       className={cn("w-full max-w-[30rem]", CALENDAR_VARS)}
-      onPointerLeave={() => onHover(null)}
+      onPointerLeave={(e) => onLeave(e.pointerType)}
     >
       <div
         className="grid grid-cols-7 gap-[var(--gap)] pb-1 text-center text-[10px] font-medium uppercase tracking-wide text-muted-foreground"
@@ -225,6 +292,77 @@ function CalendarCell({
 }
 
 /**
+ * 7D and 30D in a widget: the same calendar — seven weekday columns, a week
+ * per row — at a fixed 16px a square.
+ *
+ * Not the regular grid scaled down: that one sizes its squares off the
+ * container, and a container this small would make them a different size in
+ * every box. Fixed cells keep a month the same picture wherever the widget is
+ * put, and make its footprint (130px wide, at most 111px tall) something the
+ * widget can lay figures out around.
+ */
+function CompactCalendarGrid({
+  grid,
+  onHover,
+  onLeave,
+}: {
+  grid: ReturnType<typeof buildHeatmapGrid>;
+  onHover: (day: HeatmapDay | null) => void;
+  onLeave: (pointerType: string) => void;
+}) {
+  const columns = "grid grid-cols-[repeat(7,var(--cell))] gap-[var(--gap)]";
+  return (
+    <div
+      className={cn("w-max", CALENDAR_COMPACT_VARS)}
+      onPointerLeave={(e) => onLeave(e.pointerType)}
+    >
+      <div
+        className={cn(
+          columns,
+          "pb-[var(--gap)] text-center text-[9px] font-medium leading-none text-muted-foreground",
+        )}
+        aria-hidden
+      >
+        {WEEKDAY_INITIALS.map((d, i) => (
+          <div key={WEEKDAYS[i]}>{d}</div>
+        ))}
+      </div>
+
+      <div role="grid" aria-label="Work by day" className="flex flex-col gap-[var(--gap)]">
+        {grid.weeks.map((week) => (
+          <div key={week.index} role="row" className={columns}>
+            {week.days.map((day) =>
+              day.inRange ? (
+                <div
+                  key={day.key}
+                  role="gridcell"
+                  aria-label={dayTitle(day)}
+                  title={dayTitle(day)}
+                  onPointerEnter={() => onHover(day)}
+                  onPointerDown={() => onHover(day)}
+                  className={cn(
+                    "h-[var(--cell)] w-[var(--cell)] rounded-[3px]",
+                    INTENSITY_CLASSES[day.intensity],
+                    day.isToday && "ring-1 ring-inset ring-foreground/40",
+                  )}
+                />
+              ) : (
+                <div
+                  key={day.key}
+                  role="gridcell"
+                  aria-label={`${dayLabel(day.date)} — outside this window`}
+                  className="h-[var(--cell)] w-[var(--cell)]"
+                />
+              ),
+            )}
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+/**
  * 3M, 6M and 1Y: a week per column, a weekday per row.
  *
  * The gutter sits outside the scroll container so the weekday names stay put
@@ -236,10 +374,16 @@ function TrailGrid({
   grid,
   range,
   onHover,
+  onLeave,
+  compact = false,
+  followReveal = false,
 }: {
   grid: ReturnType<typeof buildHeatmapGrid>;
   range: RangeKey;
   onHover: (day: HeatmapDay | null) => void;
+  onLeave: (pointerType: string) => void;
+  compact?: boolean;
+  followReveal?: boolean;
 }) {
   const scroller = useRef<HTMLDivElement>(null);
 
@@ -247,16 +391,39 @@ function TrailGrid({
   // grid is wider than the card, which on a phone is every trail range.
   useEffect(() => {
     const el = scroller.current;
-    if (el) el.scrollLeft = el.scrollWidth;
-  }, [range, grid.weeks.length]);
+    if (!el) return;
+    el.scrollLeft = el.scrollWidth;
+
+    // Laid out while `display: none`, there is no width to scroll, so the
+    // line above does nothing; do it again the moment the trail is shown.
+    if (!followReveal || typeof ResizeObserver === "undefined") return;
+    let wasHidden = el.clientWidth === 0;
+    const observer = new ResizeObserver(() => {
+      const hidden = el.clientWidth === 0;
+      if (wasHidden && !hidden) el.scrollLeft = el.scrollWidth;
+      wasHidden = hidden;
+    });
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, [range, grid.weeks.length, followReveal]);
+
+  // The label size steps up with the cell on the regular trail; the compact
+  // one holds both, so the gutter still lines up with 11px rows on a desktop.
+  const labelSize = compact ? "text-[9px]" : "text-[9px] md:text-[10px]";
 
   return (
     <div
-      className={cn("flex gap-[var(--gap)]", TRAIL_VARS)}
-      onPointerLeave={() => onHover(null)}
+      className={cn(
+        "flex gap-[var(--gap)]",
+        compact ? TRAIL_COMPACT_VARS : TRAIL_VARS,
+      )}
+      onPointerLeave={(e) => onLeave(e.pointerType)}
     >
       <div
-        className="flex shrink-0 flex-col gap-[var(--gap)] text-[9px] leading-none text-muted-foreground md:text-[10px]"
+        className={cn(
+          "flex shrink-0 flex-col gap-[var(--gap)] leading-none text-muted-foreground",
+          labelSize,
+        )}
         aria-hidden
       >
         {/* Reserves the month-label row, so the first weekday lines up with
@@ -293,7 +460,12 @@ function TrailGrid({
                   left: `calc((var(--cell) + var(--gap)) * ${marker.column})`,
                 }}
               >
-                <span className="text-[9px] leading-none text-muted-foreground md:text-[10px]">
+                <span
+                  className={cn(
+                    "leading-none text-muted-foreground",
+                    labelSize,
+                  )}
+                >
                   {marker.label}
                 </span>
                 {/* Ties the word to the column edge it names. */}

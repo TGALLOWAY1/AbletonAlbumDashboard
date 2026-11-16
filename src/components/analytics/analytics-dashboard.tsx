@@ -6,6 +6,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { WorkHeatmap, HeatmapLegend } from "@/components/analytics/work-heatmap";
 import { formatDuration } from "@/lib/utils";
+import { useIsClient } from "@/lib/use-is-client";
 import {
   DEFAULT_RANGE,
   RANGE_OPTIONS,
@@ -57,9 +58,24 @@ export function AnalyticsDashboard({
 }) {
   const [range, setRange] = useState<RangeKey>(DEFAULT_RANGE);
 
+  // The window is cut on the reader's calendar, so it is not computed until
+  // the browser is the one rendering (`useIsClient`). This component is
+  // server-rendered first, and that render's clock is the server's — UTC on
+  // Vercel — so computing there handed anyone east or west of Greenwich a
+  // different "today" than hydration produced, and React threw the tree away
+  // with a hydration error. The server and the hydration pass now draw the
+  // reserved space below instead.
+  //
+  // The clock is read inside the memo, with the series as its inputs: the
+  // window runs to now, so a session logged from this page's History tab and
+  // refreshed into the still-mounted panel has to move "now" with it.
+  const isClient = useIsClient();
   const stats = useMemo(
-    () => getRangeStats({ sessions, tasks: taskCompletions, range }),
-    [sessions, taskCompletions, range],
+    () =>
+      isClient
+        ? getRangeStats({ sessions, tasks: taskCompletions, range, now: new Date() })
+        : null,
+    [isClient, sessions, taskCompletions, range],
   );
 
   return (
@@ -81,22 +97,39 @@ export function AnalyticsDashboard({
               <h3 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
                 Work heatmap
               </h3>
-              <p className="text-xs text-muted-foreground">
-                {rangeLabel(stats.start, stats.end)} · last {stats.days} days
+              <p className="min-h-4 text-xs text-muted-foreground">
+                {stats &&
+                  `${rangeLabel(stats.start, stats.end)} · last ${stats.days} days`}
               </p>
             </div>
             <HeatmapLegend />
           </div>
 
-          <WorkHeatmap
-            dailyMap={stats.dailyMap}
-            startDate={stats.start}
-            endDate={stats.end}
-            range={range}
-          />
+          {stats ? (
+            <>
+              <WorkHeatmap
+                dailyMap={stats.dailyMap}
+                startDate={stats.start}
+                endDate={stats.end}
+                range={range}
+                // A tapped day stays named in the readout after the finger
+                // lifts; without this it cleared at once, so on a phone the
+                // readout could never be read.
+                holdTap
+              />
 
-          <RangeHeadline stats={stats} tracks={tracks} />
-          <RangeFootnotes stats={stats} />
+              <RangeHeadline stats={stats} tracks={tracks} />
+              <RangeFootnotes stats={stats} />
+            </>
+          ) : (
+            // Roughly the 30-day calendar's height, so the page does not jump
+            // when the browser fills it in a frame later.
+            <div
+              className="min-h-80"
+              role="status"
+              aria-label="Loading your progress"
+            />
+          )}
         </CardContent>
       </Card>
     </div>

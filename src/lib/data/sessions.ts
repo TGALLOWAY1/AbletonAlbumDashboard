@@ -83,3 +83,64 @@ export async function getSessionCountsByTrackSince(
   });
   return map;
 }
+
+/** One row of the dashboard's Recent Sessions list. */
+export type RecentSession = {
+  id: string;
+  /** Null for a session logged against no track (practice, admin, a jam). */
+  trackId: string | null;
+  trackName: string | null;
+  /** Null when the session has no type, or its type has since been deleted. */
+  sessionTypeName: string | null;
+  sessionTypeColor: string | null;
+  startedAt: string;
+  durationSeconds: number;
+};
+
+type RecentSessionRow = {
+  id: string;
+  track_id: string | null;
+  duration_seconds: number | null;
+  started_at: string | null;
+  track: { name: string; owner_id: string } | null;
+  session_type: { name: string; color: string } | null;
+};
+
+// The most recent completed sessions, newest first, with the names a list
+// needs to say what each one was: the track's and the session type's.
+//
+// Owner-scoped the way the History tab's read is: a LEFT join to the track, so
+// a session with no track is kept, and a row is dropped only when it has a
+// track that belongs to someone else. That filter runs after the limit, which
+// in this single-owner app removes nothing; with more than one owner a page
+// could come back short rather than leak a row.
+export async function getRecentSessions(limit = 5): Promise<RecentSession[]> {
+  const supabase = getServerSupabase();
+  const { data, error } = await supabase
+    .from("sessions")
+    .select(
+      "id, track_id, duration_seconds, started_at, track:tracks!sessions_track_id_fkey(name, owner_id), session_type:session_types(name, color)",
+    )
+    .eq("status", "completed")
+    .not("started_at", "is", null)
+    .order("started_at", { ascending: false })
+    .limit(limit);
+  // Thrown, like the other reads here: "No sessions yet" over a real history
+  // would be a lie, and the widget's error boundary is what should answer.
+  if (error) throw error;
+
+  return ((data ?? []) as unknown as RecentSessionRow[])
+    .filter((s) => !s.track || s.track.owner_id === OWNER_ID)
+    .filter((s): s is RecentSessionRow & { started_at: string } =>
+      Boolean(s.started_at),
+    )
+    .map((s) => ({
+      id: s.id,
+      trackId: s.track ? s.track_id : null,
+      trackName: s.track?.name ?? null,
+      sessionTypeName: s.session_type?.name ?? null,
+      sessionTypeColor: s.session_type?.color ?? null,
+      startedAt: s.started_at,
+      durationSeconds: s.duration_seconds ?? 0,
+    }));
+}

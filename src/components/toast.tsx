@@ -24,9 +24,13 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
   return (
     <ToastContext.Provider value={{ toast }}>
       {children}
-      {/* bottom-24 keeps toasts clear of the mobile bottom nav */}
+      {/* bottom-24 keeps toasts clear of the mobile bottom nav. z-[100] puts
+          them above dialogs: a dialog's overlay is z-50 and comes later in
+          the document, so at z-50 a toast raised from inside a dialog — which
+          is where most validation errors are raised — was painted under the
+          dimmed backdrop and the action looked like it had done nothing. */}
       <div
-        className="pointer-events-none fixed bottom-24 right-4 z-50 flex flex-col gap-2 md:bottom-6 md:right-6"
+        className="pointer-events-none fixed bottom-24 right-4 z-[100] flex flex-col gap-2 md:bottom-6 md:right-6"
         aria-live="polite"
       >
         {items.map((t) => (

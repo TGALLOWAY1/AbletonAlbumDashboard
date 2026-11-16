@@ -71,3 +71,176 @@ body {
     }
   }
 }
+
+/*
+ * The dashboard grid (src/components/dashboard/dashboard-grid.tsx).
+ *
+ * One DOM, three arrangements, chosen by how wide the dashboard itself is —
+ * a container query on `.dash-root`, not a viewport breakpoint, because the
+ * sidebar takes 16rem of a desktop viewport and none of a phone's, so the
+ * viewport says little about the room the grid actually has.
+ *
+ *   under 32rem   one column, every widget at its natural height. No fixed
+ *                 rows and no scrolling inside a widget: on a phone a scroll
+ *                 box inside a scrolling page traps the thumb.
+ *   32–58rem      six columns. Widgets are half the row or all of it
+ *                 (`--mw`), keep their row height, and flow in stack order
+ *                 (`--o`) — dense, so a half-width widget fills a gap.
+ *                 32rem is where a half-row widget reaches ~250px, about
+ *                 the narrowest a three-column widget gets on the full grid.
+ *   58rem and up  the 12-column grid, each widget at the cell the user put it
+ *                 in (`--x --y --w --h`). This is the only arrangement that
+ *                 is dragged and resized. 58rem is a 1280px laptop with room
+ *                 to spare for a classic scrollbar (1280 − 16rem sidebar −
+ *                 4rem gutters = 60rem): a three-column widget is ~220px
+ *                 there, the narrowest the widgets are designed for.
+ *
+ * The cell's position is all custom properties set inline per widget, so the
+ * server renders the final layout: nothing is measured in the browser and
+ * nothing moves after hydration.
+ *
+ * Each widget is its own size container (`widget`), which is what lets a
+ * widget show more as its box grows — `@sm/widget:` for width, the
+ * `widget-h*` variants below for height. A `size` container needs a definite
+ * height, which a widget only has on the two gridded arrangements; stacked,
+ * it stays `inline-size` so its content can still set its height, and the
+ * height variants simply do not match (use `dash-stack:` to say what a
+ * widget shows there).
+ */
+.dash-root {
+  container-name: dash;
+  container-type: inline-size;
+}
+
+.dash-grid {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.dash-cell {
+  position: relative;
+  min-width: 0;
+  order: var(--o, 0);
+}
+
+.dash-widget {
+  container-name: widget;
+  container-type: inline-size;
+}
+
+.dash-grid-only {
+  display: none !important;
+}
+
+/*
+ * A widget's edit bar. It is the drag surface only on the 12-column grid —
+ * `touch-action: none` there stops a touch-drag from scrolling the page
+ * instead. Stacked, the bar must *not* claim the gesture: it is most of what
+ * a thumb lands on while scrolling past.
+ */
+.dash-drag {
+  touch-action: auto;
+}
+
+/*
+ * Stacked, the edit bar sits *above* the widget, in flow, and the widget's
+ * own header steps aside for it: the card can grow, so nothing needs
+ * covering — and a widget with no header (the featured track, the row of
+ * shortcuts) would otherwise lose its first 44px, which on a one-row widget
+ * is most of it. On the gridded arrangements the card's height is fixed, so
+ * there the bar overlays the header's row instead (see below).
+ */
+.dash-grid[data-editing] .dash-widget-header {
+  display: none;
+}
+
+@container dash (min-width: 32rem) {
+  .dash-grid {
+    display: grid;
+    grid-template-columns: repeat(6, minmax(0, 1fr));
+    grid-auto-rows: 4rem;
+    grid-auto-flow: row dense;
+  }
+
+  .dash-cell {
+    grid-column: span var(--mw);
+    grid-row: span var(--h);
+  }
+
+  .dash-widget {
+    container-type: size;
+  }
+
+  .dash-drag {
+    position: absolute;
+    inset: 0 0 auto 0;
+  }
+
+  .dash-grid[data-editing] .dash-widget-header {
+    display: flex;
+  }
+
+  /* Only where the box has a fixed height is there anything to scroll. */
+  .dash-scroll {
+    overflow-y: auto;
+    overscroll-behavior: contain;
+  }
+}
+
+@container dash (min-width: 58rem) {
+  .dash-grid {
+    grid-template-columns: repeat(12, minmax(0, 1fr));
+    grid-auto-flow: row;
+  }
+
+  .dash-cell {
+    order: 0;
+    grid-column: calc(var(--x) + 1) / span var(--w);
+    grid-row: calc(var(--y) + 1) / span var(--h);
+  }
+
+  .dash-grid-only {
+    display: revert !important;
+  }
+
+  .dash-drag {
+    touch-action: none;
+    cursor: grab;
+  }
+
+  .dash-drag:active {
+    cursor: grabbing;
+  }
+
+  .dash-stack-only {
+    display: none !important;
+  }
+}
+
+/* A widget at least three / four / five grid rows tall (rows are 4rem + 1rem gap). */
+@custom-variant widget-h3 {
+  @container widget (min-height: 13rem) {
+    @slot;
+  }
+}
+
+@custom-variant widget-h4 {
+  @container widget (min-height: 18rem) {
+    @slot;
+  }
+}
+
+@custom-variant widget-h5 {
+  @container widget (min-height: 23rem) {
+    @slot;
+  }
+}
+
+/* The single-column arrangement, where a widget is as tall as its content. */
+@custom-variant dash-stack {
+  @container dash (max-width: 31.99rem) {
+    @slot;
+  }
+}

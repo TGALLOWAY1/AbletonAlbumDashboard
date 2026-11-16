@@ -10,6 +10,7 @@ import {
   Settings as SettingsIcon,
   type LucideIcon,
 } from "lucide-react";
+import { isHomeSection } from "@/components/nav-items";
 import { APP_CHROME } from "@/lib/layout-chrome";
 import { cn } from "@/lib/utils";
 
@@ -27,7 +28,7 @@ export const MOBILE_NAV_TABS: MobileNavTab[] = [
     label: "Home",
     href: "/",
     icon: Home,
-    match: (p) => p === "/",
+    match: isHomeSection,
   },
   {
     label: "Tracks",

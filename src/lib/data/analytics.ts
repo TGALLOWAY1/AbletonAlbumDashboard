@@ -100,6 +100,14 @@ export async function fetchAnalyticsData() {
     fetchTaskCompletions(supabase),
   ]);
 
+  // Thrown, not read as empty. These used to fall through `?? []`, which
+  // printed a confident "0 sessions, nothing logged" over a real history
+  // whenever the read failed. On /analytics a throw reaches the page's error
+  // boundary; on the dashboard it reaches the one widget's, which says it
+  // could not load and offers a retry.
+  if (tracksRes.error) throw tracksRes.error;
+  if (sessionsRes.error) throw sessionsRes.error;
+
   const tracks = (tracksRes.data ?? []) as TrackSlim[];
   const sessionRows = (sessionsRes.data ?? []) as unknown as SessionSlim[];
 

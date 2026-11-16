@@ -36,8 +36,24 @@ const EXTRA_SECTION_PREFIXES: Record<string, string[]> = {
   "/tracks": ["/albums", "/m/"],
 };
 
+/**
+ * Pages that belong to Home. The analytics page is reached from the
+ * dashboard's toolbar and widgets — it is the dashboard's full progress view
+ * — so it lights up Home instead of leaving the nav with nothing selected.
+ */
+export const HOME_SECTION_PREFIXES = ["/analytics"];
+
+export function isHomeSection(pathname: string) {
+  return (
+    pathname === "/" ||
+    HOME_SECTION_PREFIXES.some(
+      (prefix) => pathname === prefix || pathname.startsWith(prefix + "/"),
+    )
+  );
+}
+
 export function isNavActive(pathname: string, href: string) {
-  if (href === "/") return pathname === "/";
+  if (href === "/") return isHomeSection(pathname);
   if (pathname === href || pathname.startsWith(href + "/")) return true;
   return (EXTRA_SECTION_PREFIXES[href] ?? []).some((prefix) =>
     pathname.startsWith(prefix),

@@ -8,14 +8,17 @@ import { OWNER_ID } from "@/lib/owner";
 import { revalidateTrackSurfaces } from "@/lib/revalidate-track";
 import { PRODUCTION_ACTIVITY_KEYS } from "@/lib/production-activities";
 import { lastWorkedAtFrom } from "@/lib/session-last-worked";
+import { ANALYTICS_PATH } from "@/lib/progress-tab";
 import { starterRunSchema, type StarterRun } from "@/lib/starter-run";
 import { STARTER_MIGRATION_MESSAGE } from "@/lib/session-starters";
 import { isMissingColumn, isMissingTable } from "@/lib/migration-errors";
 import type { Json } from "@/lib/database.types";
 
-// Session history and analytics both render on the dashboard now.
+// A session moves the dashboard's widgets and the analytics page's heatmap,
+// figures and history log.
 const REVALIDATE = () => {
   revalidatePath("/");
+  revalidatePath(ANALYTICS_PATH);
 };
 
 // ---------------------------------------------------------------------------
