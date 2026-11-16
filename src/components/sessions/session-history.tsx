@@ -9,8 +9,13 @@ import { ManualSessionEntry } from "@/components/manual-session-dialog";
 import { SessionActions } from "@/components/sessions/session-actions";
 import { listTrackOptions } from "@/lib/data/tracks";
 import { getSessionTypes } from "@/lib/data/session-types";
+import { StarterHistorySummary } from "@/components/session-starters/history-summary";
+import { MarkdownBody } from "@/components/markdown-body";
+import type { Json } from "@/lib/database.types";
 
 type SessionRow = {
+  starter_snapshot?: Json | null;
+  starter_output?: Json | null;
   id: string;
   track_id: string | null;
   session_type_id: string | null;
@@ -33,7 +38,9 @@ async function fetchSessions(): Promise<SessionRow[]> {
     .select(
       // The extra columns are what the edit dialog prefills from; the row is
       // already being read, so there is no second query for them.
-      "id, track_id, session_type_id, duration_seconds, started_at, ended_at, notes_md, progress_impact_rating, enjoyment_rating, improved, still_broken, track:tracks!sessions_track_id_fkey(name, owner_id), session_type:session_types(name, color)",
+      // Wildcard lets older databases keep serving history before optional
+      // starter snapshot columns have been migrated.
+      "*, track:tracks!sessions_track_id_fkey(name, owner_id), session_type:session_types(name, color)",
     )
     .not("started_at", "is", null)
     .order("started_at", { ascending: false })
@@ -162,6 +169,8 @@ export async function SessionHistory() {
                     )}
                   </div>
                 )}
+                <StarterHistorySummary snapshot={s.starter_snapshot} output={s.starter_output} />
+                {s.starter_snapshot && s.notes_md && <MarkdownBody className="text-xs text-muted-foreground">{s.notes_md}</MarkdownBody>}
               </CardContent>
             </Card>
           ))}

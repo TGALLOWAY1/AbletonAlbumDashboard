@@ -10,12 +10,15 @@ import {
 } from "react";
 import type { ChecklistItem } from "@/components/session-todo-checklist";
 import { readTargetMs } from "@/lib/focus-timer";
+import { starterRunSchema, type StarterRun } from "@/lib/starter-run";
 
 const STORAGE_KEY = "finish-five.focus-session";
 
 export type FocusPhase = "idle" | "running" | "paused" | "stopped";
 
 type FocusSessionState = {
+  starter: StarterRun | null;
+  stoppedAtMs: number | null;
   phase: FocusPhase;
   trackId: string | null;
   trackName: string | null;
@@ -41,6 +44,8 @@ type FocusSessionState = {
 };
 
 const INITIAL_STATE: FocusSessionState = {
+  starter: null,
+  stoppedAtMs: null,
   phase: "idle",
   trackId: null,
   trackName: null,
@@ -56,6 +61,7 @@ const INITIAL_STATE: FocusSessionState = {
 };
 
 export type StartInput = {
+  starter?: StarterRun;
   trackId: string | null;
   trackName: string | null;
   sessionTypeId?: string | null;
@@ -66,6 +72,8 @@ export type StartInput = {
 };
 
 type FocusSessionContextValue = FocusSessionState & {
+  isHydrated: boolean;
+  updateStarter: (patch: Partial<Pick<StarterRun, "completedStepIds" | "assetsCreated" | "footageCaptured" | "contentStatus" | "nextAction">>) => void;
   elapsedMs: number;
   start: (input: StartInput) => void;
   pause: () => void;
@@ -108,6 +116,7 @@ export function useFocusSession() {
 
 export function FocusSessionProvider({ children }: { children: React.ReactNode }) {
   const [state, setState] = useState<FocusSessionState>(INITIAL_STATE);
+  const [isHydrated, setIsHydrated] = useState(false);
   const [, forceTick] = useState(0);
   // Not part of the session and never persisted: it describes this page, and
   // a reload starts from "nothing is showing the timer" until a surface says so.
@@ -129,11 +138,21 @@ export function FocusSessionProvider({ children }: { children: React.ReactNode }
         ...stored,
         targetMs: readTargetMs(stored.targetMs),
       };
+      if (!["idle", "running", "paused", "stopped"].includes(parsed.phase) ||
+          !Number.isFinite(parsed.accumulatedMs) || parsed.accumulatedMs < 0 ||
+          (parsed.phase === "running" && !Number.isFinite(parsed.startedAtMs))) return;
+      if (parsed.starter) {
+        const starter = starterRunSchema.safeParse(parsed.starter);
+        if (!starter.success) return;
+        parsed.starter = starter.data;
+      }
       /* eslint-disable react-hooks/set-state-in-effect */
       setState(parsed);
       /* eslint-enable react-hooks/set-state-in-effect */
     } catch {
       // ignore corrupt storage
+    } finally {
+      setIsHydrated(true);
     }
   }, []);
 
@@ -164,6 +183,8 @@ export function FocusSessionProvider({ children }: { children: React.ReactNode }
 
   const start = useCallback((input: StartInput) => {
     setState({
+      starter: input.starter ?? null,
+      stoppedAtMs: null,
       phase: "running",
       trackId: input.trackId,
       trackName: input.trackName,
@@ -200,7 +221,8 @@ export function FocusSessionProvider({ children }: { children: React.ReactNode }
       if (prev.phase === "running" && prev.startedAtMs != null) {
         acc = prev.accumulatedMs + (Date.now() - prev.startedAtMs);
       }
-      return { ...prev, phase: "stopped", accumulatedMs: acc, startedAtMs: null };
+      if (prev.phase === "idle" || prev.phase === "stopped") return prev;
+      return { ...prev, phase: "stopped", accumulatedMs: acc, startedAtMs: null, stoppedAtMs: Date.now() };
     });
   }, []);
 
@@ -247,9 +269,15 @@ export function FocusSessionProvider({ children }: { children: React.ReactNode }
     };
   }, []);
 
+  const updateStarter = useCallback((patch: Partial<Pick<StarterRun, "completedStepIds" | "assetsCreated" | "footageCaptured" | "contentStatus" | "nextAction">>) => {
+    setState((prev) => prev.starter ? { ...prev, starter: { ...prev.starter, ...patch } } : prev);
+  }, []);
+
   const value: FocusSessionContextValue = {
     ...state,
     elapsedMs,
+    isHydrated,
+    updateStarter,
     start,
     pause,
     resume,

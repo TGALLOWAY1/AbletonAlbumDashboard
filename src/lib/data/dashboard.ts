@@ -16,7 +16,7 @@ import { getPinnedTracks, listTrackOptions } from "@/lib/data/tracks";
  * different pages:
  *
  *   ok        rows read (possibly none — the built-in layout stands in).
- *   missing   migration 0037 is not applied. The dashboard still works on the
+ *   missing   migration 0038 is not applied. The dashboard still works on the
  *             built-in layout; saving explains which file to run.
  *   failed    the read errored for some other reason. The built-in layout is
  *             shown *read-only*: saving over an unknown set of rows could
@@ -30,7 +30,7 @@ let warnedMissingLayouts = false;
  * Every named layout this owner has saved, default first.
  *
  * Degrades rather than throws, for the reason every read here does (see
- * `migration-errors.ts`): a deploy can meet a database without 0037, and the
+ * `migration-errors.ts`): a deploy can meet a database without 0038, and the
  * dashboard is the home page — it must not go down over where the widgets
  * sit. Each stored document goes through `readLayout`, so nothing downstream
  * ever sees a layout it cannot draw.
@@ -58,7 +58,7 @@ export async function getDashboardLayouts(): Promise<{
         warnedMissingLayouts = true;
         console.warn(
           "[dashboard] dashboard_layouts is missing — showing the built-in " +
-            "layout. Apply supabase/migrations/0037_dashboard_layouts.sql to " +
+            "layout. Apply supabase/migrations/0038_dashboard_layouts.sql to " +
             "let layouts be saved.",
         );
       }
@@ -69,7 +69,7 @@ export async function getDashboardLayouts(): Promise<{
   }
 
   const rows = result.data ?? [];
-  // Zero or several rows can be flagged default (see 0037): the first flagged
+  // Zero or several rows can be flagged default (see 0038): the first flagged
   // one wins, and with none flagged the first row is treated as the default.
   const defaultId = (rows.find((r) => r.is_default) ?? rows[0])?.id ?? null;
   return {

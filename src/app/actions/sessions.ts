@@ -9,6 +9,10 @@ import { revalidateTrackSurfaces } from "@/lib/revalidate-track";
 import { PRODUCTION_ACTIVITY_KEYS } from "@/lib/production-activities";
 import { lastWorkedAtFrom } from "@/lib/session-last-worked";
 import { ANALYTICS_PATH } from "@/lib/progress-tab";
+import { starterRunSchema, type StarterRun } from "@/lib/starter-run";
+import { STARTER_MIGRATION_MESSAGE } from "@/lib/session-starters";
+import { isMissingColumn, isMissingTable } from "@/lib/migration-errors";
+import type { Json } from "@/lib/database.types";
 
 // A session moves the dashboard's widgets and the analytics page's heatmap,
 // figures and history log.
@@ -23,6 +27,8 @@ const REVALIDATE = () => {
 // ---------------------------------------------------------------------------
 
 const completeSchema = z.object({
+  starterRun: starterRunSchema.optional(),
+  workedSeconds: z.number().int().min(0).max(604800).optional(),
   trackId: z.string().uuid().nullable().optional(),
   sessionTypeId: z.string().uuid().nullable().optional(),
   actionId: z.string().uuid().nullable().optional(),
@@ -55,6 +61,8 @@ const completeSchema = z.object({
 });
 
 export async function completeSession(input: {
+  starterRun?: StarterRun;
+  workedSeconds?: number;
   trackId?: string | null;
   sessionTypeId?: string | null;
   actionId?: string | null;
@@ -77,6 +85,18 @@ export async function completeSession(input: {
   const parsed = completeSchema.parse(input);
   const supabase = getServerSupabase();
 
+  const startMs = new Date(parsed.startedAt).getTime();
+  const endMs = new Date(parsed.endedAt).getTime();
+  if (!Number.isFinite(startMs) || !Number.isFinite(endMs) || endMs < startMs) {
+    throw new Error("Pick a valid start and end for the session.");
+  }
+  if (parsed.trackId) {
+    const { data: track, error } = await supabase.from("tracks").select("id").eq("id", parsed.trackId).eq("owner_id", OWNER_ID).maybeSingle();
+    if (error) throw error;
+    if (!track) throw new Error("That track no longer exists. Choose another track before saving.");
+  }
+  await assertTrackSatisfiesType(supabase, parsed.sessionTypeId ?? null, parsed.trackId ?? null);
+
   const payload = {
     track_id: parsed.trackId ?? null,
     session_type_id: parsed.sessionTypeId ?? null,
@@ -91,6 +111,44 @@ export async function completeSession(input: {
     progress_impact_rating: parsed.progressImpact ?? null,
     status: "completed" as const,
   };
+
+  if (parsed.starterRun) {
+    const run = parsed.starterRun;
+    // Resolve ownership without reloading the live workflow: a template edited
+    // during a run must not rewrite the instructions that were actually used.
+    const { data: template, error: templateError } = await supabase.from("session_templates")
+      .select("id,owner_id,starter_data").eq("id", run.template.id).eq("owner_id", OWNER_ID).maybeSingle();
+    if (templateError) throw templateError;
+    if (!template?.starter_data) throw new Error("The Session Starter for this run is unavailable. Your session is still saved in this tab.");
+    // One atomic row stores the run and outputs. The unique run token makes a
+    // retried request safe even if the first response was interrupted.
+    const { data: saved, error } = await supabase.from("sessions").upsert({
+      ...payload,
+      template_id: template.id,
+      starter_run_id: run.runId,
+      starter_snapshot: { ...run.template, durationMinutes: run.durationMinutes, startedAt: run.startedAt } as unknown as Json,
+      worked_seconds: parsed.workedSeconds ?? Math.round((endMs - startMs) / 1000),
+      starter_output: {
+        completedStepIds: run.completedStepIds,
+        assetsCreated: run.assetsCreated,
+        footageCaptured: run.footageCaptured,
+        contentStatus: run.contentStatus,
+        nextAction: run.nextAction,
+      },
+    }, { onConflict: "starter_run_id", ignoreDuplicates: true }).select("id").maybeSingle();
+    if (error) throw error;
+    let sessionId = saved?.id;
+    if (!sessionId) {
+      const existing = await supabase.from("sessions").select("id,template_id").eq("starter_run_id", run.runId).maybeSingle();
+      if (existing.error) throw existing.error;
+      if (existing.data?.template_id !== template.id) throw new Error("This session token is already in use. Your work has not been discarded.");
+      sessionId = existing.data.id;
+    }
+    if (parsed.trackId) revalidateTrackSurfaces(parsed.trackId);
+    revalidatePath("/session-starters");
+    REVALIDATE();
+    return { id: sessionId };
+  }
 
   const { data: inserted, error: insertErr } = await supabase
     .from("sessions")
@@ -140,6 +198,26 @@ export async function completeSession(input: {
   }
   REVALIDATE();
   return { id: resolvedSessionId };
+}
+
+/** Return actionable failures to the lightweight wrap-up without Next masking
+ * thrown server-action messages in production. Uses the same session writer. */
+export async function completeStarterSession(input: {
+  starterRun: StarterRun;
+  trackId: string | null;
+  startedAt: string;
+  endedAt: string;
+  workedSeconds: number;
+  notesMd: string;
+}): Promise<{ id?: string; error?: string }> {
+  try {
+    return await completeSession(input);
+  } catch (error) {
+    console.error("[starter-session] save", error);
+    if (isMissingColumn(error) || isMissingTable(error)) return { error: STARTER_MIGRATION_MESSAGE };
+    if (error instanceof z.ZodError) return { error: error.issues[0]?.message ?? "Check your session details." };
+    return { error: error instanceof Error ? error.message : "Could not save your session. Please try again; your work is still in this tab." };
+  }
 }
 
 // ---------------------------------------------------------------------------

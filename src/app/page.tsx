@@ -22,7 +22,7 @@ type DashboardSearchParams = {
  * The dashboard.
  *
  * A grid of widgets the user arranges: which ones, where, how big, and with
- * what settings is a saved layout (migration 0037), and there can be several
+ * what settings is a saved layout (migration 0038), and there can be several
  * named ones. This page's whole job is to pick the layout the request is
  * for, render one widget per instance in it, and hand both to
  * `DashboardShell`, which draws the grid and runs the edit mode.

@@ -31,6 +31,7 @@ import {
   startRefusal,
   targetMinutes,
 } from "@/lib/focus-timer";
+import { focusSessionPath } from "@/lib/starter-run";
 import { cn } from "@/lib/utils";
 
 export type TimerTrack = {
@@ -147,18 +148,29 @@ export function FocusTimerPanel({
   // on the clock does not push the digits out of a narrow box.
   const long = clock.length > 5;
 
-  const focusPath = ctx.trackId ? `/focus/${ctx.trackId}` : "/focus/new";
+  // Where this session's own page is. One definition, shared with the
+  // floating pill and the runner, so a guided Session Starter run — which
+  // lives at `/focus/starter`, not on a track's focus page — is linked to
+  // the right place from here too.
+  const focusPath = focusSessionPath(ctx);
 
   // A track-less session started by the runner (or below) carries its session
   // type's name as `trackName`, so print one or the other, never both.
   const sessionTrackName = ctx.trackId
     ? (sessionTrack?.name ?? ctx.trackName ?? "Track")
     : null;
-  const sessionLabel = sessionTrackName
-    ? sessionType
-      ? `${sessionTrackName} · ${sessionType.name}`
-      : sessionTrackName
-    : (sessionType?.name ?? ctx.trackName ?? "No specific track");
+  // A Session Starter run is named after its template, as the pill and the
+  // runner name it; the track, if it has one, follows.
+  const starterName = ctx.starter?.template.name ?? null;
+  const sessionLabel = starterName
+    ? sessionTrackName
+      ? `${starterName} · ${sessionTrackName}`
+      : starterName
+    : sessionTrackName
+      ? sessionType
+        ? `${sessionTrackName} · ${sessionType.name}`
+        : sessionTrackName
+      : (sessionType?.name ?? ctx.trackName ?? "No specific track");
 
   const cover = (live ? sessionTrack : idleTrack)?.coverImageUrl ?? null;
   const goal = live ? ctx.goal.trim() : (idleTrack?.nextTask ?? "");

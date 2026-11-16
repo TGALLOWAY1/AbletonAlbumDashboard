@@ -6,6 +6,7 @@ import { Pause, Play, Square, ChevronRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useFocusSession } from "@/components/focus-session-provider";
 import { cn } from "@/lib/utils";
+import { focusSessionPath } from "@/lib/starter-run";
 
 export function FloatingFocusBar() {
   const router = useRouter();
@@ -15,7 +16,7 @@ export function FloatingFocusBar() {
   const active = ctx.phase === "running" || ctx.phase === "paused";
   if (!active) return null;
 
-  const focusPath = ctx.trackId ? `/focus/${ctx.trackId}` : "/focus/new";
+  const focusPath = focusSessionPath(ctx);
   if (pathname === focusPath) return null;
 
   // The dashboard's Focus Timer widget shows this same session — clock, pause,
@@ -31,7 +32,7 @@ export function FloatingFocusBar() {
 
   const handleStop = () => {
     ctx.stop();
-    router.push(focusPath);
+    router.push("/focus/log");
   };
 
   return (
@@ -56,7 +57,7 @@ export function FloatingFocusBar() {
             <span className="relative h-2 w-2 rounded-full bg-primary" />
           </span>
           <span className="min-w-0 max-w-[10rem] truncate text-sm font-medium">
-            {ctx.trackName ?? "Focus"}
+            {ctx.starter?.template.name ?? ctx.trackName ?? "Focus"}
           </span>
           <span className="font-mono text-sm tabular-nums text-muted-foreground">
             {formatMMSS(ctx.elapsedMs)}

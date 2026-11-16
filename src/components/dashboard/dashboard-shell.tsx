@@ -29,7 +29,7 @@ import {
   type SavedLayout,
 } from "@/lib/dashboard/layout";
 import { widgetDefinition, type WidgetType } from "@/lib/dashboard/widgets";
-import { MIGRATION_0037_MISSING_MESSAGE } from "@/lib/migration-errors";
+import { MIGRATION_0038_MISSING_MESSAGE } from "@/lib/migration-errors";
 import { ANALYTICS_PATH } from "@/lib/progress-tab";
 
 /**
@@ -358,7 +358,7 @@ export function DashboardShell({
               editing
                 ? "Save or cancel your changes to switch layouts."
                 : status === "missing"
-                  ? MIGRATION_0037_MISSING_MESSAGE
+                  ? MIGRATION_0038_MISSING_MESSAGE
                   : "Your saved layouts could not be loaded."
             }
           />
@@ -463,7 +463,7 @@ export function DashboardShell({
             Use the arrows on each widget to change the order. Sizes and
             free placement are arranged on a wider screen.
           </span>
-          {status === "missing" && ` ${MIGRATION_0037_MISSING_MESSAGE}`}
+          {status === "missing" && ` ${MIGRATION_0038_MISSING_MESSAGE}`}
         </p>
       )}
 

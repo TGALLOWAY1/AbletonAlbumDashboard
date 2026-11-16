@@ -336,7 +336,7 @@ above it:
   of widget; an *instance* is one copy on a dashboard with its own id, box and
   settings (two Tasks widgets, two tracks). A layout is
   `{ version, items, order }`, stored whole in `dashboard_layouts.layout`
-  (migration 0037) — a document rather than a row per widget because it is
+  (migration 0038) — a document rather than a row per widget because it is
   saved and cancelled as a unit and nothing queries inside it. **`readLayout`
   is the only way a stored layout enters the app, and it never throws**: an
   unknown or future version falls back to the default (flagged, and nothing is

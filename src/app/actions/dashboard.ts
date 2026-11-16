@@ -6,7 +6,7 @@ import { getServerSupabase } from "@/lib/supabase/server";
 import { logSupabaseError } from "@/lib/supabase/log-error";
 import { OWNER_ID } from "@/lib/owner";
 import {
-  MIGRATION_0037_MISSING_MESSAGE,
+  MIGRATION_0038_MISSING_MESSAGE,
   isMissingTable,
 } from "@/lib/migration-errors";
 import type { Json } from "@/lib/database.types";
@@ -21,7 +21,7 @@ import {
 } from "@/lib/dashboard/layout";
 
 /**
- * Writes for named dashboard layouts (migration 0037).
+ * Writes for named dashboard layouts (migration 0038).
  *
  * Every action returns `{ error }` instead of throwing: a failed save is
  * something the user acts on (apply the migration, try again), and a thrown
@@ -55,7 +55,7 @@ const CHANGED_ELSEWHERE_MESSAGE =
   "since you opened it, so your changes were not saved.";
 
 function failure(label: string, error: unknown, fallback: string): DashboardActionResult {
-  if (isMissingTable(error)) return { error: MIGRATION_0037_MISSING_MESSAGE };
+  if (isMissingTable(error)) return { error: MIGRATION_0038_MISSING_MESSAGE };
   logSupabaseError(label, error);
   return { error: fallback };
 }
@@ -267,7 +267,7 @@ export async function renameDashboardLayout(input: {
 
 /**
  * Make one layout the one a bare `/` opens on. Clear-then-set, as two
- * statements — see 0037 for why that is not guarded by a unique index, and
+ * statements — see 0038 for why that is not guarded by a unique index, and
  * `getDashboardLayouts` for why a lost race between them is harmless.
  */
 export async function setDefaultDashboardLayout(input: {

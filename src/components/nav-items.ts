@@ -5,6 +5,7 @@ import {
   Library,
   ListMusic,
   Settings,
+  PanelsTopLeft,
   type LucideIcon,
 } from "lucide-react";
 
@@ -17,6 +18,7 @@ export type NavItem = {
 export const NAV_ITEMS: NavItem[] = [
   { href: "/", label: "Home", icon: Home },
   { href: "/tracks", label: "Tracks", icon: ListMusic },
+  { href: "/session-starters", label: "Session Starters", icon: PanelsTopLeft },
   { href: "/library", label: "Library", icon: Library },
   { href: "/templates", label: "Templates", icon: LayoutTemplate },
   { href: "/resources", label: "Resources", icon: BookOpen },

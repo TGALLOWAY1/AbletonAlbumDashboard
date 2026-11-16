@@ -23,7 +23,7 @@ import {
  * settings.
  *
  * This is the shape that is stored (`dashboard_layouts.layout`, migration
- * 0037) and the shape the page renders from. The grid module moves
+ * 0038) and the shape the page renders from. The grid module moves
  * rectangles; this one knows a rectangle is a *widget* — it has a type from
  * the registry, settings that must match that type's schema, and limits on
  * how small it may be.

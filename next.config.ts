@@ -2,6 +2,12 @@ import type { NextConfig } from "next";
 import { REMOTE_IMAGE_PATTERNS } from "./src/lib/image-hosts";
 
 const nextConfig: NextConfig = {
+  // Isolated browser QA can use a second build directory alongside the normal app.
+  distDir: process.env.NEXT_DIST_DIR || ".next",
+  experimental: {
+    // Visuals are validated server-side at 8 MiB; leave room for multipart fields.
+    serverActions: { bodySizeLimit: "10mb" },
+  },
   images: {
     // Uploaded covers live in a public Supabase bucket, so the optimizer needs
     // explicit permission to fetch them. `CoverArt` checks a URL against the
