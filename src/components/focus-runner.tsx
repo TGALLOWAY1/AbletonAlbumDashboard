@@ -21,6 +21,7 @@ import {
   shouldReseedGoal,
 } from "@/lib/focus-runner";
 import type { ActionRow, SessionTypeRow, TrackRow } from "@/lib/types";
+import { focusSessionPath } from "@/lib/starter-run";
 
 export function FocusRunner({
   track,
@@ -46,10 +47,10 @@ export function FocusRunner({
 
   // This page "owns" the running session when its track matches (track mode)
   // or when the active session has no track (track-less mode).
-  const pageOwnsSession = track ? ctx.trackId === track.id : ctx.trackId === null;
+  const pageOwnsSession = !ctx.starter && (track ? ctx.trackId === track.id : ctx.trackId === null);
 
   const isOtherSessionActive =
-    (ctx.phase === "running" || ctx.phase === "paused") && !pageOwnsSession;
+    ctx.phase !== "idle" && !pageOwnsSession;
 
   // The moment this page's session stops, send the user to the full-screen
   // production-logging page. The FocusSessionProvider lives in the root layout,
@@ -137,12 +138,12 @@ export function FocusRunner({
     }
   };
 
-  const activeFocusPath = ctx.trackId ? `/focus/${ctx.trackId}` : "/focus/new";
+  const activeFocusPath = focusSessionPath(ctx);
 
   if (isOtherSessionActive) {
     return (
       <ActiveElsewhereNotice
-        activeTrackName={ctx.trackName}
+        activeTrackName={ctx.starter?.template.name ?? ctx.trackName}
         onReturn={() => router.push(activeFocusPath)}
         onStopAndLog={() => {
           ctx.stop();

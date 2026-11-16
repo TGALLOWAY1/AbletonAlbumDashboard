@@ -41,6 +41,7 @@ import type { TrackSessionWithActivities } from "@/lib/data/sessions";
 import type { ActionRow, SessionTypeRow, VersionRow } from "@/lib/types";
 import { formatDuration } from "@/lib/utils";
 import { cn } from "@/lib/utils";
+import { StarterHistorySummary } from "@/components/session-starters/history-summary";
 
 const ACTIVITY_LABELS = new Map(
   PRODUCTION_ACTIVITIES.map((a) => [a.key as string, a.label]),
@@ -505,6 +506,8 @@ function SessionEntry({
           <ReactMarkdown>{session.notes_md}</ReactMarkdown>
         </div>
       )}
+
+      <StarterHistorySummary snapshot={session.starter_snapshot} output={session.starter_output} />
 
       {session.activities.some((a) => a.note) && (
         <ul className="mt-2 flex flex-col gap-1 text-xs text-muted-foreground">

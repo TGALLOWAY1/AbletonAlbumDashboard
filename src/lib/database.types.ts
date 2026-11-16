@@ -158,8 +158,52 @@ export type Database = {
         };
         Relationships: [];
       };
+      session_starter_media: {
+        Row: {
+          id: string;
+          owner_id: string;
+          template_id: string;
+          storage_path: string;
+          name: string;
+          kind: string;
+          mime_type: string;
+          size_bytes: number;
+          sort_order: number;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          owner_id: string;
+          template_id: string;
+          storage_path: string;
+          name: string;
+          kind: string;
+          mime_type: string;
+          size_bytes: number;
+          sort_order?: number;
+          created_at?: string;
+        };
+        Update: {
+          id?: string;
+          owner_id?: string;
+          template_id?: string;
+          storage_path?: string;
+          name?: string;
+          kind?: string;
+          mime_type?: string;
+          size_bytes?: number;
+          sort_order?: number;
+          created_at?: string;
+        };
+        Relationships: [];
+      };
       session_templates: {
         Row: {
+          starter_data: Json | null;
+          starter_seed_key: string | null;
+          is_favorite: boolean;
+          archived_at: string | null;
+          updated_at: string;
           created_at: string;
           default_duration_minutes: number;
           default_notes_md: string | null;
@@ -169,6 +213,11 @@ export type Database = {
           session_type_id: string | null;
         };
         Insert: {
+          starter_data?: Json | null;
+          starter_seed_key?: string | null;
+          is_favorite?: boolean;
+          archived_at?: string | null;
+          updated_at?: string;
           created_at?: string;
           default_duration_minutes?: number;
           default_notes_md?: string | null;
@@ -178,6 +227,11 @@ export type Database = {
           session_type_id?: string | null;
         };
         Update: {
+          starter_data?: Json | null;
+          starter_seed_key?: string | null;
+          is_favorite?: boolean;
+          archived_at?: string | null;
+          updated_at?: string;
           created_at?: string;
           default_duration_minutes?: number;
           default_notes_md?: string | null;
@@ -294,6 +348,10 @@ export type Database = {
       };
       sessions: {
         Row: {
+          starter_snapshot: Json | null;
+          starter_run_id: string | null;
+          worked_seconds: number | null;
+          starter_output: Json | null;
           action_id: string | null;
           created_at: string;
           duration_seconds: number | null;
@@ -315,6 +373,10 @@ export type Database = {
           track_id: string | null;
         };
         Insert: {
+          starter_snapshot?: Json | null;
+          starter_run_id?: string | null;
+          worked_seconds?: number | null;
+          starter_output?: Json | null;
           action_id?: string | null;
           created_at?: string;
           duration_seconds?: number | null;
@@ -336,6 +398,10 @@ export type Database = {
           track_id?: string | null;
         };
         Update: {
+          starter_snapshot?: Json | null;
+          starter_run_id?: string | null;
+          worked_seconds?: number | null;
+          starter_output?: Json | null;
           action_id?: string | null;
           created_at?: string;
           duration_seconds?: number | null;
