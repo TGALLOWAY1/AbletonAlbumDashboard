@@ -1,6 +1,13 @@
 "use client";
 
-import { useId, useOptimistic, useRef, useState, useTransition } from "react";
+import {
+  useId,
+  useOptimistic,
+  useRef,
+  useState,
+  useTransition,
+  type ReactNode,
+} from "react";
 import Link from "next/link";
 import { ChevronDown, GripVertical, Pin, PinOff, Play } from "lucide-react";
 import { CoverArt } from "@/components/cover-art";
@@ -60,11 +67,21 @@ export function PinnedTracksList({
   title,
   items,
   options,
+  controls,
 }: {
   title: string;
   items: PinnedTrackSummary[];
   /** Every non-archived track — the dialog's candidates. */
   options: TrackOption[];
+  /**
+   * Per-track controls for a row's opened detail, by track id — the Suno
+   * status toggle, the `.als` path copy and the track actions menu, which the
+   * old home page offered on its expanded card. Rendered on the server and
+   * passed down as nodes, so this list never has to import them (or the
+   * `TrackWithDetails` they read). Kept out of `items` so the optimistic
+   * reorder state stays plain data.
+   */
+  controls?: Record<string, ReactNode>;
 }) {
   const [optimistic, applyOptimistic] = useOptimistic<
     PinnedTrackSummary[],
@@ -187,6 +204,7 @@ export function PinnedTracksList({
               <PinnedRow
                 key={item.id}
                 item={item}
+                controls={controls?.[item.id]}
                 position={index + 1}
                 total={optimistic.length}
                 expanded={expanded.has(item.id)}
@@ -227,6 +245,7 @@ export function PinnedTracksList({
 
 function PinnedRow({
   item,
+  controls,
   position,
   total,
   expanded,
@@ -241,6 +260,7 @@ function PinnedRow({
   onUnpin,
 }: {
   item: PinnedTrackSummary;
+  controls?: ReactNode;
   position: number;
   total: number;
   expanded: boolean;
@@ -406,10 +426,11 @@ function PinnedRow({
               "Never worked"
             )}
           </p>
-          <div className="flex flex-wrap gap-1.5">
+          <div className="flex flex-wrap items-center gap-1.5">
             <Button asChild size="sm" variant="outline" className="dash-stack:h-9">
               <Link href={`/tracks/${item.id}`}>Open track</Link>
             </Button>
+            {controls}
             <Button
               size="sm"
               variant="ghost"

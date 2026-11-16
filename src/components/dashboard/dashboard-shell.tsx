@@ -17,6 +17,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/components/toast";
 import type { LayoutsStatus } from "@/lib/data/dashboard";
+import { stackOrder } from "@/lib/dashboard/grid";
 import {
   addWidget,
   duplicateWidget,
@@ -38,6 +39,13 @@ import { ANALYTICS_PATH } from "@/lib/progress-tab";
  * carefully — on a phone that row decides what makes the first screen.
  */
 const TOOLBAR_BUTTON_CLASS = "gap-1.5 px-2.5 [&_svg]:size-3.5";
+
+/** Selectors for the elements keyboard focus is handed to — see `focusNext`. */
+const FOCUS = {
+  customize: '[data-dash-focus="customize"]',
+  add: '[data-dash-focus="add"]',
+  grip: (id: string) => `[data-widget-id="${CSS.escape(id)}"] [data-widget-grip]`,
+};
 
 /**
  * The dashboard: a toolbar, the widget grid, and the edit mode that
@@ -81,12 +89,20 @@ export function DashboardShell({
   // The layout on screen outside edit mode. Normally just the saved one; kept
   // in state so a successful save can show its result at once instead of the
   // old arrangement flashing back until the refreshed page arrives.
-  const savedKey = `${active.id ?? "built-in"}:${JSON.stringify(active.layout)}`;
+  //
+  // `rowId` and `revision` ride along for the same reason: a save returns the
+  // row it wrote and its new revision, and the next save must be based on
+  // those even if it happens before the refreshed page has delivered them.
+  const savedKey = `${active.id ?? "built-in"}:${active.updatedAt ?? ""}:${JSON.stringify(active.layout)}`;
   const [syncedKey, setSyncedKey] = useState(savedKey);
   const [view, setView] = useState(active.layout);
+  const [rowId, setRowId] = useState(active.id);
+  const [revision, setRevision] = useState(active.updatedAt);
   if (syncedKey !== savedKey) {
     setSyncedKey(savedKey);
     setView(active.layout);
+    setRowId(active.id);
+    setRevision(active.updatedAt);
   }
 
   const [draft, setDraft] = useState<DashboardLayout | null>(null);
@@ -111,14 +127,53 @@ export function DashboardShell({
 
   const readOnly = status === "failed";
 
-  // Leaving with unsaved changes asks first — a reload would silently lose
-  // an arrangement that took a minute of dragging.
+  // Leaving with unsaved changes asks first — otherwise an arrangement that
+  // took a minute of dragging is gone without a word. Two ways out need two
+  // guards: `beforeunload` covers a reload, a closed tab and leaving the
+  // site, but an in-app link is a client-side route change and never fires
+  // it — and the sidebar and bottom nav stay live while customizing. So link
+  // clicks are intercepted too, in the capture phase, ahead of the router.
+  // (The browser's Back button cannot be intercepted; that one still leaves.)
   useEffect(() => {
     if (!dirty) return;
     const warn = (e: BeforeUnloadEvent) => e.preventDefault();
+    const onClick = (e: MouseEvent) => {
+      // Let modified clicks through: they open another tab and leave this one.
+      if (e.button !== 0 || e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return;
+      const link = (e.target as Element | null)?.closest?.("a[href]") as HTMLAnchorElement | null;
+      if (!link || link.target === "_blank" || link.hasAttribute("download")) return;
+      const url = new URL(link.href, window.location.href);
+      if (url.origin !== window.location.origin) return;
+      const samePage =
+        url.pathname === window.location.pathname &&
+        url.search === window.location.search;
+      if (samePage) return;
+      if (!window.confirm("You have unsaved changes to this layout. Leave and discard them?")) {
+        e.preventDefault();
+        e.stopPropagation();
+      }
+    };
     window.addEventListener("beforeunload", warn);
-    return () => window.removeEventListener("beforeunload", warn);
+    document.addEventListener("click", onClick, true);
+    return () => {
+      window.removeEventListener("beforeunload", warn);
+      document.removeEventListener("click", onClick, true);
+    };
   }, [dirty]);
+
+  // Where keyboard focus goes after the control that held it disappears.
+  // Saving removes the Save button; removing a widget removes its menu;
+  // closing a dialog opened from a menu has no trigger to return to. Left
+  // alone, focus falls to <body> and a keyboard user starts again from the
+  // top of the page. A handler names the next sensible element here and the
+  // effect below moves focus once the render that removes the old one lands.
+  const focusNext = useRef<string | null>(null);
+  useEffect(() => {
+    const selector = focusNext.current;
+    if (!selector) return;
+    focusNext.current = null;
+    document.querySelector<HTMLElement>(selector)?.focus();
+  });
 
   useEffect(() => {
     if (!highlightId) return;
@@ -164,6 +219,7 @@ export function DashboardShell({
 
   const cancel = () => {
     editSession.current += 1;
+    focusNext.current = FOCUS.customize;
     setDraft(null);
     setPreviews({});
     setGalleryOpen(false);
@@ -174,16 +230,35 @@ export function DashboardShell({
   const save = () => {
     if (!draft) return;
     if (!dirty) {
+      focusNext.current = FOCUS.customize;
       setDraft(null);
       return;
     }
     const next = draft;
     startSaving(async () => {
-      const result = await saveDashboardLayout({
-        id: active.id,
-        name: active.name,
-        layout: next,
-      });
+      const attempt = (force: boolean) =>
+        saveDashboardLayout({
+          id: rowId,
+          name: active.name,
+          layout: next,
+          expectedUpdatedAt: revision,
+          force,
+        });
+
+      let result = await attempt(false);
+      // Someone else saved this layout since it was loaded here. Neither
+      // version is thrown away without being asked: the draft stays on
+      // screen, and replacing the other change is the user's call.
+      if (result.conflict && rowId !== null) {
+        const overwrite = window.confirm(
+          `${result.error}\n\nSave your version anyway? It will replace the changes made elsewhere.`,
+        );
+        if (!overwrite) {
+          toast("Not saved. Reload to see the latest version of this layout.");
+          return;
+        }
+        result = await attempt(true);
+      }
       if (result.error) {
         toast(result.error);
         return;
@@ -191,7 +266,10 @@ export function DashboardShell({
       // The saved page is about to supply every node itself; a preview
       // still in flight would only arrive after them and go stale.
       editSession.current += 1;
+      focusNext.current = FOCUS.customize;
       setView(next);
+      setRowId(result.id ?? rowId);
+      setRevision(result.updatedAt ?? null);
       setDraft(null);
       setAnnouncement("Layout saved.");
       router.refresh();
@@ -226,13 +304,20 @@ export function DashboardShell({
   const remove = (id: string) => {
     if (!draft) return;
     const item = draft.items.find((i) => i.id === id);
-    setDraft(removeWidget(draft, id));
+    const next = removeWidget(draft, id);
+    // Focus was on the removed widget's menu. Hand it to the widget that
+    // follows in reading order — or, if that was the last one, to Add widget.
+    const order = stackOrder(draft.items, draft.order ?? undefined);
+    const neighbour = order[order.indexOf(id) + 1] ?? order[order.indexOf(id) - 1];
+    focusNext.current = neighbour ? FOCUS.grip(neighbour) : FOCUS.add;
+    setDraft(next);
     if (item) setAnnouncement(`${widgetDefinition(item.type).name} removed.`);
   };
 
   const configure = (id: string, config: Record<string, unknown>) => {
     if (!draft) return;
     const next = setWidgetConfig(draft, id, config);
+    focusNext.current = FOCUS.grip(id);
     setDraft(next);
     setSettingsFor(null);
     const item = next.items.find((i) => i.id === id);
@@ -243,6 +328,18 @@ export function DashboardShell({
     if (readOnly) return;
     if (!draft) setDraft(view);
     setGalleryOpen(true);
+  };
+
+  const closeSettings = () => {
+    if (settingsFor) focusNext.current = FOCUS.grip(settingsFor);
+    setSettingsFor(null);
+  };
+
+  const closeGallery = (open: boolean) => {
+    // Closed without adding: back to the button that opened it. (Adding
+    // closes it too, and focuses the new widget instead — see `add`.)
+    if (!open) focusNext.current = FOCUS.add;
+    setGalleryOpen(open);
   };
 
   const settingsItem = settingsFor
@@ -274,6 +371,8 @@ export function DashboardShell({
               size="sm"
               className={TOOLBAR_BUTTON_CLASS}
               onClick={() => setGalleryOpen(true)}
+              disabled={saving}
+              data-dash-focus="add"
             >
               <Plus aria-hidden />
               <span className="hidden sm:inline">Add widget</span>
@@ -312,6 +411,7 @@ export function DashboardShell({
               className={TOOLBAR_BUTTON_CLASS}
               onClick={startEditing}
               disabled={readOnly}
+              data-dash-focus="customize"
             >
               <SlidersHorizontal aria-hidden />
               <span className="hidden sm:inline">Customize</span>
@@ -322,6 +422,7 @@ export function DashboardShell({
               className={TOOLBAR_BUTTON_CLASS}
               onClick={openGallery}
               disabled={readOnly}
+              data-dash-focus="add"
             >
               <Plus aria-hidden />
               <span className="hidden sm:inline">Add widget</span>
@@ -381,6 +482,10 @@ export function DashboardShell({
           />
         </div>
       ) : (
+        // Locked while a save is in flight: the save carries the draft as it
+        // was when Save was pressed, and it replaces the draft when it lands
+        // — so a widget removed in that second would silently come back.
+        <div inert={saving} aria-busy={saving || undefined}>
         <DashboardGrid
           layout={layout}
           editing={editing}
@@ -395,6 +500,7 @@ export function DashboardShell({
           onRemove={remove}
           highlightId={highlightId}
         />
+        </div>
       )}
 
       {/* Where drags, keyboard moves and saves are spoken. */}
@@ -405,7 +511,7 @@ export function DashboardShell({
       {draft && (
         <WidgetGallery
           open={galleryOpen}
-          onOpenChange={setGalleryOpen}
+          onOpenChange={closeGallery}
           layout={draft}
           onAdd={add}
         />
@@ -416,7 +522,7 @@ export function DashboardShell({
           key={settingsItem.id}
           item={settingsItem}
           tracks={tracks}
-          onClose={() => setSettingsFor(null)}
+          onClose={closeSettings}
           onSave={(config) => configure(settingsItem.id, config)}
         />
       )}

@@ -164,6 +164,18 @@ async function attachDetails(tracks: TrackRow[]): Promise<TrackWithDetails[]> {
         .in("track_id", ids),
     ]);
 
+  // Stages and tasks are what a track's progress, next step and open count
+  // are made of, and both tables have existed since 0001 — so unlike the
+  // reads below there is no "migration not applied" case to degrade for. A
+  // failure used to fall through `?? []` and draw every track at 0% with no
+  // open tasks, which is a wrong answer rather than a missing one. Thrown, it
+  // reaches the page's error boundary, or the one dashboard widget's.
+  // (`selectOpenActions` has already retried without `sort_order` for a
+  // database that predates 0025, so an error here is a real one.)
+  for (const res of [stagesRes, openActionsRes, completedActionsRes]) {
+    if (res.error) throw res.error;
+  }
+
   const stagesByTrack = new Map<string, StageRow[]>();
   (stagesRes.data ?? []).forEach((s) => {
     const list = stagesByTrack.get(s.track_id) ?? [];

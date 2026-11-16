@@ -171,29 +171,52 @@ export function FocusTimerPanel({
   // timer scrolled out of view is not showing anyone anything — there the pill
   // comes back. Declared on mount and corrected by the observer, so the pill
   // does not flash for the frame before the first observation arrives.
+  //
+  // It also has to be *usable*. While the dashboard is being customized every
+  // widget's contents are inert, so this one can show the clock but cannot
+  // stop it; if it still claimed the session there would be no Stop anywhere
+  // on the page until the edit ended. The grid marks itself `data-editing`,
+  // and the widget stands aside for the pill for as long as it does.
   const rootRef = useRef<HTMLDivElement | null>(null);
   const { showTimerSurface } = ctx;
   useEffect(() => {
-    let withdraw: (() => void) | null = showTimerSurface();
     const el = rootRef.current;
-    if (!el || typeof IntersectionObserver === "undefined") {
-      return () => withdraw?.();
-    }
-    const observer = new IntersectionObserver(
-      ([entry]) => {
-        const shown = entry.intersectionRatio >= 0.5;
-        if (shown && !withdraw) {
-          withdraw = showTimerSurface();
-        } else if (!shown && withdraw) {
-          withdraw();
-          withdraw = null;
-        }
-      },
-      { threshold: 0.5 },
-    );
-    observer.observe(el);
+    const grid = el?.closest<HTMLElement>(".dash-grid") ?? null;
+    let withdraw: (() => void) | null = null;
+    let onScreen = true;
+
+    const sync = () => {
+      const shown = onScreen && !grid?.hasAttribute("data-editing");
+      if (shown && !withdraw) {
+        withdraw = showTimerSurface();
+      } else if (!shown && withdraw) {
+        withdraw();
+        withdraw = null;
+      }
+    };
+    sync();
+
+    const visibility =
+      el && typeof IntersectionObserver !== "undefined"
+        ? new IntersectionObserver(
+            ([entry]) => {
+              onScreen = entry.intersectionRatio >= 0.5;
+              sync();
+            },
+            { threshold: 0.5 },
+          )
+        : null;
+    if (el) visibility?.observe(el);
+
+    const editing =
+      grid && typeof MutationObserver !== "undefined"
+        ? new MutationObserver(sync)
+        : null;
+    if (grid) editing?.observe(grid, { attributes: true, attributeFilter: ["data-editing"] });
+
     return () => {
-      observer.disconnect();
+      visibility?.disconnect();
+      editing?.disconnect();
       withdraw?.();
     };
   }, [showTimerSurface]);
@@ -266,7 +289,9 @@ export function FocusTimerPanel({
       : reading.kind === "remaining"
         ? `left of ${describeLength(targetMinutes(ctx.targetMs))}`
         : reading.kind === "overtime"
-          ? `over ${describeLength(targetMinutes(ctx.targetMs))} — still running`
+          ? `over ${describeLength(targetMinutes(ctx.targetMs))} — ${
+              ctx.phase === "paused" ? "paused" : "still running"
+            }`
           : "Open-ended";
 
   return (
@@ -317,7 +342,11 @@ export function FocusTimerPanel({
 
       {/* Announced once, when the countdown runs out — the session carries on. */}
       <p className="sr-only" role="status">
-        {over && !stopped ? "Time is up. The session is still running." : ""}
+        {over && !stopped
+          ? ctx.phase === "paused"
+            ? "Time is up. The session is paused."
+            : "Time is up. The session is still running."
+          : ""}
       </p>
 
       <div className="dash-scroll flex min-h-0 flex-1 flex-col px-4 pb-4">

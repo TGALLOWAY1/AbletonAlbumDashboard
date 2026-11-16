@@ -28,6 +28,17 @@ class Boundary extends Component<
     return { failed: true };
   }
 
+  // A refresh hands every widget a newly rendered node. If this one had
+  // failed, that node is a fresh attempt, so show it — otherwise one "Try
+  // again" would clear only the card it was pressed on while the others,
+  // refreshed by the same request, stayed on their error message. If the new
+  // node fails too it throws again and this flips straight back.
+  componentDidUpdate(previous: { children: ReactNode }) {
+    if (this.state.failed && previous.children !== this.props.children) {
+      this.setState({ failed: false });
+    }
+  }
+
   render() {
     return this.state.failed ? this.props.fallback : this.props.children;
   }

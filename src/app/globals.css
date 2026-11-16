@@ -83,14 +83,17 @@ body {
  *   under 32rem   one column, every widget at its natural height. No fixed
  *                 rows and no scrolling inside a widget: on a phone a scroll
  *                 box inside a scrolling page traps the thumb.
- *   32–64rem      six columns. Widgets are half the row or all of it
+ *   32–58rem      six columns. Widgets are half the row or all of it
  *                 (`--mw`), keep their row height, and flow in stack order
  *                 (`--o`) — dense, so a half-width widget fills a gap.
  *                 32rem is where a half-row widget reaches ~250px, about
  *                 the narrowest a three-column widget gets on the full grid.
- *   64rem and up  the 12-column grid, each widget at the cell the user put it
+ *   58rem and up  the 12-column grid, each widget at the cell the user put it
  *                 in (`--x --y --w --h`). This is the only arrangement that
- *                 is dragged and resized.
+ *                 is dragged and resized. 58rem is a 1280px laptop with room
+ *                 to spare for a classic scrollbar (1280 − 16rem sidebar −
+ *                 4rem gutters = 60rem): a three-column widget is ~220px
+ *                 there, the narrowest the widgets are designed for.
  *
  * The cell's position is all custom properties set inline per widget, so the
  * server renders the final layout: nothing is measured in the browser and
@@ -186,7 +189,7 @@ body {
   }
 }
 
-@container dash (min-width: 64rem) {
+@container dash (min-width: 58rem) {
   .dash-grid {
     grid-template-columns: repeat(12, minmax(0, 1fr));
     grid-auto-flow: row;

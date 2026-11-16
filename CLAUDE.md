@@ -81,6 +81,9 @@ Run `pnpm typecheck && pnpm lint && pnpm test` before committing.
   short inline detail (next task in full, open count, last worked, Open /
   Unpin) — **not** the full `TrackCard`, which picks its layout from the
   viewport (`md:`) and would draw four columns inside a quarter-width card.
+  The detail still carries what that card offered from the home page — the
+  Suno status toggle, the `.als` path copy (desktop) and the track actions
+  menu — as server-rendered nodes passed in per track (`controls`).
   The top row is the song that matters most, and the one the Current Track
   widget follows when it is not pointed at a specific track.
   Pinning is reachable from three places: the "+" in the widget's header,
@@ -122,7 +125,8 @@ Run `pnpm typecheck && pnpm lint && pnpm test` before committing.
   data and link here for the whole of it — and editing or deleting a logged
   session must not depend on which widgets someone kept. `/sessions` and the
   old `/?progress=history` redirect to it. It is not a nav item: it is reached
-  from the dashboard toolbar and from those widgets.
+  from the dashboard toolbar and from those widgets, and it lights up Home
+  (`isHomeSection` in `nav-items.ts`).
 - **One range control, one window.** The 7D/30D/3M/6M/1Y tabs govern the
   heatmap *and* the time, session count, tasks-done and streak figures printed
   under it — all read off a single `getRangeStats()` (`src/lib/analytics.ts`).
@@ -169,7 +173,9 @@ Run `pnpm typecheck && pnpm lint && pnpm test` before committing.
   counts down to it and then keeps counting the overtime rather than ending
   the session. While the widget is on screen it calls `showTimerSurface()`
   and `FloatingFocusBar` stands down, so the same timer is not drawn twice;
-  for that reason the widget keeps a Stop control at every size.
+  for that reason the widget keeps a Stop control at every size, and stands
+  aside for the pill while the dashboard is being customized (its contents
+  are inert then, so it could show the clock but not stop it).
 - **The dashboard toolbar is one row.** On a phone every line above the
   first widget decides what makes the first screen, so the row is the layout
   name (which is the switcher) and three buttons that drop their labels below
@@ -364,7 +370,7 @@ Rules that are easy to break:
   `--x --y --w --h --mw --o` inline and `.dash-grid` picks the arrangement
   from a container query on the dashboard's *own* width (the sidebar takes
   16rem of a desktop viewport and none of a phone's, so the viewport is the
-  wrong thing to ask): 12 columns from 64rem, six flowed columns from 32rem,
+  wrong thing to ask): 12 columns from 58rem, six flowed columns from 32rem,
   one column below. Nothing is measured in the browser and nothing moves
   after hydration. Do not swap this for a library that positions with
   measured pixel transforms.
@@ -387,6 +393,36 @@ Rules that are easy to break:
   returns the rendered `WidgetHost`) supplies one; previews are dropped when
   the page re-renders from the saved layout. Widget contents are `inert`
   while editing.
+- **A save is conditional on the revision it was based on.** The whole
+  document is written at once, so a save from a page that loaded before
+  someone else's save would put back everything they changed — the widget
+  removed in the other tab (or on the phone) silently reappears.
+  `saveDashboardLayout` takes the `updated_at` the caller loaded and only
+  matches a row still at it; otherwise nothing is written and the result says
+  `conflict`, and the shell *asks* whether to replace the other change
+  (`force`). The built-in layout has the same hazard in another shape — two
+  tabs would each insert a "My Studio" — so once any row exists a save of it
+  is refused. A successful save returns the new row id and revision, and the
+  shell keeps both in state so a second save before the refresh lands is not
+  a false conflict.
+- **Unsaved changes are not lost without asking, and nothing changes under a
+  save.** `beforeunload` covers reloads and leaving the site; an in-app link
+  is a client-side route change and never fires it, so the shell also
+  intercepts link clicks (capture phase) while the draft is dirty. While a
+  save is in flight the grid is `inert`: the save carries the draft as it was
+  when Save was pressed and replaces it when it lands.
+- **Document order follows what is on screen.** Where a widget is drawn is
+  CSS, but the order of the elements is what Tab and a screen reader follow,
+  and the stacked and gridded arrangements read differently. The server
+  renders stack order; `DashboardGrid` re-sorts to grid reading order once it
+  sees the 12-column grid is live. That order is pinned from press to release
+  of a pointer gesture — moving an element in the document drops its pointer
+  capture — and a keyboard move puts focus back on the grip it came from.
+- **Focus is handed on when its control disappears.** Saving removes Save,
+  removing a widget removes its menu, a dialog opened from a menu has no
+  trigger to return to. The shell names the next element (`focusNext`); the
+  dashboard's dialogs `preventDefault` Radix's close-autofocus so it is not
+  overridden. Do not let focus fall to `<body>`.
 - **The options menu is portalled, and React bubbles its events to the drag
   bar anyway.** The bar's `onPointerDown` checks
   `currentTarget.contains(target)`; without it a press on a menu item starts
@@ -479,7 +515,7 @@ exception).
   their own pages a failed read *should* reach that page's boundary.
   `layout-chrome-reads.test.ts` asserts the catch.
 - Server actions that mutate track-level data must call `revalidateTrackSurfaces(trackId)` from `src/lib/revalidate-track.ts`, which revalidates **both** route shapes plus the dashboard/focus/session surfaces. Do not hand-roll `revalidatePath` lists.
-- User-facing errors in client components go through `useToast()` (`src/components/toast.tsx`, provider mounted in the root layout) — never `window.alert()`.
+- User-facing errors in client components go through `useToast()` (`src/components/toast.tsx`, provider mounted in the root layout) — never `window.alert()`. Toasts sit above dialogs (`z-[100]`): most validation errors are raised from inside one, and under the dialog's backdrop the action just looked like it did nothing. Write the message for the person — a schema's messages are user copy (see the widget registry), never a raw Zod string.
 - Optimistic UI uses React 19's `useOptimistic` (see `TrackTodoList`).
 - Persistent chrome (sidebar, mobile header, mobile bottom nav, library
   mini-player) is pinned with `position: fixed`, **never** `sticky`, and its

@@ -71,7 +71,14 @@ export function WidgetSettingsDialog({
   const submit = () => {
     const parsed = definition.config.safeParse(draft);
     if (!parsed.success) {
-      toast(parsed.error.issues[0]?.message ?? "Those settings are not valid.");
+      // The schema's messages are written for this dialog (see the registry);
+      // anything without one gets a plain sentence, never a raw Zod string.
+      const message = parsed.error.issues[0]?.message ?? "";
+      toast(
+        /^(Invalid|Too |Expected|Required)/.test(message) || message === ""
+          ? "Those settings are not valid. Check each field and try again."
+          : message,
+      );
       return;
     }
     onSave(parsed.data as Record<string, unknown>);
@@ -79,7 +86,9 @@ export function WidgetSettingsDialog({
 
   return (
     <Dialog open onOpenChange={(open) => !open && onClose()}>
-      <DialogContent>
+      {/* Opened from a menu item that no longer exists, so Radix has nothing
+          to return focus to; the shell places it on this widget's grip. */}
+      <DialogContent onCloseAutoFocus={(e) => e.preventDefault()}>
         <DialogHeader>
           <DialogTitle>{definition.name} settings</DialogTitle>
           <DialogDescription>
@@ -254,9 +263,17 @@ function GoalsField({
             min={1}
             aria-label={`Goal ${index + 1} target`}
             className={`${FIELD_CLASS} w-20 flex-none`}
-            value={Number.isFinite(goal.target) ? goal.target : ""}
+            // An emptied field stays empty (and fails validation on Done)
+            // rather than snapping to 0 — which made it impossible to clear
+            // the box and type a new number without a stray leading zero.
+            value={typeof goal.target === "number" && Number.isFinite(goal.target) ? goal.target : ""}
             onChange={(e) =>
-              update(index, { target: Math.round(Number(e.target.value)) })
+              update(index, {
+                target:
+                  e.target.value.trim() === ""
+                    ? (undefined as unknown as number)
+                    : Math.round(Number(e.target.value)),
+              })
             }
           />
           <select

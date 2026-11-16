@@ -43,7 +43,7 @@ export async function getDashboardLayouts(): Promise<{
   try {
     result = await getServerSupabase()
       .from("dashboard_layouts")
-      .select("id, name, layout, is_default")
+      .select("id, name, layout, is_default, updated_at")
       .eq("owner_id", OWNER_ID)
       .order("sort_order", { ascending: true })
       .order("created_at", { ascending: true });
@@ -82,6 +82,7 @@ export async function getDashboardLayouts(): Promise<{
         isDefault: row.id === defaultId,
         layout,
         fallback,
+        updatedAt: row.updated_at,
       };
     }),
   };

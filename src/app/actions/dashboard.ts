@@ -35,9 +35,24 @@ import {
  * rejected, exactly as they would be on the way back out.
  */
 
-export type DashboardActionResult = { error?: string; id?: string };
+export type DashboardActionResult = {
+  error?: string;
+  id?: string;
+  /** The row's new revision after a successful save. */
+  updatedAt?: string;
+  /**
+   * The save was refused because the layout changed since the caller read
+   * it. Nothing was written. The caller may ask the user and retry with
+   * `force`.
+   */
+  conflict?: boolean;
+};
 
 const idSchema = z.string().uuid();
+
+const CHANGED_ELSEWHERE_MESSAGE =
+  "This layout was changed somewhere else — another tab or another device — " +
+  "since you opened it, so your changes were not saved.";
 
 function failure(label: string, error: unknown, fallback: string): DashboardActionResult {
   if (isMissingTable(error)) return { error: MIGRATION_0037_MISSING_MESSAGE };
@@ -65,22 +80,48 @@ async function countLayouts(): Promise<{ count: number; error: unknown }> {
  * `id: null` is the built-in layout, which has no row until now: the first
  * save creates it (as the default, under `name`). Anything else updates the
  * row in place.
+ *
+ * A SAVE IS CONDITIONAL. The whole document is written at once, so a save
+ * from a page that loaded before someone else's save would put back
+ * everything they changed — the widget removed in the other tab reappears,
+ * with no warning to either side. So the caller sends the revision it loaded
+ * (`expectedUpdatedAt`) and the update only matches a row still at that
+ * revision; when it does not, nothing is written and the result says
+ * `conflict`, so the user is asked rather than overruled. `force` is their
+ * answer "save mine anyway".
+ *
+ * The built-in layout has the same hazard in a different shape: two tabs
+ * that both loaded it would each insert their own "My Studio". Once any row
+ * exists the built-in is no longer what a fresh page would show, so a save
+ * of it is refused as a conflict instead of inserted beside the first.
  */
 export async function saveDashboardLayout(input: {
   id: string | null;
   name: string;
   layout: unknown;
+  expectedUpdatedAt: string | null;
+  force?: boolean;
 }): Promise<DashboardActionResult> {
   const layout = acceptLayout(input.layout);
   if (!layout) return { error: "That layout could not be read. Reload and try again." };
   const name = layoutNameSchema.safeParse(input.name);
   if (!name.success) return { error: name.error.issues[0].message };
   const supabase = getServerSupabase();
+  const updatedAt = new Date().toISOString();
 
   if (input.id === null) {
     const existing = await countLayouts();
     if (existing.error) {
       return failure("saveDashboardLayout", existing.error, "Could not save the layout. Try again.");
+    }
+    if (existing.count > 0) {
+      return {
+        conflict: true,
+        error:
+          "A layout was saved somewhere else — another tab or another device — " +
+          "since you opened this page, so your changes were not saved. Reload " +
+          "to see it, then make your changes there.",
+      };
     }
     const { data, error } = await supabase
       .from("dashboard_layouts")
@@ -88,37 +129,52 @@ export async function saveDashboardLayout(input: {
         owner_id: OWNER_ID,
         name: name.data,
         layout: layout as unknown as Json,
-        is_default: existing.count === 0,
-        sort_order: existing.count,
+        is_default: true,
+        sort_order: 0,
+        updated_at: updatedAt,
       })
-      .select("id")
+      .select("id, updated_at")
       .single();
     if (error) {
       return failure("saveDashboardLayout", error, "Could not save the layout. Try again.");
     }
     revalidatePath("/");
-    return { id: data.id };
+    return { id: data.id, updatedAt: data.updated_at };
   }
 
   if (!idSchema.safeParse(input.id).success) return { error: "Unknown layout." };
-  const { data, error } = await supabase
+  let update = supabase
     .from("dashboard_layouts")
-    .update({
-      layout: layout as unknown as Json,
-      updated_at: new Date().toISOString(),
-    })
+    .update({ layout: layout as unknown as Json, updated_at: updatedAt })
     .eq("id", input.id)
-    .eq("owner_id", OWNER_ID)
-    .select("id");
+    .eq("owner_id", OWNER_ID);
+  if (!input.force && input.expectedUpdatedAt) {
+    update = update.eq("updated_at", input.expectedUpdatedAt);
+  }
+  const { data, error } = await update.select("id, updated_at");
   if (error) {
     return failure("saveDashboardLayout", error, "Could not save the layout. Try again.");
   }
-  if (!data || data.length === 0) {
+  if (data && data.length > 0) {
+    revalidatePath("/");
+    return { id: input.id, updatedAt: data[0].updated_at };
+  }
+
+  // Nothing matched: the row is gone, or it has moved on from the revision
+  // this save was based on. Tell the two apart — only one can be retried.
+  const current = await supabase
+    .from("dashboard_layouts")
+    .select("id")
+    .eq("id", input.id)
+    .eq("owner_id", OWNER_ID);
+  if (current.error) {
+    return failure("saveDashboardLayout", current.error, "Could not save the layout. Try again.");
+  }
+  if (!current.data || current.data.length === 0) {
     // Deleted in another tab while this one was being edited.
     return { error: "This layout no longer exists. Reload to see your layouts." };
   }
-  revalidatePath("/");
-  return { id: input.id };
+  return { conflict: true, error: CHANGED_ELSEWHERE_MESSAGE };
 }
 
 /**

@@ -404,6 +404,13 @@ export type SavedLayout = {
   layout: DashboardLayout;
   /** See `ReadLayoutResult.fallback`. */
   fallback: boolean;
+  /**
+   * The row's `updated_at` as it was read — the layout's revision. A save
+   * sends it back, and the write only lands if the row still carries it, so
+   * two tabs (or a phone and a desktop) cannot silently overwrite each other.
+   * `null` for the built-in layout, which has no row.
+   */
+  updatedAt: string | null;
 };
 
 export function builtInLayout(): SavedLayout {
@@ -413,6 +420,7 @@ export function builtInLayout(): SavedLayout {
     isDefault: true,
     layout: defaultLayout(),
     fallback: false,
+    updatedAt: null,
   };
 }
 

@@ -1,6 +1,6 @@
 "use client";
 
-import { useId, useState, useTransition } from "react";
+import { useId, useRef, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { Check, ChevronDown, Copy, Pencil, Plus, Star, Trash2 } from "lucide-react";
 import {
@@ -79,6 +79,7 @@ export function LayoutMenu({
   const [pending, startTransition] = useTransition();
   const nameId = useId();
   const startId = useId();
+  const triggerRef = useRef<HTMLButtonElement | null>(null);
 
   // The built-in layout has no row, but it is still what is on screen, so it
   // is listed like any other.
@@ -122,7 +123,12 @@ export function LayoutMenu({
         () =>
           active.id
             ? renameDashboardLayout({ id: active.id, name })
-            : saveDashboardLayout({ id: null, name, layout: active.layout }),
+            : saveDashboardLayout({
+                id: null,
+                name,
+                layout: active.layout,
+                expectedUpdatedAt: null,
+              }),
         () => router.refresh(),
       );
     } else if (active.id) {
@@ -139,6 +145,7 @@ export function LayoutMenu({
       <DropdownMenu>
         <DropdownMenuTrigger asChild disabled={disabled}>
           <button
+            ref={triggerRef}
             type="button"
             title={disabled ? disabledReason : "Switch or manage layouts"}
             className="group flex min-w-0 items-center gap-1.5 rounded-md py-1 pl-1 pr-1.5 text-left outline-none hover:bg-surface-2 focus-visible:ring-2 focus-visible:ring-ring disabled:hover:bg-transparent"
@@ -224,7 +231,14 @@ export function LayoutMenu({
 
       <Dialog open={dialog !== null} onOpenChange={(next) => !next && setDialog(null)}>
         {dialog && (
-          <DialogContent>
+          <DialogContent
+            // Opened from a menu item, so there is no trigger for Radix to
+            // return focus to; send it back to the layout title.
+            onCloseAutoFocus={(e) => {
+              e.preventDefault();
+              triggerRef.current?.focus();
+            }}
+          >
             <DialogHeader>
               <DialogTitle>
                 {dialog.kind === "new"

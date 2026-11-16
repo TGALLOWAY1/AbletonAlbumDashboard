@@ -156,7 +156,13 @@ export const MAX_GOALS = 5;
 
 export const goalSchema = z.object({
   metric: z.enum(GOAL_METRICS),
-  target: z.number().int().min(1).max(100_000),
+  // The messages are what the settings dialog shows, so they are written for
+  // the person filling it in, not for whoever reads a stack trace.
+  target: z
+    .number("Give each goal a target number.")
+    .int("A goal's target is a whole number.")
+    .min(1, "A goal's target must be at least 1.")
+    .max(100_000, "That target is too large."),
   period: z.enum(GOAL_PERIODS),
 });
 export type Goal = z.infer<typeof goalSchema>;
@@ -269,7 +275,10 @@ export const WIDGETS = {
     defaultSize: "small",
     multiple: false,
     config: z.object({
-      actions: z.array(z.enum(QUICK_ACTION_KEYS)).min(1).max(QUICK_ACTION_KEYS.length),
+      actions: z
+        .array(z.enum(QUICK_ACTION_KEYS))
+        .min(1, "Keep at least one shortcut.")
+        .max(QUICK_ACTION_KEYS.length),
     }),
     defaultConfig: { actions: [...QUICK_ACTION_KEYS] as QuickActionKey[] },
     fields: [

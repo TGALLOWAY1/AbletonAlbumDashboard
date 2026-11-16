@@ -62,7 +62,12 @@ export function WidgetGallery({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-4xl gap-0 p-0 sm:p-0">
+      <DialogContent
+        className="max-w-4xl gap-0 p-0 sm:p-0"
+        // The shell decides where focus goes on close: the new widget's grip
+        // after an add, the Add widget button otherwise.
+        onCloseAutoFocus={(e) => e.preventDefault()}
+      >
         <DialogHeader className="border-b border-border p-4 pr-14 sm:p-6 sm:pr-16">
           <DialogTitle>Add a widget</DialogTitle>
           <DialogDescription>

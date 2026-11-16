@@ -30,6 +30,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import {
   GRID_COLUMNS,
+  byReadingOrder,
   moveItem,
   resizeItem,
   stackOrder,
@@ -124,6 +125,8 @@ const DRAG_THRESHOLD_PX = 4;
 const AUTOSCROLL_EDGE_PX = 56;
 /** Pixels per frame at the very edge; it eases in from zero across the zone. */
 const AUTOSCROLL_MAX_STEP_PX = 10;
+/** How far past the last row the page may scroll while a widget is carried. */
+const AUTOSCROLL_SLACK_PX = 120;
 
 const ORDINALS = ["th", "st", "nd", "rd"];
 function ordinal(n: number): string {
@@ -189,9 +192,62 @@ export function DashboardGrid({
 
   const order = stackOrder(layout.items, layout.order ?? undefined);
   const position = new Map(order.map((id, index) => [id, index]));
-  const ordered = [...layout.items].sort(
-    (a, b) => (position.get(a.id) ?? 0) - (position.get(b.id) ?? 0),
-  );
+
+  // DOCUMENT ORDER FOLLOWS WHAT IS ON SCREEN. Where a widget is *drawn* is
+  // CSS either way, but the order the elements sit in the document is the
+  // order Tab and a screen reader visit them — and the two arrangements read
+  // differently. Stacked and flowed, widgets appear in `order`; on the
+  // 12-column grid they appear where they were placed, which is reading
+  // order of the grid. One fixed document order would be wrong on one of
+  // them (the default layout's phone order starts with the shortcuts, while
+  // the grid's top-left is the featured track). The server cannot know which
+  // arrangement the browser will pick, so it renders stack order and this
+  // re-sorts once the grid is known to be live; nothing moves on screen.
+  const [onGrid, setOnGrid] = useState(false);
+  useEffect(() => {
+    const grid = gridRef.current;
+    if (!grid) return;
+    // Fires once on observe, then whenever the dashboard's width changes —
+    // which is the only thing that switches arrangement.
+    const observer = new ResizeObserver(() => setOnGrid(readMetrics(grid) !== null));
+    observer.observe(grid);
+    return () => observer.disconnect();
+  }, []);
+
+  // …except while a pointer gesture is live. Re-sorting the document under a
+  // drag would have React move elements around the one holding pointer
+  // capture, and a moved element drops its capture. The order is pinned from
+  // press to release and catches up afterwards.
+  const [pinnedOrder, setPinnedOrder] = useState<string[] | null>(null);
+
+  const wanted = onGrid
+    ? [...layout.items].sort(byReadingOrder)
+    : [...layout.items].sort(
+        (a, b) => (position.get(a.id) ?? 0) - (position.get(b.id) ?? 0),
+      );
+  const ordered = pinnedOrder
+    ? [
+        ...pinnedOrder.flatMap((id) => wanted.find((item) => item.id === id) ?? []),
+        ...wanted.filter((item) => !pinnedOrder.includes(item.id)),
+      ]
+    : wanted;
+
+  // A keyboard move can re-sort the document too, and an element that is
+  // moved in the document loses focus. The grip that was just used asks for
+  // it back once the move has rendered.
+  // The same goes for the up / down buttons of the stacked arrangements.
+  const refocus = useRef<string | null>(null);
+  useLayoutEffect(() => {
+    const selector = refocus.current;
+    if (!selector) return;
+    refocus.current = null;
+    const control = gridRef.current?.querySelector<HTMLElement>(selector);
+    if (control && document.activeElement !== control) {
+      control.focus({ preventScroll: true });
+    }
+  });
+  const within = (id: string, control: string) =>
+    `[data-widget-id="${CSS.escape(id)}"] ${control}`;
 
   // ---------------------------------------------------------- animation ----
   //
@@ -280,6 +336,7 @@ export function DashboardGrid({
     if (!metrics) return;
     // Capture, so moves keep arriving once the pointer leaves the handle.
     e.currentTarget.setPointerCapture(e.pointerId);
+    setPinnedOrder(ordered.map((entry) => entry.id));
     gesture.current = {
       kind,
       id: item.id,
@@ -317,6 +374,7 @@ export function DashboardGrid({
       const g = gesture.current;
       if (!g) return;
       gesture.current = null;
+      setPinnedOrder(null);
       if (revert && g.active) {
         latest.current.onChange(withItems(latest.current.layout, g.startItems));
         latest.current.onAnnounce("Cancelled. The widget is back where it was.");
@@ -354,6 +412,13 @@ export function DashboardGrid({
     };
     window.addEventListener("keydown", onKey);
 
+    // The gesture works in the column and row pitch measured when it began.
+    // If the window is resized under it — or the dashboard narrows into
+    // another arrangement altogether — those numbers are stale, so the
+    // gesture is put back rather than finished on the wrong grid.
+    const onResize = () => endGesture(true);
+    window.addEventListener("resize", onResize);
+
     let frame = 0;
     const tick = () => {
       const g = gesture.current;
@@ -367,7 +432,23 @@ export function DashboardGrid({
             : Math.max(0, g.lastY - (window.innerHeight - AUTOSCROLL_EDGE_PX));
         if (depth !== 0) {
           const speed = Math.min(1, Math.abs(depth) / AUTOSCROLL_EDGE_PX);
-          window.scrollBy(0, Math.sign(depth) * Math.ceil(speed * AUTOSCROLL_MAX_STEP_PX));
+          let step = Math.sign(depth) * Math.ceil(speed * AUTOSCROLL_MAX_STEP_PX);
+          if (step > 0) {
+            // Downward, stop where the layout stops. The card under the
+            // pointer is drawn with a transform, and a transformed element
+            // stretches the page's scrollable area to wherever it is — so
+            // the page "ends" wherever the widget is held, and an unbounded
+            // scroll chases it into blank space for as long as the pointer
+            // stays put. The grid's own box is the real end of the content
+            // (it grows only when the layout really gains a row); a little
+            // slack lets a widget be carried just past the last row.
+            const grid = gridRef.current;
+            const room = grid
+              ? grid.getBoundingClientRect().bottom + AUTOSCROLL_SLACK_PX - window.innerHeight
+              : 0;
+            step = Math.max(0, Math.min(step, Math.floor(room)));
+          }
+          if (step !== 0) window.scrollBy(0, step);
         }
         if (window.scrollY !== before) applyGesture(g);
       }
@@ -377,6 +458,7 @@ export function DashboardGrid({
 
     return () => {
       window.removeEventListener("keydown", onKey);
+      window.removeEventListener("resize", onResize);
       cancelAnimationFrame(frame);
     };
   }, [gestureLive, endGesture, applyGesture]);
@@ -402,6 +484,7 @@ export function DashboardGrid({
     )[e.key];
     if (!direction) return;
     e.preventDefault();
+    refocus.current = within(item.id, "[data-widget-grip]");
     const grid = gridRef.current;
     const name = widgetDefinition(item.type).name;
 
@@ -556,7 +639,11 @@ export function DashboardGrid({
                   <span className="dash-stack-only flex items-center" data-no-drag>
                     <button
                       type="button"
-                      onClick={() => moveInStack(item, -1)}
+                      data-stack-move="earlier"
+                      onClick={() => {
+                        refocus.current = within(item.id, '[data-stack-move="earlier"]');
+                        moveInStack(item, -1);
+                      }}
                       disabled={index === 0}
                       aria-label={`Move ${definition.name} earlier`}
                       className="flex h-9 w-9 items-center justify-center rounded-md text-muted-foreground hover:bg-surface-2 hover:text-foreground disabled:opacity-30"
@@ -565,7 +652,11 @@ export function DashboardGrid({
                     </button>
                     <button
                       type="button"
-                      onClick={() => moveInStack(item, 1)}
+                      data-stack-move="later"
+                      onClick={() => {
+                        refocus.current = within(item.id, '[data-stack-move="later"]');
+                        moveInStack(item, 1);
+                      }}
                       disabled={index === ordered.length - 1}
                       aria-label={`Move ${definition.name} later`}
                       className="flex h-9 w-9 items-center justify-center rounded-md text-muted-foreground hover:bg-surface-2 hover:text-foreground disabled:opacity-30"
